@@ -1,0 +1,186 @@
+@import "tailwindcss";
+
+/* Modo oscuro del admin: `data-admin-theme="dark"` en un ancestro (ver `AdminThemeProvider`). */
+@custom-variant dark (&:where([data-admin-theme="dark"], [data-admin-theme="dark"] *));
+
+:root {
+  --background: #ffffff;
+  --foreground: #292524;
+  /* Sin `only`: si no, los subárboles no pueden usar color-scheme dark (rompe admin oscuro / nativos). */
+  color-scheme: light;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-montserrat);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: #ffffff;
+  color: var(--foreground);
+  font-family: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
+}
+
+.font-berea-nova {
+  font-family: "Stack Sans Notch", var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 500;
+}
+
+.berea-signature {
+  color: #3d5240;
+  letter-spacing: 0.01em;
+}
+
+@keyframes store-cart-drawer-panel {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes store-cart-drawer-backdrop {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.store-cart-drawer-backdrop {
+  animation: store-cart-drawer-backdrop 0.28s ease-out forwards;
+}
+
+.store-cart-drawer-panel {
+  animation: store-cart-drawer-panel 0.34s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes store-cookies-banner-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.store-cookies-banner-panel {
+  animation: store-cookies-banner-in 0.48s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .store-cookies-banner-panel {
+    animation: none;
+  }
+}
+
+/* Bolsa: cuerpo con scroll vertical sin barra horizontal por hijos anchos */
+.store-cart-drawer-body-scroll {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* Carrusel "También te puede gustar": scroll horizontal sin barra (flechas / trackpad) */
+.store-cart-suggestions-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  scrollbar-color: transparent transparent;
+}
+
+.store-cart-suggestions-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+  background: transparent;
+}
+
+.store-cart-suggestions-scroll::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .store-cart-drawer-backdrop,
+  .store-cart-drawer-panel {
+    animation: none !important;
+  }
+
+  .store-cart-drawer-panel {
+    transform: none;
+  }
+
+  .store-cart-drawer-backdrop {
+    opacity: 1;
+  }
+
+  .store-reveal {
+    transition: none !important;
+  }
+
+  .store-reveal-out-below,
+  .store-reveal-out-above {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* Scroll reveal en vitrina (productos, bloques de home) */
+.store-reveal {
+  transition-property: opacity, transform;
+  transition-duration: 0.72s;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.32, 1);
+  will-change: opacity, transform;
+}
+
+.store-reveal-in {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+  will-change: auto;
+}
+
+.store-reveal-out-below {
+  opacity: 0;
+  transform: translate3d(0, 2.25rem, 0) scale(0.96);
+}
+
+.store-reveal-out-above {
+  opacity: 0;
+  transform: translate3d(0, -2.25rem, 0) scale(0.96);
+}
+
+/*
+ * Franja superior: N copias del bloque (ver MARQUEE_SEGMENT_COUNT en StoreAnnouncementBar.tsx).
+ * Un ciclo desplaza exactamente 1 copia: translateX(-100%/N). Con N=12 → -8.333333%.
+ */
+@keyframes store-announcement-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-8.333333%);
+  }
+}
+
+.store-announcement-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: store-announcement-marquee 48s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .store-announcement-marquee-track {
+    animation: none;
+    margin-inline: auto;
+  }
+
+  .store-announcement-marquee-segment--dupe {
+    display: none;
+  }
+}

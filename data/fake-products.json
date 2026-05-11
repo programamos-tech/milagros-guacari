@@ -1,0 +1,134 @@
+[
+  {
+    "id": "f1000000-0000-4000-8000-000000000001",
+    "name": "Audífonos Bluetooth con cancelación de ruido",
+    "description": "Sonido nítido, batería extendida. Ideales para trabajo y viaje.",
+    "price_cents": 289900,
+    "currency": "COP",
+    "is_published": true,
+    "image_path": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&q=80",
+    "stock_warehouse": 8,
+    "stock_local": 16
+  },
+  {
+    "id": "f1000000-0000-4000-8000-000000000002",
+    "name": "Auriculares deportivos in-ear",
+    "description": "Resistentes al sudor, gancho ergonómico. Incluye estuche de carga.",
+    "price_cents": 159900,
+    "currency": "COP",
+    "is_published": true,
+    "image_path": "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=600&q=80",
+    "stock_warehouse": 13,
+    "stock_local": 27
+  },
+  {
+    "id": "f1000000-0000-4000-8000-000000000003",
+    "name": "Bolso tote cuero vegano",
+    "description": "Compartimento para laptop 13\". Forro interior contrastado.",
+    "price_cents": 199500,
+    "currency": "COP",
+    "is_published": true,
+    "image_path": "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=600&q=80",
+    "stock_warehouse": 5,
+    "stock_local": 10
+  },
+  {
+    "id": "f1000000-0000-4000-8000-000000000004",
+    "name": "Mochila urbana minimal",
+    "description": "Tejido repelente al agua, bolsillo oculto trasero.",
+    "price_cents": 175000,
+    "currency": "COP",
+    "is_published": true,
+    "image_path": "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=600&q=80",
+    "stock_warehouse": 7,
+    "stock_local": 15
+  },
+  {
+    "id": "f1000000-0000-4000-8000-000000000005",
+    "name": "Reloj analógico acero mate",
+    "description": "Movimiento de cuarzo, correa intercambiable. Estuche de regalo.",
+    "price_cents": 349000,
+    "currency": "COP",
+    "is_published": true,
+    "image_path": "https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=600&q=80",
+    "stock_warehouse": 3,
+    "stock_local": 7
+  },
+  {
+    "id": "f1000000-0000-4000-8000-000000000006",
+    "name": "Zapatillas running ligera",
+    "description": "Suela EVA, upper transpirable. Tallas 36–44.",
+    "price_cents": 419900,
+    "currency": "COP",
+    "is_published": true,
+    "image_path": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&q=80",
+    "stock_warehouse": 10,
+    "stock_local": 20
+  },
+  {
+    "id": "f1000000-0000-4000-8000-000000000007",
+    "name": "Lámpara de escritorio LED",
+    "description": "Temperatura de color ajustable, brazo articulado.",
+    "price_cents": 129900,
+    "currency": "COP",
+    "is_published": true,
+    "image_path": "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&q=80",
+    "stock_warehouse": 6,
+    "stock_local": 12
+  },
+  {
+    "id": "f1000000-0000-4000-8000-000000000008",
+    "name": "Set cuidado facial 3 pasos",
+    "description": "Limpiador, tónico y serum. Fórmula sin parabenos.",
+    "price_cents": 89900,
+    "currency": "COP",
+    "is_published": true,
+    "image_path": "https://images.unsplash.com/photo-1556228578-0d85b1a4d571?w=600&q=80",
+    "stock_warehouse": 16,
+    "stock_local": 34
+  },
+  {
+    "id": "f1000000-0000-4000-8000-000000000009",
+    "name": "Caja regalo té artesanal",
+    "description": "12 infusiones surtidas, madera de pino certificada.",
+    "price_cents": 67900,
+    "currency": "COP",
+    "is_published": true,
+    "image_path": "https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=600&q=80",
+    "stock_warehouse": 11,
+    "stock_local": 24
+  },
+  {
+    "id": "f1000000-0000-4000-8000-000000000010",
+    "name": "Notebook ultradelgada 14\"",
+    "description": "Ideal estudio y oficina. 16 GB RAM, SSD 512 GB (demo).",
+    "price_cents": 3299900,
+    "currency": "COP",
+    "is_published": true,
+    "image_path": "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=600&q=80",
+    "stock_warehouse": 2,
+    "stock_local": 4
+  },
+  {
+    "id": "f1000000-0000-4000-8000-000000000011",
+    "name": "Gafas sol polarizadas",
+    "description": "Protección UV400, montura metálica ligera.",
+    "price_cents": 189900,
+    "currency": "COP",
+    "is_published": true,
+    "image_path": "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=600&q=80",
+    "stock_warehouse": 9,
+    "stock_local": 19
+  },
+  {
+    "id": "f1000000-0000-4000-8000-000000000012",
+    "name": "Cafetera espresso compacta",
+    "description": "Presión 15 bar, depósito 1,2 L. Acabado mate.",
+    "price_cents": 899900,
+    "currency": "COP",
+    "is_published": true,
+    "image_path": "https://images.unsplash.com/photo-1517668808822-9ebb02f2a0e6?w=600&q=80",
+    "stock_warehouse": 2,
+    "stock_local": 6
+  }
+]
