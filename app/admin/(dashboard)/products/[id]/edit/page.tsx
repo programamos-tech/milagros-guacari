@@ -24,6 +24,7 @@ type ProductRow = {
   brand?: string;
   price_cents: number;
   cost_cents?: number;
+  cost_gross_cents?: number;
   stock_warehouse?: number;
   stock_local?: number;
   stock_quantity: number;
@@ -182,6 +183,7 @@ export default async function EditProductPage({ params, searchParams }: Props) {
           categoryId,
           priceCents: p.price_cents,
           costCents: p.cost_cents ?? 0,
+          costGrossCents: p.cost_gross_cents ?? 0,
           stockLocal: p.stock_local ?? 0,
           stockWarehouse: p.stock_warehouse ?? 0,
           isPublished: p.is_published === true,

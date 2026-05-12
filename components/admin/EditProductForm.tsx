@@ -39,6 +39,7 @@ type Initial = {
   categoryId: string;
   priceCents: number;
   costCents: number;
+  costGrossCents: number;
   stockLocal: number;
   stockWarehouse: number;
   isPublished: boolean;
@@ -70,6 +71,7 @@ export function EditProductForm({
   const [brand, setBrand] = useState(initial.brand);
   const [categoryId, setCategoryId] = useState(initial.categoryId);
   const [costCents, setCostCents] = useState(initial.costCents);
+  const [costGrossCents, setCostGrossCents] = useState(initial.costGrossCents);
   const [priceCents, setPriceCents] = useState(initial.priceCents);
   const [isPublished, setIsPublished] = useState(initial.isPublished);
   const [hasExpiration, setHasExpiration] = useState(initial.hasExpiration);
@@ -357,16 +359,32 @@ export function EditProductForm({
           <section className={cardClass}>
             <h2 className={sectionTitle}>Información financiera</h2>
             <div className="mt-5 space-y-4">
-              <div>
-                <label className={labelClass}>
-                  Costo de compra <span className="text-red-600 dark:text-red-400">*</span>
-                </label>
-                <ProductMoneyInput
-                  name="cost_cents"
-                  value={costCents}
-                  onChange={setCostCents}
-                  required
-                />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={labelClass}>
+                    Costo (sin IVA) <span className="text-red-600 dark:text-red-400">*</span>
+                  </label>
+                  <ProductMoneyInput
+                    name="cost_cents"
+                    value={costCents}
+                    onChange={setCostCents}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>
+                    Costo con IVA
+                  </label>
+                  <ProductMoneyInput
+                    name="cost_gross_cents"
+                    value={costGrossCents}
+                    onChange={setCostGrossCents}
+                    required={false}
+                  />
+                  <p className="mt-1.5 text-[11px] leading-snug text-zinc-500 dark:text-zinc-400">
+                    Bruto en factura del proveedor. Reportes de stock con IVA.
+                  </p>
+                </div>
               </div>
               <div>
                 <label className={labelClass}>
@@ -422,9 +440,15 @@ export function EditProductForm({
 
             <ul className="mt-4 space-y-1.5 border-t border-zinc-200/70 pt-4 text-sm dark:border-zinc-800">
               <li className="flex justify-between text-zinc-600 dark:text-zinc-400">
-                <span>Costo</span>
+                <span>Costo sin IVA</span>
                 <span className="tabular-nums text-zinc-900 dark:text-zinc-100">
                   {formatCop(costCents)}
+                </span>
+              </li>
+              <li className="flex justify-between text-zinc-600 dark:text-zinc-400">
+                <span>Costo con IVA</span>
+                <span className="tabular-nums text-zinc-900 dark:text-zinc-100">
+                  {formatCop(costGrossCents)}
                 </span>
               </li>
               <li className="flex justify-between font-medium text-zinc-900 dark:text-zinc-100">
@@ -444,7 +468,7 @@ export function EditProductForm({
 
             <button
               type="submit"
-              className="mt-4 w-full rounded-lg border border-zinc-900 bg-zinc-900 py-3.5 text-sm font-medium text-white transition hover:bg-zinc-800 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
+              className="mt-4 w-full rounded-lg border border-rose-950 bg-rose-950 py-3.5 text-sm font-medium text-white transition hover:bg-rose-900 hover:border-rose-900 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
             >
               Guardar cambios
             </button>

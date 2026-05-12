@@ -64,7 +64,7 @@ export function AdminTransferStockForm({
   const toggleWrap =
     "flex gap-1 rounded-xl border border-zinc-200/90 bg-zinc-100/70 p-1 dark:border-zinc-700 dark:bg-zinc-950/80";
   const toggleActive =
-    "flex-1 rounded-lg bg-zinc-900 px-3 py-3 text-center text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-950";
+    "flex-1 rounded-lg border border-rose-950 bg-rose-950 px-3 py-3 text-center text-sm font-medium text-white transition hover:bg-rose-900 hover:border-rose-900 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white";
   const toggleIdle =
     "flex-1 rounded-lg px-3 py-3 text-center text-sm font-medium text-zinc-700 transition hover:bg-white/60 dark:text-zinc-400 dark:hover:bg-zinc-800/50";
 
@@ -143,7 +143,7 @@ export function AdminTransferStockForm({
 
           <button
             type="submit"
-            className="mt-10 w-full rounded-xl border border-zinc-900 bg-zinc-900 py-3.5 text-sm font-medium text-white transition hover:bg-zinc-800 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
+            className="mt-10 w-full rounded-xl border border-rose-950 bg-rose-950 py-3.5 text-sm font-medium text-white transition hover:bg-rose-900 hover:border-rose-900 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
           >
             Transferir
           </button>

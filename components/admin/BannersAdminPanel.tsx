@@ -107,7 +107,7 @@ function BannerRowEditor({ row }: { row: StoreBannerRow }) {
             <div className="flex flex-wrap gap-2 pt-1">
               <button
                 type="submit"
-                className="w-full rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white sm:w-auto sm:text-xs"
+                className="w-full rounded-lg border border-rose-950 bg-rose-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-900 hover:border-rose-900 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white sm:w-auto sm:text-xs"
               >
                 Guardar cambios
               </button>
@@ -153,7 +153,7 @@ function UploadBlock({
         </div>
         <button
           type="submit"
-          className="w-full rounded-lg bg-zinc-900 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white sm:w-auto sm:px-5"
+          className="w-full rounded-lg border border-rose-950 bg-rose-950 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-900 hover:border-rose-900 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white sm:w-auto sm:px-5"
         >
           Subir banner
         </button>

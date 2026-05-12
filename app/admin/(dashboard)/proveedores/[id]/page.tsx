@@ -120,7 +120,7 @@ export default async function AdminProveedorDetailPage({ params, searchParams }:
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href={`/admin/proveedores/${id}/nueva-factura`}
-            className="inline-flex items-center justify-center rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
+            className="inline-flex items-center justify-center rounded-lg border border-rose-950 bg-rose-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-900 hover:border-rose-900 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
           >
             + Nueva factura
           </Link>
@@ -164,7 +164,7 @@ export default async function AdminProveedorDetailPage({ params, searchParams }:
         </select>
         <button
           type="submit"
-          className="rounded-lg bg-zinc-900 px-3 py-2 text-sm font-semibold text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
+          className="rounded-lg border border-rose-950 bg-rose-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-rose-900 hover:border-rose-900 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
         >
           Filtrar
         </button>

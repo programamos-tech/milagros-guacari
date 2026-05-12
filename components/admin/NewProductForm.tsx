@@ -43,6 +43,7 @@ export function NewProductForm({
   const [stockLocal, setStockLocal] = useState(0);
   const [stockWarehouse, setStockWarehouse] = useState(0);
   const [costCents, setCostCents] = useState(0);
+  const [costGrossCents, setCostGrossCents] = useState(0);
   const [priceCents, setPriceCents] = useState(0);
   const [hasExpiration, setHasExpiration] = useState(false);
   const [expirationDate, setExpirationDate] = useState("");
@@ -346,16 +347,30 @@ export function NewProductForm({
           <section className={cardClass}>
             <h2 className={sectionTitle}>Información financiera</h2>
             <div className="mt-5 space-y-4">
-              <div>
-                <label className={labelClass}>
-                  Costo de compra <span className="text-red-600 dark:text-red-400">*</span>
-                </label>
-                <ProductMoneyInput
-                  name="cost_cents"
-                  value={costCents}
-                  onChange={setCostCents}
-                  required
-                />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={labelClass}>
+                    Costo (sin IVA) <span className="text-red-600 dark:text-red-400">*</span>
+                  </label>
+                  <ProductMoneyInput
+                    name="cost_cents"
+                    value={costCents}
+                    onChange={setCostCents}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Costo con IVA</label>
+                  <ProductMoneyInput
+                    name="cost_gross_cents"
+                    value={costGrossCents}
+                    onChange={setCostGrossCents}
+                    required={false}
+                  />
+                  <p className="mt-1.5 text-[11px] leading-snug text-zinc-500 dark:text-zinc-400">
+                    Bruto en factura del proveedor (reportes de stock).
+                  </p>
+                </div>
               </div>
               <div>
                 <label className={labelClass}>
@@ -448,7 +463,7 @@ export function NewProductForm({
 
             <button
               type="submit"
-              className="mt-5 w-full rounded-lg border border-zinc-900 bg-zinc-900 py-3.5 text-sm font-medium text-white transition hover:bg-zinc-800 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
+              className="mt-5 w-full rounded-lg border border-rose-950 bg-rose-950 py-3.5 text-sm font-medium text-white transition hover:bg-rose-900 hover:border-rose-900 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
             >
               Crear producto
             </button>

@@ -293,6 +293,11 @@ alter table public.products
   add column if not exists cost_cents integer not null default 0
     check (cost_cents >= 0);
 
+-- --- 20260616120000_products_cost_gross_cents.sql ---
+alter table public.products
+  add column if not exists cost_gross_cents integer not null default 0
+    check (cost_gross_cents >= 0);
+
 -- --- 20260512120000_customers_entity.sql ---
 create table public.customers (
   id uuid primary key default gen_random_uuid(),

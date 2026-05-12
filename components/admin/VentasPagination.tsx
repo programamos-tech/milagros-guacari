@@ -20,7 +20,7 @@ export function VentasPagination({
   const to = Math.min(page * pageSize, total);
 
   const linkClass =
-    "inline-flex min-h-9 min-w-[2.25rem] items-center justify-center rounded-lg border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:shadow-none dark:hover:border-zinc-600 dark:hover:bg-zinc-800";
+    "inline-flex min-h-9 min-w-[2.25rem] items-center justify-center rounded-lg border border-rose-200/70 bg-white px-3 text-sm font-medium text-rose-950 shadow-sm transition hover:border-rose-300/80 hover:bg-rose-50/50 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:shadow-none dark:hover:border-zinc-600 dark:hover:bg-zinc-800";
   const navLinkClass = `${linkClass} px-4`;
 
   return (

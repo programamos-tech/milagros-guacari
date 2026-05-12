@@ -207,7 +207,7 @@ export function AdminUpdateStockForm({
           </p>
           <button
             type="submit"
-            className="mt-6 w-full rounded-xl border border-zinc-900 bg-zinc-900 py-3.5 text-sm font-medium text-white transition hover:bg-zinc-800 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
+            className="mt-6 w-full rounded-xl border border-rose-950 bg-rose-950 py-3.5 text-sm font-medium text-white transition hover:bg-rose-900 hover:border-rose-900 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
           >
             Actualizar stock
           </button>

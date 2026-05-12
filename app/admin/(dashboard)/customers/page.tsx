@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { CustomerAvatar } from "@/components/admin/CustomerAvatar";
+import { CustomersSearchBar } from "@/components/admin/CustomersSearchBar";
+import { CustomersPagination } from "@/components/admin/CustomersPagination";
 import { customerAvatarSeed } from "@/lib/customer-avatar-seed";
 import { CustomerRowActions } from "@/components/admin/CustomerRowActions";
 import {
@@ -12,8 +15,18 @@ import { formatCop } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
+const CUSTOMERS_PAGE_SIZE = 20;
+
 const customerCardClass =
   "flex h-full flex-col rounded-xl border border-zinc-200/90 bg-white p-4 shadow-sm ring-1 ring-zinc-950/5 transition hover:border-zinc-300 hover:shadow-md dark:border-zinc-700/90 dark:bg-zinc-900 dark:ring-white/[0.06] dark:hover:border-zinc-600 dark:hover:shadow-none";
+
+function searchParamFirst(
+  v: string | string[] | undefined,
+): string | undefined {
+  if (typeof v === "string") return v;
+  if (Array.isArray(v) && typeof v[0] === "string") return v[0];
+  return undefined;
+}
 
 function matchesSearch(row: AdminCustomerListRow, q: string): boolean {
   if (!q) return true;
@@ -32,10 +45,16 @@ function matchesSearch(row: AdminCustomerListRow, q: string): boolean {
 export default async function AdminCustomersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{
+    q?: string | string[];
+    page?: string | string[];
+  }>;
 }) {
   const sp = await searchParams;
-  const q = typeof sp.q === "string" ? sp.q.trim() : "";
+  const q = searchParamFirst(sp.q)?.trim() ?? "";
+  const pageRaw = Number.parseInt(searchParamFirst(sp.page) ?? "1", 10);
+  const pageRequested =
+    Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : 1;
 
   const authPerm = await loadAdminPermissions();
   const canCreateCustomer = Boolean(authPerm?.permissions.clientes_crear);
@@ -44,7 +63,20 @@ export default async function AdminCustomersPage({
   const { rows: allRows, error, withoutShippingFields } =
     await fetchAdminCustomersWithStats(supabase);
 
-  const rows = q ? allRows.filter((r) => matchesSearch(r, q)) : allRows;
+  const filteredRows = q ? allRows.filter((r) => matchesSearch(r, q)) : allRows;
+  const totalFiltered = filteredRows.length;
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / CUSTOMERS_PAGE_SIZE));
+  const page = Math.min(pageRequested, totalPages);
+  const offset = (page - 1) * CUSTOMERS_PAGE_SIZE;
+  const rows = filteredRows.slice(offset, offset + CUSTOMERS_PAGE_SIZE);
+
+  const buildPageHref = (p: number) => {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (p > 1) params.set("page", String(p));
+    const qs = params.toString();
+    return qs ? `/admin/customers?${qs}` : "/admin/customers";
+  };
 
   const filterLabelClass =
     "mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400";
@@ -66,7 +98,16 @@ export default async function AdminCustomersPage({
           </h1>
           <p className="mt-1 max-w-xl text-sm text-zinc-600 dark:text-zinc-300">
             Un mismo registro para la tienda online y la física: alta manual o cuando compran en
-            la web.
+            la web. Si hay filas duplicadas por la misma cédula o el mismo correo, podés unificarlas
+            con el script{" "}
+            <code className="rounded bg-zinc-100 px-1 py-0.5 font-mono text-[11px] text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200">
+              npm run merge:customers-duplicates
+            </code>{" "}
+            (simulación) y{" "}
+            <code className="rounded bg-zinc-100 px-1 py-0.5 font-mono text-[11px] text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200">
+              --execute
+            </code>{" "}
+            para aplicar.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -80,7 +121,7 @@ export default async function AdminCustomersPage({
           {canCreateCustomer ? (
             <Link
               href="/admin/customers/new"
-              className="inline-flex items-center justify-center rounded-lg border border-zinc-900 bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-800 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
+              className="inline-flex items-center justify-center rounded-lg border border-rose-950 bg-rose-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-rose-900 hover:border-rose-900 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
             >
               + Nuevo cliente
             </Link>
@@ -124,24 +165,27 @@ export default async function AdminCustomersPage({
           </p>
         ) : null}
 
-        <form method="get" action="/admin/customers" className="grid gap-4 sm:grid-cols-12">
-          <div className="sm:col-span-12 lg:col-span-8">
-            <label htmlFor="customer-q" className={filterLabelClass}>
-              Buscar
-            </label>
-            <input
-              id="customer-q"
-              name="q"
-              type="search"
-              defaultValue={q}
-              placeholder="Nombre, email, documento, teléfono o dirección…"
-              className={searchFieldClass}
-              autoComplete="off"
-            />
-          </div>
-        </form>
+        <Suspense
+          fallback={
+            <div className="grid gap-4 sm:grid-cols-12">
+              <div className="sm:col-span-12 lg:col-span-8">
+                <label className={filterLabelClass}>Buscar</label>
+                <div
+                  className="h-[42px] animate-pulse rounded-lg border border-zinc-200 bg-zinc-100/80 dark:border-zinc-700 dark:bg-zinc-800/60"
+                  aria-hidden
+                />
+              </div>
+            </div>
+          }
+        >
+          <CustomersSearchBar
+            initialQ={q}
+            filterLabelClass={filterLabelClass}
+            inputClassName={searchFieldClass}
+          />
+        </Suspense>
 
-        {!error && rows.length === 0 ? (
+        {!error && totalFiltered === 0 ? (
           <div className="border-t border-zinc-100 py-12 text-center dark:border-zinc-800">
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
               {allRows.length === 0
@@ -166,6 +210,29 @@ export default async function AdminCustomersPage({
           </div>
         ) : !error ? (
           <>
+            {q && totalFiltered > 0 ? (
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                {totalFiltered}{" "}
+                {totalFiltered === 1 ? "cliente coincide" : "clientes coinciden"} con «{q}»
+                {pageRequested > totalPages ? (
+                  <span className="text-amber-700 dark:text-amber-400">
+                    {" "}
+                    (página solicitada fuera de rango; mostrando la última)
+                  </span>
+                ) : null}
+              </p>
+            ) : null}
+            {!q && totalFiltered > CUSTOMERS_PAGE_SIZE ? (
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                {totalFiltered} clientes en total
+                {pageRequested > totalPages ? (
+                  <span className="text-amber-700 dark:text-amber-400">
+                    {" "}
+                    (página solicitada fuera de rango; mostrando la última)
+                  </span>
+                ) : null}
+              </p>
+            ) : null}
             {/* Con sidebar fijo, por debajo de xl la tabla fuerza scroll: tarjetas 1/2 cols (como Productos/Ventas). */}
             <ul
               role="list"
@@ -342,6 +409,13 @@ export default async function AdminCustomersPage({
                 </tbody>
               </table>
             </div>
+
+            <CustomersPagination
+              page={page}
+              pageSize={CUSTOMERS_PAGE_SIZE}
+              total={totalFiltered}
+              buildHref={buildPageHref}
+            />
           </>
         ) : null}
       </div>

@@ -1,8 +1,7 @@
 /**
- * Alineado a la vitrina de la tienda: blanco limpio + piedra en contenidos.
- * `app/layout.tsx` define `--admin-sidebar-bg` y `--store-chrome-bg` en `<body>`.
+ * Fondo del sidebar del panel (`--admin-sidebar-bg` en `app/layout.tsx`).
  */
-export const ADMIN_SIDEBAR_BG = "#ffffff" as const;
+export const ADMIN_SIDEBAR_BG = "#fcc3d8" as const;
 
 /** Paneles suaves (cuenta, direcciones) — mismo tono que columna principal del admin. */
 export const STORE_CHROME_BG = "#fafaf9" as const;

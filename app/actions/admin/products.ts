@@ -221,7 +221,7 @@ function isSchemaColumnError(err: { message?: string; code?: string } | null) {
   if (/column .* does not exist/i.test(m)) return true;
   if (
     /column/i.test(m) &&
-    /reference|brand|cost_cents|stock_warehouse|stock_local|category_id|size_value|size_unit|size_options|has_expiration|expiration_date|colors|fragrance_options|fragrance_option_images|has_vat|vat_percent/i.test(m)
+    /reference|brand|cost_cents|cost_gross_cents|stock_warehouse|stock_local|category_id|size_value|size_unit|size_options|has_expiration|expiration_date|colors|fragrance_options|fragrance_option_images|has_vat|vat_percent/i.test(m)
   ) {
     return true;
   }
@@ -294,6 +294,7 @@ export async function createProduct(formData: FormData) {
   const brand = String(formData.get("brand") ?? "").trim();
   const price_cents = parseMoneyCents(formData.get("price_cents"));
   const cost_cents = parseMoneyCents(formData.get("cost_cents"));
+  const cost_gross_cents = parseMoneyCents(formData.get("cost_gross_cents"));
   const stockWarehouse = parseNonNegInt(formData.get("stock_warehouse"));
   const stockLocal = parseNonNegInt(formData.get("stock_local"));
   const isPublished = formData.get("is_published") === "on";
@@ -342,6 +343,7 @@ export async function createProduct(formData: FormData) {
     reference,
     brand,
     cost_cents,
+    cost_gross_cents,
   };
 
   const { size_options: _omitSizeExt, ...extendedRowNoSizeOptions } =
@@ -454,6 +456,7 @@ export async function updateProduct(productId: string, formData: FormData) {
   const brand = String(formData.get("brand") ?? "").trim();
   const price_cents = parseMoneyCents(formData.get("price_cents"));
   const cost_cents = parseMoneyCents(formData.get("cost_cents"));
+  const cost_gross_cents = parseMoneyCents(formData.get("cost_gross_cents"));
   const stockWarehouse = parseNonNegInt(formData.get("stock_warehouse"));
   const stockLocal = parseNonNegInt(formData.get("stock_local"));
   const isPublished = formData.get("is_published") === "on";
@@ -509,6 +512,7 @@ export async function updateProduct(productId: string, formData: FormData) {
     reference,
     brand,
     cost_cents,
+    cost_gross_cents,
   };
 
   let { error } = await supabase

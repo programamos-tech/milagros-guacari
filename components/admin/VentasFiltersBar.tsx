@@ -3,9 +3,10 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import {
+  AdminDateInput,
   productInputClass as inputClass,
-  productSectionTitle as sectionTitle,
 } from "@/components/admin/product-form-primitives";
+import { adminButtonToolbarOutlineClass } from "@/lib/admin-ui";
 import type { VentaEstadoFilter, VentaPagoFilter } from "@/lib/ventas-sales";
 
 function IconSearch() {
@@ -26,7 +27,13 @@ function IconSearch() {
 
 function buildQuery(
   pathname: string,
-  next: { q?: string; status?: VentaEstadoFilter; payment?: VentaPagoFilter },
+  next: {
+    q?: string;
+    status?: VentaEstadoFilter;
+    payment?: VentaPagoFilter;
+    from?: string;
+    to?: string;
+  },
   current: URLSearchParams,
 ) {
   const p = new URLSearchParams(current.toString());
@@ -42,10 +49,22 @@ function buildQuery(
     if (next.payment === "all") p.delete("payment");
     else p.set("payment", next.payment);
   }
+  if (next.from !== undefined) {
+    const t = next.from.trim();
+    if (t) p.set("from", t);
+    else p.delete("from");
+  }
+  if (next.to !== undefined) {
+    const t = next.to.trim();
+    if (t) p.set("to", t);
+    else p.delete("to");
+  }
   if (
     next.q !== undefined ||
     next.status !== undefined ||
-    next.payment !== undefined
+    next.payment !== undefined ||
+    next.from !== undefined ||
+    next.to !== undefined
   ) {
     p.delete("page");
   }
@@ -53,25 +72,42 @@ function buildQuery(
   return qs ? `${pathname}?${qs}` : pathname;
 }
 
+const filterLabelClass =
+  "mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400";
+
 type VentasFiltersBarProps = {
   initialQ: string;
+  initialFrom: string;
+  initialTo: string;
 };
 
-export function VentasFiltersBar({ initialQ }: VentasFiltersBarProps) {
+export function VentasFiltersBar({ initialQ, initialFrom, initialTo }: VentasFiltersBarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const [q, setQ] = useState(initialQ);
+  const [from, setFrom] = useState(initialFrom);
+  const [to, setTo] = useState(initialTo);
   const status = (searchParams.get("status") ?? "all") as VentaEstadoFilter;
   const payment = (searchParams.get("payment") ?? "all") as VentaPagoFilter;
 
+  /* eslint-disable react-hooks/set-state-in-effect -- sincronizar con la URL (atrás/adelante), mismo patrón que egresos */
   useEffect(() => {
     setQ(searchParams.get("q") ?? "");
+    setFrom(searchParams.get("from") ?? "");
+    setTo(searchParams.get("to") ?? "");
   }, [searchParams]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const pushQuery = useCallback(
-    (patch: { q?: string; status?: VentaEstadoFilter; payment?: VentaPagoFilter }) => {
+    (patch: {
+      q?: string;
+      status?: VentaEstadoFilter;
+      payment?: VentaPagoFilter;
+      from?: string;
+      to?: string;
+    }) => {
       const url = buildQuery(pathname, patch, searchParams);
       router.replace(url);
     },
@@ -88,24 +124,33 @@ export function VentasFiltersBar({ initialQ }: VentasFiltersBarProps) {
   }, [q, pushQuery, searchParams]);
 
   return (
-    <div className="flex flex-col gap-4 rounded-t-xl border-b border-zinc-100 px-4 py-4 dark:border-zinc-800 sm:px-5 lg:flex-row lg:flex-nowrap lg:items-end lg:gap-4">
-      <div className="relative min-w-0 w-full flex-1 lg:min-w-[12rem]">
-        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
-          <IconSearch />
-        </span>
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Factura, cliente…"
-          className={`${inputClass} w-full min-w-0 pl-10`}
-          autoComplete="off"
-          aria-label="Buscar por factura o cliente"
-        />
-      </div>
-      <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 lg:flex lg:shrink-0 lg:gap-5">
-        <div className="min-w-0 sm:min-w-[140px]">
-          <label className={`${sectionTitle} mb-2 block`}>Estado</label>
+    <div className="border-b border-zinc-100 px-4 py-4 dark:border-zinc-800 sm:px-5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-12 lg:items-end">
+        <div className="relative min-w-0 sm:col-span-2 lg:col-span-4">
+          <label htmlFor="ventas-q" className={filterLabelClass}>
+            Buscar
+          </label>
+          <div className="relative">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
+              <IconSearch />
+            </span>
+            <input
+              id="ventas-q"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Factura, cliente…"
+              className={`${inputClass} w-full min-w-0 pl-10`}
+              autoComplete="off"
+              aria-label="Buscar por factura o cliente"
+            />
+          </div>
+        </div>
+        <div className="min-w-0 lg:col-span-2">
+          <label htmlFor="ventas-status" className={filterLabelClass}>
+            Estado
+          </label>
           <select
+            id="ventas-status"
             value={status}
             onChange={(e) =>
               pushQuery({ status: e.target.value as VentaEstadoFilter })
@@ -119,9 +164,12 @@ export function VentasFiltersBar({ initialQ }: VentasFiltersBarProps) {
             <option value="failed">Fallida</option>
           </select>
         </div>
-        <div className="min-w-0 sm:min-w-[160px]">
-          <label className={`${sectionTitle} mb-2 block`}>Forma de pago</label>
+        <div className="min-w-0 lg:col-span-2">
+          <label htmlFor="ventas-payment" className={filterLabelClass}>
+            Forma de pago
+          </label>
           <select
+            id="ventas-payment"
             value={payment}
             onChange={(e) =>
               pushQuery({ payment: e.target.value as VentaPagoFilter })
@@ -135,6 +183,38 @@ export function VentasFiltersBar({ initialQ }: VentasFiltersBarProps) {
             <option value="online">En línea</option>
           </select>
         </div>
+        <div className="min-w-0 lg:col-span-2">
+          <label htmlFor="ventas-from" className={filterLabelClass}>
+            Desde
+          </label>
+          <AdminDateInput
+            id="ventas-from"
+            name="from"
+            value={from}
+            allowEmpty
+            emptyLabel="dd/mm/aaaa"
+            onChange={(next) => {
+              setFrom(next);
+              pushQuery({ from: next });
+            }}
+          />
+        </div>
+        <div className="min-w-0 lg:col-span-2">
+          <label htmlFor="ventas-to" className={filterLabelClass}>
+            Hasta
+          </label>
+          <AdminDateInput
+            id="ventas-to"
+            name="to"
+            value={to}
+            allowEmpty
+            emptyLabel="dd/mm/aaaa"
+            onChange={(next) => {
+              setTo(next);
+              pushQuery({ to: next });
+            }}
+          />
+        </div>
       </div>
     </div>
   );
@@ -146,7 +226,7 @@ export function VentasRefreshButton() {
     <button
       type="button"
       onClick={() => router.refresh()}
-      className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:shadow-none dark:hover:bg-zinc-800 sm:w-auto"
+      className={adminButtonToolbarOutlineClass}
     >
       <svg
         viewBox="0 0 24 24"

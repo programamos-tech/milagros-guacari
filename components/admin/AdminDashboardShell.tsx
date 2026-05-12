@@ -51,7 +51,7 @@ export function AdminDashboardShell({
         onNavigate={closeNav}
       />
 
-      <div className="relative z-10 flex min-h-screen min-w-0 flex-1 flex-col overflow-x-visible overflow-y-visible bg-stone-50/90 dark:bg-zinc-950/90 lg:ml-64 print:ml-0 print:bg-white">
+      <div className="relative z-10 flex min-h-screen min-w-0 flex-1 flex-col overflow-x-visible overflow-y-visible bg-gradient-to-b from-rose-50/40 via-stone-50/95 to-stone-100/90 dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-950 lg:ml-64 print:ml-0 print:bg-white">
         <AdminTopBar
           menuOpen={mobileNavOpen}
           onMenuClick={() => setMobileNavOpen(true)}

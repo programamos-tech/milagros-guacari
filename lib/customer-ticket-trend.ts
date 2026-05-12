@@ -33,3 +33,17 @@ export function averageTicketByMonthFromPaidOrders(
     };
   });
 }
+
+/**
+ * Variación porcentual del ticket promedio del último mes con datos vs el mes anterior.
+ * Devuelve `null` si no hay al menos dos meses o el anterior es 0.
+ */
+export function ticketTrendMonthOverMonthPercent(
+  points: TicketTrendPoint[],
+): number | null {
+  if (points.length < 2) return null;
+  const prev = points[points.length - 2]!.avgCents;
+  const last = points[points.length - 1]!.avgCents;
+  if (prev <= 0) return null;
+  return Math.round(((last - prev) / prev) * 1000) / 10;
+}

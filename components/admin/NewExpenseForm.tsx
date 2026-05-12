@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createStoreExpense } from "@/app/actions/admin/expenses";
 import {
   AdminDateInput,
@@ -14,7 +14,9 @@ import {
 const cardSectionClass =
   "rounded-xl border border-zinc-200/90 bg-white p-4 shadow-sm ring-1 ring-zinc-950/5 sm:p-6 dark:border-zinc-700/90 dark:bg-zinc-900 dark:shadow-none dark:ring-white/[0.06]";
 
-const conceptOptions: Array<{
+export type TurnWorkerOption = { id: string; label: string };
+
+const ALL_CONCEPT_OPTIONS: Array<{
   concept: string;
   category: string;
   paymentMethod: "transferencia" | "efectivo" | "tarjeta" | "otro";
@@ -22,6 +24,7 @@ const conceptOptions: Array<{
   { concept: "Arriendo del local", category: "fijo", paymentMethod: "transferencia" },
   { concept: "Servicios (luz/agua/internet)", category: "servicios", paymentMethod: "transferencia" },
   { concept: "Pago de nómina", category: "nomina", paymentMethod: "transferencia" },
+  { concept: "Personal Turnos", category: "nomina", paymentMethod: "efectivo" },
   { concept: "Transporte / domicilios", category: "logistica", paymentMethod: "efectivo" },
   { concept: "Compra de insumos", category: "insumos", paymentMethod: "transferencia" },
   { concept: "Publicidad / pauta", category: "marketing", paymentMethod: "tarjeta" },
@@ -76,22 +79,64 @@ function errorMessage(code: string | undefined) {
   }
 }
 
-export function NewExpenseForm({ initialError }: { initialError?: string }) {
-  const [conceptSelection, setConceptSelection] = useState(conceptOptions[0]?.concept ?? "");
+export function NewExpenseForm({
+  initialError,
+  turnWorkers = [],
+}: {
+  initialError?: string;
+  turnWorkers?: TurnWorkerOption[];
+}) {
+  const conceptOptionsForSelect = useMemo(
+    () =>
+      turnWorkers.length > 0
+        ? ALL_CONCEPT_OPTIONS
+        : ALL_CONCEPT_OPTIONS.filter((o) => o.concept !== "Personal Turnos"),
+    [turnWorkers.length],
+  );
+
+  const [conceptSelection, setConceptSelection] = useState(
+    () => conceptOptionsForSelect[0]?.concept ?? "",
+  );
   const [conceptOther, setConceptOther] = useState("");
-  const [category, setCategory] = useState("operativo");
+  const [turnWorkerId, setTurnWorkerId] = useState("");
+  const [category, setCategory] = useState(
+    () => conceptOptionsForSelect[0]?.category ?? "operativo",
+  );
   const [paymentMethod, setPaymentMethod] = useState<
     "transferencia" | "efectivo" | "tarjeta" | "otro"
-  >("transferencia");
+  >(() => conceptOptionsForSelect[0]?.paymentMethod ?? "transferencia");
   const [notes, setNotes] = useState("");
   const [amountCents, setAmountCents] = useState(0);
   const [expenseDate, setExpenseDate] = useState(() =>
     new Date().toISOString().slice(0, 10),
   );
 
+  useEffect(() => {
+    if (conceptOptionsForSelect.some((o) => o.concept === conceptSelection)) return;
+    const first = conceptOptionsForSelect[0];
+    if (first) {
+      setConceptSelection(first.concept);
+      setCategory(first.category);
+      setPaymentMethod(first.paymentMethod);
+      setTurnWorkerId("");
+    }
+  }, [conceptOptionsForSelect, conceptSelection]);
+
   const err = useMemo(() => errorMessage(initialError), [initialError]);
-  const conceptValue =
-    conceptSelection === "Otro" ? conceptOther.trim() : conceptSelection;
+  const conceptValue = useMemo(() => {
+    if (conceptSelection === "Otro") return conceptOther.trim();
+    if (conceptSelection === "Personal Turnos") {
+      const w = turnWorkers.find((t) => t.id === turnWorkerId);
+      return w ? `Personal Turnos — ${w.label}` : "";
+    }
+    return conceptSelection;
+  }, [conceptSelection, conceptOther, turnWorkerId, turnWorkers]);
+
+  const otroIncomplete = conceptSelection === "Otro" && !conceptOther.trim();
+  const turnoIncomplete =
+    conceptSelection === "Personal Turnos" &&
+    (!turnWorkerId || !turnWorkers.some((t) => t.id === turnWorkerId));
+  const submitBlocked = otroIncomplete || turnoIncomplete;
 
   return (
     <form action={createStoreExpense} className="space-y-6">
@@ -111,7 +156,8 @@ export function NewExpenseForm({ initialError }: { initialError?: string }) {
               onChange={(e) => {
                 const next = e.target.value;
                 setConceptSelection(next);
-                const hit = conceptOptions.find((c) => c.concept === next);
+                setTurnWorkerId("");
+                const hit = conceptOptionsForSelect.find((c) => c.concept === next);
                 if (hit) {
                   setCategory(hit.category);
                   setPaymentMethod(hit.paymentMethod);
@@ -119,12 +165,33 @@ export function NewExpenseForm({ initialError }: { initialError?: string }) {
               }}
               className={inputClass}
             >
-              {conceptOptions.map((opt) => (
+              {conceptOptionsForSelect.map((opt) => (
                 <option key={opt.concept} value={opt.concept}>
                   {opt.concept}
                 </option>
               ))}
             </select>
+            {conceptSelection === "Personal Turnos" ? (
+              <div className="mt-3">
+                <label className={`${labelClass} text-zinc-600 dark:text-zinc-400`}>
+                  Trabajador
+                </label>
+                <select
+                  value={turnWorkerId}
+                  onChange={(e) => setTurnWorkerId(e.target.value)}
+                  required
+                  className={`${inputClass} mt-1.5`}
+                  aria-label="Seleccionar a quién se le pagó el turno"
+                >
+                  <option value="">Elegí a quién se le pagó el turno…</option>
+                  {turnWorkers.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
             {conceptSelection === "Otro" ? (
               <input
                 value={conceptOther}
@@ -194,7 +261,8 @@ export function NewExpenseForm({ initialError }: { initialError?: string }) {
         </div>
         <button
           type="submit"
-          className="mt-5 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
+          disabled={submitBlocked}
+          className="mt-5 rounded-lg border border-rose-950 bg-rose-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-900 hover:border-rose-900 disabled:pointer-events-none disabled:opacity-45 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white dark:disabled:opacity-40"
         >
           Registrar egreso
         </button>

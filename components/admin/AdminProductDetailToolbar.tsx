@@ -56,7 +56,7 @@ export function AdminProductDetailToolbar({
       </Link>
       <Link
         href={`/admin/products/${productId}/edit`}
-        className="inline-flex size-10 items-center justify-center rounded-full border border-zinc-900 bg-zinc-900 text-white transition hover:bg-zinc-800 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
+        className="inline-flex size-10 items-center justify-center rounded-full border border-rose-950 bg-rose-950 text-white transition hover:bg-rose-900 hover:border-rose-900 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
         title="Editar producto"
       >
         <IconPencil />

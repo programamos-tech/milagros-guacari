@@ -27,17 +27,17 @@ export function SupplierAbonoForm({
   const labelClass = `mb-1 block text-[10px] font-semibold uppercase tracking-wide ${isDark ? "text-zinc-400" : "text-zinc-500"}`;
   const primaryBtn = isDark
     ? "flex-1 rounded-lg bg-zinc-100 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-white"
-    : "flex-1 rounded-lg bg-zinc-900 py-2.5 text-sm font-semibold text-white hover:bg-zinc-800";
+    : "flex-1 rounded-lg border border-rose-950 bg-rose-950 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-900 hover:border-rose-900";
   const ghostBtn = isDark
     ? "rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2.5 text-sm text-zinc-200 hover:bg-zinc-700"
-    : "rounded-lg border border-zinc-200 px-3 py-2.5 text-sm text-zinc-600 hover:bg-zinc-50";
+    : "rounded-lg border border-rose-200/70 px-3 py-2.5 text-sm text-rose-950/85 transition hover:border-rose-300/80 hover:bg-rose-50/60";
 
   return (
     <div className="relative">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center justify-center rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
+        className="inline-flex items-center justify-center rounded-lg border border-rose-950 bg-rose-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-900 hover:border-rose-900 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
       >
         + Registrar abono
       </button>

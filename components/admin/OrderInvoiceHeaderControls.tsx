@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { updateAdminOrderStatus } from "@/app/actions/admin/order-status";
 import { productInputClass as inputClass } from "@/components/admin/product-form-primitives";
+import { adminButtonCancelClass } from "@/lib/admin-ui";
 import { ORDER_CANCELLATION_REASON_MIN_LENGTH } from "@/lib/orders-constants";
 
 const INVOICE_OPTIONS: { value: string; label: string }[] = [
@@ -54,7 +55,7 @@ export function OrderInvoicePrintButton() {
     <button
       type="button"
       onClick={() => window.print()}
-      className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-800 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:shadow-none dark:hover:border-zinc-600 dark:hover:bg-zinc-800 print:hidden"
+      className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-rose-200/70 bg-white px-4 py-2 text-sm font-semibold text-rose-950 shadow-sm transition hover:border-rose-300/80 hover:bg-rose-50/50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:shadow-none dark:hover:border-zinc-600 dark:hover:bg-zinc-800 print:hidden"
     >
       <IconPrinter className="size-4 text-zinc-500 dark:text-zinc-400" />
       Imprimir
@@ -146,7 +147,7 @@ function CancelInvoiceModal({
             type="button"
             disabled={pending}
             onClick={onClose}
-            className="rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-800"
+            className={adminButtonCancelClass}
           >
             Volver
           </button>

@@ -1,8 +1,9 @@
 import { formatCop, formatCopCompact } from "@/lib/money";
 import type { TicketTrendPoint } from "@/lib/customer-ticket-trend";
 
+/** Línea y puntos alineados al acento rosa del admin; rejilla neutra. */
 const chartPaletteClass =
-  "[--chart-line:#18181b] [--chart-grid:#e4e4e7] [--chart-axis:#d4d4d8] [--chart-point-fill:#ffffff] [--chart-point-stroke:#18181b] dark:[--chart-line:#e4e4e7] dark:[--chart-grid:#3f3f46] dark:[--chart-axis:#52525b] dark:[--chart-point-fill:#27272a] dark:[--chart-point-stroke:#fafafa]";
+  "[--chart-line:#be123c] [--chart-grid:#fce7f3] [--chart-axis:#a1a1aa] [--chart-point-fill:#fff1f2] [--chart-point-stroke:#be123c] dark:[--chart-line:#fb7185] dark:[--chart-grid:#3f3f46] dark:[--chart-axis:#71717a] dark:[--chart-point-fill:#27272a] dark:[--chart-point-stroke:#fb7185]";
 
 function monthLabelEs(monthKey: string) {
   const [y, m] = monthKey.split("-").map(Number);
@@ -13,6 +14,24 @@ function monthLabelEs(monthKey: string) {
 }
 
 type ChartPoint = TicketTrendPoint & { value: number; key: string };
+
+function catmullRomToBezierPath(points: { x: number; y: number }[]): string {
+  if (points.length === 0) return "";
+  if (points.length === 1) return `M ${points[0]!.x} ${points[0]!.y}`;
+  let d = `M ${points[0]!.x} ${points[0]!.y}`;
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const p0 = points[Math.max(0, i - 1)]!;
+    const p1 = points[i]!;
+    const p2 = points[i + 1]!;
+    const p3 = points[Math.min(points.length - 1, i + 2)]!;
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${p2.x} ${p2.y}`;
+  }
+  return d;
+}
 
 export function CustomerTicketTrendChart({ points }: { points: TicketTrendPoint[] }) {
   if (points.length === 0) return null;
@@ -45,7 +64,8 @@ export function CustomerTicketTrendChart({ points }: { points: TicketTrendPoint[
   };
   const yAt = (v: number) => padT + plotH - (v / yMax) * plotH;
 
-  const linePoints = trend.map((t, i) => `${xAt(i)},${yAt(t.value)}`).join(" ");
+  const pts = trend.map((t, i) => ({ x: xAt(i), y: yAt(t.value) }));
+  const smoothStrokePath = pts.length > 1 ? catmullRomToBezierPath(pts) : "";
 
   let areaPath: string;
   if (trend.length === 1) {
@@ -66,7 +86,7 @@ export function CustomerTicketTrendChart({ points }: { points: TicketTrendPoint[
   }
 
   return (
-    <div className={`mt-6 overflow-x-auto ${chartPaletteClass}`}>
+    <div className={`mt-5 overflow-x-auto ${chartPaletteClass}`}>
       <svg
         viewBox={`0 0 ${chartW} ${chartH}`}
         className="h-[240px] w-full min-h-[220px] min-w-[520px] sm:h-[280px]"
@@ -82,8 +102,8 @@ export function CustomerTicketTrendChart({ points }: { points: TicketTrendPoint[
             x2="0"
             y2="1"
           >
-            <stop offset="0%" stopColor="var(--chart-line)" stopOpacity="0.12" />
-            <stop offset="55%" stopColor="var(--chart-line)" stopOpacity="0.04" />
+            <stop offset="0%" stopColor="var(--chart-line)" stopOpacity="0.14" />
+            <stop offset="55%" stopColor="var(--chart-line)" stopOpacity="0.05" />
             <stop offset="100%" stopColor="var(--chart-line)" stopOpacity="0" />
           </linearGradient>
         </defs>
@@ -135,14 +155,14 @@ export function CustomerTicketTrendChart({ points }: { points: TicketTrendPoint[
         />
 
         <path d={areaPath} fill="url(#customerTicketChartFill)" />
-        {trend.length > 1 ? (
-          <polyline
+        {trend.length > 1 && smoothStrokePath ? (
+          <path
+            d={smoothStrokePath}
             fill="none"
             stroke="var(--chart-line)"
-            strokeWidth={2.25}
+            strokeWidth={2.5}
             strokeLinejoin="round"
             strokeLinecap="round"
-            points={linePoints}
           />
         ) : null}
 
@@ -152,7 +172,7 @@ export function CustomerTicketTrendChart({ points }: { points: TicketTrendPoint[
             <circle
               cx={xAt(i)}
               cy={yAt(t.value)}
-              r="4"
+              r="5"
               fill="var(--chart-point-fill)"
               stroke="var(--chart-point-stroke)"
               strokeWidth={2}

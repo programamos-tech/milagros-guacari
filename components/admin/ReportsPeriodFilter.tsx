@@ -26,7 +26,7 @@ function triggerLabel(from: string, to: string, todayKey: string): string {
 }
 
 const panelClass =
-  "absolute right-0 top-[calc(100%+0.35rem)] z-40 w-[min(100vw-1.5rem,22rem)] rounded-xl border border-stone-200 bg-white p-4 shadow-[0_16px_48px_-24px_rgba(0,0,0,0.35)] dark:border-zinc-700 dark:bg-zinc-900 dark:shadow-[0_16px_48px_-24px_rgba(0,0,0,0.55)]";
+  "absolute right-0 top-[calc(100%+0.35rem)] z-40 w-[min(100vw-1.5rem,22rem)] rounded-xl border border-rose-200/60 bg-white p-4 shadow-[0_16px_48px_-24px_rgba(190,24,93,0.18)] dark:border-zinc-700 dark:bg-zinc-900 dark:shadow-[0_16px_48px_-24px_rgba(0,0,0,0.55)]";
 
 const tabBtn =
   "flex-1 rounded-md px-3 py-2 text-xs font-semibold uppercase tracking-wide transition";
@@ -89,14 +89,14 @@ export function ReportsPeriodFilter({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-2 rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm font-medium text-stone-800 shadow-[0_1px_2px_0_rgb(28_25_23/0.04)] transition hover:border-stone-300 hover:bg-stone-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:shadow-none dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
+        className="inline-flex items-center gap-2 rounded-lg border border-rose-200/70 bg-white px-3 py-2 text-sm font-medium text-rose-950 shadow-[0_1px_2px_0_rgb(190_24_93/0.06)] transition hover:border-rose-300/80 hover:bg-rose-50/50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:shadow-none dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
         aria-expanded={open}
         aria-haspopup="dialog"
       >
         <span className="tabular-nums">{summary}</span>
         <svg
           viewBox="0 0 24 24"
-          className={`size-4 shrink-0 text-stone-500 transition dark:text-zinc-400 ${open ? "rotate-180" : ""}`}
+          className={`size-4 shrink-0 text-rose-900/45 transition dark:text-zinc-400 ${open ? "rotate-180" : ""}`}
           fill="none"
           stroke="currentColor"
           strokeWidth={2}
@@ -108,7 +108,7 @@ export function ReportsPeriodFilter({
       <button
         type="button"
         onClick={() => router.refresh()}
-        className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-600 shadow-[0_1px_2px_0_rgb(28_25_23/0.04)] transition hover:border-stone-300 hover:bg-stone-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300 dark:shadow-none dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
+        className="rounded-lg border border-rose-200/70 bg-white px-3 py-2 text-sm text-rose-950/85 shadow-[0_1px_2px_0_rgb(190_24_93/0.06)] transition hover:border-rose-300/80 hover:bg-rose-50/50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300 dark:shadow-none dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
       >
         Actualizar
       </button>
@@ -118,18 +118,18 @@ export function ReportsPeriodFilter({
           <button
             type="button"
             onClick={applyToday}
-            className="w-full rounded-lg bg-stone-900 px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-stone-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
+            className="w-full rounded-lg bg-rose-950 px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-900 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
           >
             Hoy
           </button>
 
-          <div className="mt-4 flex gap-1 rounded-lg bg-stone-100 p-1 dark:bg-zinc-800/80">
+          <div className="mt-4 flex gap-1 rounded-lg bg-rose-100/50 p-1 dark:bg-zinc-800/80">
             <button
               type="button"
               className={`${tabBtn} ${
                 tab === "day"
-                  ? "bg-white text-stone-900 shadow-sm dark:bg-zinc-950 dark:text-zinc-100 dark:shadow-none"
-                  : "text-stone-600 hover:text-stone-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+                  ? "bg-white text-rose-950 shadow-sm dark:bg-zinc-950 dark:text-zinc-100 dark:shadow-none"
+                  : "text-rose-950/70 hover:text-rose-950 dark:text-zinc-400 dark:hover:text-zinc-100"
               }`}
               onClick={() => setTab("day")}
             >
@@ -139,8 +139,8 @@ export function ReportsPeriodFilter({
               type="button"
               className={`${tabBtn} ${
                 tab === "range"
-                  ? "bg-white text-stone-900 shadow-sm dark:bg-zinc-950 dark:text-zinc-100 dark:shadow-none"
-                  : "text-stone-600 hover:text-stone-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+                  ? "bg-white text-rose-950 shadow-sm dark:bg-zinc-950 dark:text-zinc-100 dark:shadow-none"
+                  : "text-rose-950/70 hover:text-rose-950 dark:text-zinc-400 dark:hover:text-zinc-100"
               }`}
               onClick={() => setTab("range")}
             >
@@ -157,7 +157,7 @@ export function ReportsPeriodFilter({
               <button
                 type="button"
                 onClick={() => applyParams(singleDay, singleDay)}
-                className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2.5 text-sm font-semibold text-stone-900 transition hover:bg-stone-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                className="w-full rounded-lg border border-rose-200/70 bg-white px-3 py-2.5 text-sm font-semibold text-rose-950 transition hover:bg-rose-50/60 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-800"
               >
                 Aplicar
               </button>
@@ -179,7 +179,7 @@ export function ReportsPeriodFilter({
               <button
                 type="button"
                 onClick={() => applyParams(from, to)}
-                className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2.5 text-sm font-semibold text-stone-900 transition hover:bg-stone-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                className="w-full rounded-lg border border-rose-200/70 bg-white px-3 py-2.5 text-sm font-semibold text-rose-950 transition hover:bg-rose-50/60 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-800"
               >
                 Aplicar rango
               </button>

@@ -8,6 +8,7 @@ import {
 import { adminLandingPath } from "@/lib/admin-landing";
 import { loadAdminPermissions } from "@/lib/load-admin-permissions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import { formatCop, formatCopCompact } from "@/lib/money";
 import {
@@ -20,11 +21,30 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const cardLabelClass =
-  "text-[10px] font-semibold uppercase tracking-[0.18em] text-stone-400 dark:text-zinc-500";
+async function fetchProductsForStockInvestment(supabase: SupabaseClient) {
+  const full = await supabase
+    .from("products")
+    .select("stock_quantity,cost_cents,cost_gross_cents");
+  if (!full.error) {
+    return (full.data ?? []) as {
+      stock_quantity?: number | null;
+      cost_cents?: number | null;
+      cost_gross_cents?: number | null;
+    }[];
+  }
+  const basic = await supabase.from("products").select("stock_quantity,cost_cents");
+  return (basic.data ?? []) as {
+    stock_quantity?: number | null;
+    cost_cents?: number | null;
+    cost_gross_cents?: number | null;
+  }[];
+}
 
-/** Acento del gráfico — mismo eje cromático que login / tienda. */
-const chartLineColor = "#1c1917";
+const cardLabelClass =
+  "text-[10px] font-semibold uppercase tracking-[0.18em] text-rose-900/40 dark:text-zinc-500";
+
+/** Acento del gráfico — alineado al sidebar (rose). */
+const chartLineColor = "#9f1239";
 
 function dayKey(dateIso: string) {
   return new Date(dateIso).toISOString().slice(0, 10);
@@ -57,10 +77,8 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
   const periodLabel = prettyReportPeriodLabel(rangeFrom, rangeTo, todayKey);
 
   const supabase = await createSupabaseServerClient();
-  const [productsRes, ordersRes, expensesRes] = await Promise.all([
-    supabase
-      .from("products")
-      .select("stock_quantity,cost_cents"),
+  const [products, ordersRes, expensesRes] = await Promise.all([
+    fetchProductsForStockInvestment(supabase),
     supabase
       .from("orders")
       .select("id,status,total_cents,created_at,wompi_reference"),
@@ -73,8 +91,6 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
       .order("created_at", { ascending: false })
       .limit(500),
   ]);
-
-  const products = productsRes.data ?? [];
   const ordersRaw = ordersRes.data ?? [];
   const expenses = expensesRes.data ?? [];
 
@@ -164,10 +180,15 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
     cantidadEgresosPeriod += 1;
   }
 
-  const stockInversion = products.reduce((sum, p) => {
+  const stockInversionNet = products.reduce((sum, p) => {
     const cost = Number((p as { cost_cents?: number | null }).cost_cents ?? 0);
     const stock = Number((p as { stock_quantity?: number | null }).stock_quantity ?? 0);
     return sum + cost * stock;
+  }, 0);
+  const stockInversionGross = products.reduce((sum, p) => {
+    const gross = Number((p as { cost_gross_cents?: number | null }).cost_gross_cents ?? 0);
+    const stock = Number((p as { stock_quantity?: number | null }).stock_quantity ?? 0);
+    return sum + gross * stock;
   }, 0);
   const trendDayKeys = dayKeysInclusiveUtc(rangeFrom, rangeTo);
   const trendDays: { key: string; value: number }[] = trendDayKeys.map((key) => ({
@@ -259,10 +280,10 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
     <div className="space-y-0">
       <div className="flex flex-col gap-4 pb-8 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-4 sm:pb-10">
         <div className="min-w-0">
-          <h1 className="text-xl font-semibold tracking-tight text-stone-900 dark:text-zinc-100 sm:text-2xl md:text-3xl">
+          <h1 className="text-xl font-semibold tracking-tight text-rose-950 dark:text-zinc-100 sm:text-2xl md:text-3xl">
             Reportes
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-stone-500 dark:text-zinc-400">
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-rose-950/55 dark:text-zinc-400">
             Resumen ejecutivo y métricas de rendimiento de la tienda principal.
           </p>
         </div>
@@ -275,7 +296,7 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
         </div>
       </div>
 
-      <div className="border-t border-stone-200/80 pt-10 pb-12 dark:border-zinc-800">
+      <div className="border-t border-rose-200/55 pt-10 pb-12 dark:border-zinc-800">
         <p className={cardLabelClass}>Resumen del periodo</p>
         <p className="mt-1 text-sm text-stone-500 dark:text-zinc-400">{periodLabel}</p>
         <dl className="mt-6 grid grid-cols-1 gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
@@ -298,35 +319,37 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
               </p>
             </div>
           </div>
-          {[
+          {(
             [
-              "Efectivo",
-              formatCop(efectivo),
-              totalCobradoPedidos > 0
-                ? `${Math.round((efectivo / totalCobradoPedidos) * 100)}% del cobrado`
-                : "0% del cobrado",
-            ],
-            [
-              "Transferencia",
-              formatCop(transferencia),
-              totalCobradoPedidos > 0
-                ? `${Math.round((transferencia / totalCobradoPedidos) * 100)}% del cobrado`
-                : "0% del cobrado",
-            ],
-            ["Facturas anuladas", String(anuladas), "Facturas anuladas"],
-            [
-              "Egresos",
-              formatCop(egresosPeriod),
-              `${cantidadEgresosPeriod} registrados en el periodo`,
-            ],
-            ["Ganancia bruta", formatCop(gananciaBruta), "Por ventas del periodo"],
-            ["Stock (inversión)", formatCop(stockInversion), "Inversión en stock"],
-            [
-              "Ventas virtuales",
-              formatCop(ventasVirtuales),
-              "Checkout web (sin mostrador)",
-            ],
-          ].map(([label, value, hint]) => (
+              {
+                label: "Efectivo",
+                value: formatCop(efectivo),
+                hint:
+                  totalCobradoPedidos > 0
+                    ? `${Math.round((efectivo / totalCobradoPedidos) * 100)}% del cobrado`
+                    : "0% del cobrado",
+              },
+              {
+                label: "Transferencia",
+                value: formatCop(transferencia),
+                hint:
+                  totalCobradoPedidos > 0
+                    ? `${Math.round((transferencia / totalCobradoPedidos) * 100)}% del cobrado`
+                    : "0% del cobrado",
+              },
+              { label: "Facturas anuladas", value: String(anuladas), hint: "Facturas anuladas" },
+              {
+                label: "Egresos",
+                value: formatCop(egresosPeriod),
+                hint: `${cantidadEgresosPeriod} registrados en el periodo`,
+              },
+              {
+                label: "Ganancia bruta",
+                value: formatCop(gananciaBruta),
+                hint: "Por ventas del periodo",
+              },
+            ] as const
+          ).map(({ label, value, hint }) => (
             <div key={label} className="min-w-0">
               <dt className={cardLabelClass}>{label}</dt>
               <dd className="mt-1 text-2xl font-normal tabular-nums text-stone-900 dark:text-zinc-100">
@@ -335,6 +358,56 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
               <p className="mt-1 text-xs text-stone-500 dark:text-zinc-400">{hint}</p>
             </div>
           ))}
+
+          <div className="min-w-0">
+            <dt className={cardLabelClass}>Stock (inversión)</dt>
+            <dd className="mt-1 flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
+              <span className="inline-flex min-w-0 items-baseline gap-1.5">
+                <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-rose-900/40 dark:text-zinc-500">
+                  Sin IVA
+                </span>
+                <span className="text-2xl font-normal tabular-nums text-stone-900 dark:text-zinc-100">
+                  {formatCop(stockInversionNet)}
+                </span>
+              </span>
+              {stockInversionGross > 0 ? (
+                <span className="inline-flex min-w-0 items-baseline gap-1.5">
+                  <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-rose-900/40 dark:text-zinc-500">
+                    Con IVA
+                  </span>
+                  <span className="text-sm font-normal tabular-nums text-stone-500 dark:text-zinc-400">
+                    {formatCop(stockInversionGross)}
+                  </span>
+                </span>
+              ) : null}
+            </dd>
+            {stockInversionGross === 0 && stockInversionNet > 0 ? (
+              <p className="mt-1 text-[11px] leading-snug text-amber-900/80 dark:text-amber-100/80">
+                Sin costo con IVA cargado. Completá el campo en cada producto o ejecutá{" "}
+                <code className="rounded bg-stone-100 px-1 py-0.5 text-[10px] dark:bg-zinc-800">
+                  npm run import:products
+                </code>{" "}
+                si venís del CSV.
+              </p>
+            ) : stockInversionGross === 0 && stockInversionNet === 0 && products.length > 0 ? (
+              <p className="mt-1 text-[11px] leading-snug text-stone-500 dark:text-zinc-400">
+                Con IVA sin monto hasta cargar costo bruto. Si el total sigue en $0, revisá costo
+                sin IVA e inventario (bodega + local).
+              </p>
+            ) : stockInversionGross === 0 && stockInversionNet === 0 && products.length === 0 ? (
+              <p className="mt-1 text-[11px] text-stone-400 dark:text-zinc-500">—</p>
+            ) : null}
+          </div>
+
+          <div className="min-w-0">
+            <dt className={cardLabelClass}>Ventas virtuales</dt>
+            <dd className="mt-1 text-2xl font-normal tabular-nums text-stone-900 dark:text-zinc-100">
+              {formatCop(ventasVirtuales)}
+            </dd>
+            <p className="mt-1 text-xs text-stone-500 dark:text-zinc-400">
+              Checkout web (sin mostrador)
+            </p>
+          </div>
         </dl>
       </div>
 
@@ -345,7 +418,7 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
         <p className="mt-1 text-sm text-stone-500 dark:text-zinc-400">
           Monto con IVA por día (ventas pagadas) · {periodLabel}
         </p>
-        <div className="mt-6 rounded-2xl border border-stone-200/90 bg-white p-4 shadow-[0_1px_3px_0_rgb(28_25_23/0.06)] dark:border-zinc-700/90 dark:bg-zinc-900 dark:shadow-[0_1px_0_0_rgb(0_0_0/0.35)] sm:p-6">
+        <div className="mt-6 rounded-2xl border border-rose-200/50 bg-white p-4 shadow-[0_1px_3px_0_rgb(190_24_93/0.06)] dark:border-zinc-700/90 dark:bg-zinc-900 dark:shadow-[0_1px_0_0_rgb(0_0_0/0.35)] sm:p-6">
           <div className="overflow-x-auto">
             <svg
               viewBox={`0 0 ${chartW} ${chartH}`}

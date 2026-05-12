@@ -160,7 +160,7 @@ export function ProductFragranceRows({ initialRows }: Props) {
                 <button
                   type="button"
                   onClick={() => remove(i)}
-                  className="inline-flex shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white px-3 py-2 text-zinc-600 transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-900 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:bg-zinc-700 dark:hover:text-zinc-100"
+                  className="inline-flex shrink-0 items-center justify-center rounded-lg border border-rose-200/70 bg-white px-3 py-2 text-rose-950/75 transition hover:border-rose-300/80 hover:bg-rose-50/50 hover:text-rose-950 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:bg-zinc-700 dark:hover:text-zinc-100"
                   aria-label="Quitar fragancia o tono"
                 >
                   <Trash2 className="size-4" strokeWidth={1.5} />

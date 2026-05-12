@@ -1,6 +1,7 @@
 "use client";
 
 import { deleteProduct } from "@/app/actions/admin/products";
+import { adminButtonCancelClass } from "@/lib/admin-ui";
 import { type ReactNode, useRef, useTransition } from "react";
 
 function IconTrash() {
@@ -69,7 +70,7 @@ export function ProductDeleteConfirmForm({
         <button
           type="button"
           disabled={pending}
-          className="rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 shadow-sm transition hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:shadow-none dark:hover:bg-zinc-700"
+          className={adminButtonCancelClass}
           onClick={closeDialog}
         >
           Cancelar

@@ -124,7 +124,7 @@ export function CouponProductPicker({
                         setQ("");
                         setHits([]);
                       }}
-                      className="shrink-0 rounded-md bg-zinc-900 px-2.5 py-1 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-950"
+                      className="shrink-0 rounded-md border border-rose-950 bg-rose-950 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-rose-900 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
                     >
                       Agregar
                     </button>

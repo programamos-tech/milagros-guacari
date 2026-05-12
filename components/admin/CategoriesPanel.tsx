@@ -58,7 +58,7 @@ export function CategoriesPanel({ list, loadError, categoryError }: Props) {
             </label>
             <button
               type="submit"
-              className="inline-flex shrink-0 justify-center rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800"
+              className="inline-flex shrink-0 justify-center rounded-lg border border-rose-950 bg-rose-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-900 hover:border-rose-900"
             >
               Agregar
             </button>
@@ -161,7 +161,7 @@ export function CategoriesPanel({ list, loadError, categoryError }: Props) {
                             />
                             <button
                               type="submit"
-                              className="self-start rounded-md bg-zinc-800 px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-zinc-900"
+                              className="self-start rounded-md border border-rose-900 bg-rose-900 px-2.5 py-1.5 text-[11px] font-semibold text-white transition hover:bg-rose-950 hover:border-rose-950"
                             >
                               Guardar imagen del listado
                             </button>

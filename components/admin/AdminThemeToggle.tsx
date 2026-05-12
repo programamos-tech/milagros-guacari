@@ -47,7 +47,7 @@ export function AdminThemeToggle({ className = "" }: Props) {
     <button
       type="button"
       onClick={() => ctx.setTheme(isDark ? "light" : "dark")}
-      className={`rounded-lg p-2 text-stone-500 transition hover:bg-stone-100 hover:text-stone-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 ${className}`}
+      className={`rounded-lg p-2 text-rose-900/45 transition hover:bg-rose-100/55 hover:text-rose-950 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 ${className}`}
       title={isDark ? "Modo claro" : "Modo oscuro"}
       aria-label={isDark ? "Activar modo claro" : "Activar modo oscuro"}
     >

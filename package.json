@@ -11,7 +11,14 @@
     "seed:demo": "node scripts/seed-fake-products.mjs",
     "seed:csv": "node scripts/seed-products-from-csv.mjs",
     "seed:produtos": "node scripts/seed-produtos-xlsx.mjs",
-    "admin:link-profile": "node scripts/link-admin-profile.mjs"
+    "admin:link-profile": "node scripts/link-admin-profile.mjs",
+    "import:clients": "node scripts/import-clients-from-csv.mjs",
+    "import:products": "node scripts/import-products-from-csv.mjs",
+    "import:categories": "node scripts/import-categories-and-link-products.mjs",
+    "import:expenses": "node scripts/import-expenses-from-csv.mjs",
+    "import:users": "node scripts/import-users-from-csv.mjs",
+    "import:sales": "node scripts/import-sales-from-csv.mjs",
+    "merge:customers-duplicates": "node scripts/merge-customers-duplicates.mjs"
   },
   "dependencies": {
     "@dicebear/core": "^9.4.2",

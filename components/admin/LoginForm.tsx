@@ -59,7 +59,7 @@ function IconEyeOff({ className }: { className?: string }) {
 
 /** Misma base que inputs del panel + icono a la izquierda (sin caja de color). */
 const iconInputWrap =
-  "flex items-center gap-2.5 rounded-sm border border-neutral-300 bg-white px-3 transition-[border-color,box-shadow] duration-200 focus-within:border-neutral-950 focus-within:shadow-[0_0_0_1px_rgba(10,10,10,1)] dark:border-zinc-600 dark:bg-zinc-900/80 dark:focus-within:border-zinc-300 dark:focus-within:shadow-[0_0_0_1px_rgba(212,212,216,0.35)]";
+  "flex items-center gap-2.5 rounded-sm border border-neutral-300 bg-white px-3 transition-[border-color,box-shadow] duration-200 focus-within:border-rose-950 focus-within:shadow-[0_0_0_1px_rgba(136,19,55,0.35)] dark:border-zinc-600 dark:bg-zinc-900/80 dark:focus-within:border-zinc-300 dark:focus-within:shadow-[0_0_0_1px_rgba(212,212,216,0.35)]";
 
 const iconInputInner =
   "min-w-0 flex-1 border-0 bg-transparent py-3 text-sm text-neutral-950 placeholder:text-neutral-400 focus:outline-none focus:ring-0 dark:text-zinc-100 dark:placeholder:text-zinc-500";
@@ -168,7 +168,7 @@ export function AdminLoginForm() {
       <button
         type="submit"
         disabled={loading}
-        className="mt-2 w-full rounded-sm bg-neutral-950 py-4 text-[11px] font-semibold uppercase tracking-[0.22em] text-white transition-[background-color,opacity] duration-200 hover:bg-black disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
+        className="mt-2 w-full rounded-sm border border-rose-950 bg-rose-950 py-4 text-[11px] font-semibold uppercase tracking-[0.22em] text-white transition-[background-color,opacity] duration-200 hover:bg-rose-900 hover:border-rose-900 disabled:opacity-50 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
       >
         {loading ? "Entrando…" : "Iniciar sesión"}
       </button>

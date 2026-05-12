@@ -246,7 +246,7 @@ export default async function AdminProductsPage({
           {canCreateProduct ? (
             <Link
               href="/admin/products/new"
-              className="inline-flex items-center justify-center rounded-lg border border-zinc-900 bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-800"
+              className="inline-flex items-center justify-center rounded-lg border border-rose-950 bg-rose-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-rose-900 hover:border-rose-900"
             >
               + Nuevo producto
             </Link>

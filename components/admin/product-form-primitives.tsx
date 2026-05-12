@@ -264,7 +264,7 @@ export function AdminDateInput({
                   className={[
                     "h-8 rounded-md text-sm tabular-nums transition",
                     active
-                      ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950"
+                      ? "bg-rose-950 text-white dark:bg-zinc-100 dark:text-zinc-950"
                       : inMonth
                         ? "text-zinc-800 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
                         : "text-zinc-400 hover:bg-zinc-50 dark:text-zinc-600 dark:hover:bg-zinc-800/60",
@@ -291,7 +291,10 @@ export function AdminDateInput({
               ) : null}
               <button
                 type="button"
-                onClick={() => onChange(toInputDate(new Date()))}
+                onClick={() => {
+                  onChange(toInputDate(new Date()));
+                  setOpen(false);
+                }}
                 className="rounded-md px-2 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
               >
                 Hoy

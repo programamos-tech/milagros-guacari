@@ -110,7 +110,7 @@ export function VentasSalesTable({ rows }: { rows: VentaOrderRow[] }) {
                       <p className="font-mono text-base font-bold tabular-nums leading-none text-zinc-900 dark:text-zinc-100 sm:text-[17px]">
                         {ref}
                       </p>
-                      <p className="mt-1 line-clamp-2 text-sm font-semibold leading-snug text-zinc-900 dark:text-zinc-100">
+                      <p className="mt-1 line-clamp-2 text-sm leading-snug text-zinc-900 dark:text-zinc-100">
                         {row.customer_name}
                       </p>
                     </div>
@@ -140,7 +140,7 @@ export function VentasSalesTable({ rows }: { rows: VentaOrderRow[] }) {
                     </span>
                   </div>
                 </div>
-                <p className="mt-3 text-xl font-bold tabular-nums tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-2xl">
+                <p className="mt-3 text-xl tabular-nums tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-2xl">
                   {formatCop(Number(row.total_cents ?? 0))}
                 </p>
               </article>
@@ -189,7 +189,7 @@ export function VentasSalesTable({ rows }: { rows: VentaOrderRow[] }) {
                   <td className="whitespace-nowrap px-3 py-3.5 text-zinc-600 dark:text-zinc-400 sm:px-4 md:px-5">
                     {formatVentaFecha(row.created_at)}
                   </td>
-                  <td className="min-w-0 max-w-[10rem] truncate px-3 py-3.5 font-semibold text-zinc-900 dark:text-zinc-100 sm:max-w-[12rem] sm:px-4 md:max-w-[16rem] md:px-5 xl:max-w-none">
+                  <td className="min-w-0 max-w-[10rem] truncate px-3 py-3.5 text-zinc-900 dark:text-zinc-100 sm:max-w-[12rem] sm:px-4 md:max-w-[16rem] md:px-5 xl:max-w-none">
                     {row.customer_name}
                   </td>
                   <td className="px-3 py-3.5 sm:px-4 md:px-5">
@@ -206,7 +206,7 @@ export function VentasSalesTable({ rows }: { rows: VentaOrderRow[] }) {
                       {estado.label}
                     </span>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3.5 text-right text-sm font-bold tabular-nums text-zinc-900 dark:text-zinc-50 sm:px-4 md:px-5">
+                  <td className="whitespace-nowrap px-3 py-3.5 text-right text-sm tabular-nums text-zinc-900 dark:text-zinc-50 sm:px-4 md:px-5">
                     {formatCop(Number(row.total_cents ?? 0))}
                   </td>
                   <td className="px-3 py-3.5 text-center sm:px-4 md:px-5">

@@ -52,8 +52,9 @@ export function AdminProductsPagination({
       : null;
 
   const linkClass =
-    "rounded-lg px-3 py-1.5 text-sm font-medium transition hover:bg-zinc-100";
-  const linkActive = "bg-zinc-900 text-white hover:bg-zinc-800";
+    "rounded-lg px-3 py-1.5 text-sm font-medium transition hover:bg-rose-100/60 dark:hover:bg-zinc-100";
+  const linkActive =
+    "border border-rose-950 bg-rose-950 text-white hover:bg-rose-900 hover:border-rose-900 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white";
   const linkMuted = "text-zinc-400";
 
   const windowPages = (): number[] => {
@@ -83,7 +84,7 @@ export function AdminProductsPagination({
         {prevHref ? (
           <Link
             href={prevHref}
-            className={`${linkClass} border border-zinc-200 bg-white text-zinc-800 shadow-sm`}
+            className={`${linkClass} border border-rose-200/70 bg-white text-rose-950 shadow-sm`}
           >
             Anterior
           </Link>
@@ -98,7 +99,7 @@ export function AdminProductsPagination({
             <Link
               key={p}
               href={href({ ...base(), page: p })}
-              className={`${linkClass} min-w-[2.25rem] text-center ${p === cur ? linkActive : "text-zinc-700"}`}
+              className={`${linkClass} min-w-[2.25rem] text-center ${p === cur ? linkActive : "border border-transparent text-rose-950/75 dark:text-zinc-300"}`}
               aria-current={p === cur ? "page" : undefined}
             >
               {p}
@@ -109,7 +110,7 @@ export function AdminProductsPagination({
         {nextHref ? (
           <Link
             href={nextHref}
-            className={`${linkClass} border border-zinc-200 bg-white text-zinc-800 shadow-sm`}
+            className={`${linkClass} border border-rose-200/70 bg-white text-rose-950 shadow-sm`}
           >
             Siguiente
           </Link>
@@ -122,7 +123,7 @@ export function AdminProductsPagination({
 
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="text-zinc-500">Por página</span>
-        <div className="flex rounded-lg border border-zinc-200 bg-zinc-50 p-0.5">
+        <div className="flex rounded-lg border border-rose-200/60 bg-rose-50/40 p-0.5 dark:border-zinc-700 dark:bg-zinc-900/80">
           {([10, 25, 50, 100] as const).map((n) => (
             <Link
               key={n}

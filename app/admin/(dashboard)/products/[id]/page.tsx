@@ -42,6 +42,7 @@ export default async function AdminProductDetailPage({ params }: Props) {
     brand?: string;
     price_cents: number;
     cost_cents?: number;
+    cost_gross_cents?: number;
     stock_warehouse?: number;
     stock_local?: number;
     stock_quantity: number;
@@ -71,6 +72,7 @@ export default async function AdminProductDetailPage({ params }: Props) {
   const reference =
     (raw.reference && String(raw.reference).trim()) || shortSku(raw.id);
   const cost = Number(raw.cost_cents ?? 0);
+  const costGross = Number(raw.cost_gross_cents ?? 0);
   const price = Number(raw.price_cents ?? 0);
   const priceNet = unitPriceNetCents(price);
   const priceGross = unitPriceGrossCents(
@@ -117,6 +119,7 @@ export default async function AdminProductDetailPage({ params }: Props) {
   }
 
   const plataStock = cost * stockTotal;
+  const plataStockConIva = costGross * stockTotal;
   const margenBruto = Math.max(0, price - cost) * stockTotal;
   const margenPct =
     price > 0 ? Math.round(((price - cost) / price) * 100) : 0;
@@ -250,8 +253,13 @@ export default async function AdminProductDetailPage({ params }: Props) {
               {formatCop(plataStock)}
             </p>
             <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-              Inversión en {fmtUnits(stockTotal)}
+              Costo sin IVA en {fmtUnits(stockTotal)}
             </p>
+            {plataStockConIva > 0 ? (
+              <p className="mt-2 text-xs tabular-nums text-zinc-500 dark:text-zinc-400">
+                Con IVA: {formatCop(plataStockConIva)}
+              </p>
+            ) : null}
           </div>
           <div className={statInset}>
             <p className={labelClass}>Margen bruto estimado</p>

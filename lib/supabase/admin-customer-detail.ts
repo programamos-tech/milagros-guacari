@@ -14,11 +14,15 @@ export type AdminCustomerOrderRow = {
   created_at: string | null;
   status: string;
   wompi_reference?: string | null;
+  shipping_address?: string | null;
+  /** Cantidad de líneas en `order_items` (si se cargó). */
+  line_count?: number;
 };
 
 export type TopProductRow = {
   name: string;
   quantity: number;
+  totalCents: number;
 };
 
 export type AdminCustomerDetail = {
@@ -34,6 +38,7 @@ export type AdminCustomerDetail = {
     notes: string | null;
     source: string;
     created_at: string;
+    birth_date: string | null;
   };
   addresses: CustomerAddressRow[];
   ordersPaid: AdminCustomerOrderRow[];
@@ -50,9 +55,9 @@ function looksLikeMissingCustomerIdColumn(message: string): boolean {
 }
 
 const ORDER_SEL_WITH_CID =
-  "id,total_cents,created_at,status,customer_id,customer_email,wompi_reference";
+  "id,total_cents,created_at,status,customer_id,customer_email,wompi_reference,shipping_address";
 const ORDER_SEL_NO_CID =
-  "id,total_cents,created_at,status,customer_email,wompi_reference";
+  "id,total_cents,created_at,status,customer_email,wompi_reference,shipping_address";
 
 /**
  * Pedidos del cliente: por `customer_id` y/o por email (misma lógica que el listado).
@@ -108,6 +113,10 @@ async function fetchOrdersForCustomer(
             "wompi_reference" in r
               ? (r as { wompi_reference?: string | null }).wompi_reference ?? null
               : null,
+          shipping_address:
+            "shipping_address" in r
+              ? (r as { shipping_address?: string | null }).shipping_address ?? null
+              : null,
         });
       }
     }
@@ -129,7 +138,7 @@ export async function fetchAdminCustomerDetail(
   const { data: raw, error: cErr } = await supabase
     .from("customers")
     .select(
-      "id,name,email,phone,document_id,shipping_address,shipping_city,shipping_postal_code,notes,source,created_at",
+      "id,name,email,phone,document_id,shipping_address,shipping_city,shipping_postal_code,notes,source,created_at,birth_date",
     )
     .eq("id", customerId)
     .maybeSingle();
@@ -142,7 +151,13 @@ export async function fetchAdminCustomerDetail(
     return { detail: null, error: null };
   }
 
-  const customer = raw as AdminCustomerDetail["customer"];
+  const customer = {
+    ...(raw as Omit<AdminCustomerDetail["customer"], "birth_date">),
+    birth_date:
+      (raw as { birth_date?: string | null }).birth_date != null
+        ? String((raw as { birth_date?: string | null }).birth_date)
+        : null,
+  };
   const emailNormalized = customer.email?.trim().toLowerCase() ?? null;
 
   const addrRes = await supabase
@@ -163,31 +178,51 @@ export async function fetchAdminCustomerDetail(
   const ordersPaid = allOrders.filter((o) => o.status === "paid");
 
   let topProducts: TopProductRow[] = [];
+  const lineCountByOrder = new Map<string, number>();
   if (ordersPaid.length > 0) {
     const ids = ordersPaid.map((o) => o.id);
     const { data: items } = await supabase
       .from("order_items")
-      .select("product_name_snapshot,quantity")
+      .select("order_id,product_name_snapshot,quantity,unit_price_cents")
       .in("order_id", ids);
 
-    const map = new Map<string, number>();
+    const map = new Map<string, { quantity: number; totalCents: number }>();
     for (const it of items ?? []) {
-      const name = String((it as { product_name_snapshot: string }).product_name_snapshot);
-      const q = Number((it as { quantity: number }).quantity) || 0;
-      map.set(name, (map.get(name) ?? 0) + q);
+      const row = it as {
+        order_id: string;
+        product_name_snapshot: string;
+        quantity: number;
+        unit_price_cents: number;
+      };
+      const name = String(row.product_name_snapshot);
+      const q = Number(row.quantity) || 0;
+      const unit = Math.max(0, Math.round(Number(row.unit_price_cents ?? 0)));
+      const lineTotal = unit * q;
+      const cur = map.get(name) ?? { quantity: 0, totalCents: 0 };
+      cur.quantity += q;
+      cur.totalCents += lineTotal;
+      map.set(name, cur);
+      const oid = String(row.order_id);
+      lineCountByOrder.set(oid, (lineCountByOrder.get(oid) ?? 0) + 1);
     }
     topProducts = [...map.entries()]
-      .map(([name, quantity]) => ({ name, quantity }))
+      .map(([name, { quantity, totalCents }]) => ({ name, quantity, totalCents }))
       .sort((a, b) => b.quantity - a.quantity)
       .slice(0, 8);
   }
+
+  const withLineCounts = (orders: AdminCustomerOrderRow[]) =>
+    orders.map((o) => ({
+      ...o,
+      line_count: lineCountByOrder.get(o.id),
+    }));
 
   return {
     detail: {
       customer,
       addresses,
-      ordersPaid,
-      customerOrders: allOrders,
+      ordersPaid: withLineCounts(ordersPaid),
+      customerOrders: withLineCounts(allOrders),
       topProducts,
       matchedOrdersByEmailFallback: byEmailFallback,
     },

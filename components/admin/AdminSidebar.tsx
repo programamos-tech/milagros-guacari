@@ -5,7 +5,11 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Suspense, type SVGProps } from "react";
 import { signOutAdmin } from "@/app/actions/admin/auth";
-import { bereaSignaturePath, storeBrand, storeLogoPath } from "@/lib/brand";
+import {
+  adminSidebarLogoPath,
+  bereaSignaturePath,
+  storeBrand,
+} from "@/lib/brand";
 
 function Icon(props: SVGProps<SVGSVGElement> & { children: React.ReactNode }) {
   const { children, className = "", ...rest } = props;
@@ -234,18 +238,21 @@ function navItemActive(
   return isActive(pathname, href);
 }
 
+const sidebarInk = "text-rose-950/80 dark:text-rose-950/75";
+const sidebarInkMuted = "text-rose-950/65 dark:text-rose-950/60";
+
 function SidebarLogo() {
   return (
     <Link
       href="/admin"
-      className="inline-block rounded-md outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:ring-offset-2"
+      className="inline-block rounded-md outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-rose-400/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar-bg)]"
     >
       <Image
-        src={storeLogoPath}
+        src={adminSidebarLogoPath}
         alt={storeBrand}
-        width={280}
-        height={120}
-        className="h-auto w-full max-w-[92px] object-contain object-center sm:max-w-[100px]"
+        width={320}
+        height={320}
+        className="h-auto w-full max-w-[72px] object-contain object-center sm:max-w-[76px]"
         priority
       />
     </Link>
@@ -275,8 +282,8 @@ function AdminSidebarInner({
     [
       "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition duration-200",
       active
-        ? "bg-neutral-950 text-white shadow-[0_8px_22px_-12px_rgba(0,0,0,0.35)] dark:bg-zinc-100 dark:text-zinc-950 dark:shadow-[0_8px_22px_-12px_rgba(255,255,255,0.12)]"
-        : "text-stone-600 hover:bg-stone-100 hover:text-stone-950 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100",
+        ? "bg-rose-950 text-white shadow-[0_8px_22px_-12px_rgba(136,19,55,0.35)] dark:bg-rose-950 dark:text-rose-50 dark:shadow-[0_8px_22px_-12px_rgba(0,0,0,0.2)]"
+        : "text-rose-950/80 hover:bg-white/45 hover:text-rose-950 dark:text-rose-950/75 dark:hover:bg-white/20 dark:hover:text-rose-950",
     ].join(" ");
 
   const drawerTranslate =
@@ -290,21 +297,25 @@ function AdminSidebarInner({
 
   return (
     <aside
-      className={`flex shrink-0 flex-col border-stone-200/90 bg-white shadow-[2px_0_32px_-16px_rgba(28,25,23,0.12)] transition-transform duration-300 ease-out motion-reduce:transition-none print:hidden dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-[2px_0_32px_-16px_rgba(0,0,0,0.35)] fixed inset-y-0 left-0 z-[50] w-[min(88vw,288px)] max-w-[288px] border-r lg:w-64 lg:max-w-none lg:border-b-0 lg:shadow-[1px_0_0_rgba(231,229,228,0.9)] dark:lg:shadow-[1px_0_0_rgba(63,63,70,0.65)] ${drawerTranslate} ${drawerHiddenMobile}`}
+      className={`flex shrink-0 flex-col border-rose-300/35 bg-[var(--admin-sidebar-bg)] shadow-[2px_0_32px_-16px_rgba(190,24,93,0.12)] transition-transform duration-300 ease-out motion-reduce:transition-none print:hidden dark:border-rose-400/25 dark:shadow-[2px_0_32px_-16px_rgba(131,24,67,0.18)] fixed inset-y-0 left-0 z-[50] w-[min(88vw,288px)] max-w-[288px] border-r lg:w-64 lg:max-w-none lg:border-b-0 lg:shadow-[1px_0_0_rgba(244,114,182,0.35)] dark:lg:shadow-[1px_0_0_rgba(190,24,93,0.25)] ${drawerTranslate} ${drawerHiddenMobile}`}
     >
-      <div className="flex flex-col items-center border-b border-stone-200/90 px-4 py-6 text-center dark:border-zinc-800">
+      <div className="flex flex-col items-center border-b border-rose-300/40 px-4 py-6 text-center dark:border-rose-400/30">
         <SidebarLogo />
-        <p className="mt-3 text-[9px] font-semibold uppercase tracking-[0.22em] text-stone-500 dark:text-zinc-500">
+        <p
+          className={`mt-3 text-[9px] font-semibold uppercase tracking-[0.22em] ${sidebarInk}`}
+        >
           Backoffice
         </p>
       </div>
       <nav
         id="admin-sidebar-nav"
-        className="flex-1 space-y-7 overflow-y-auto overscroll-contain px-3 py-5"
+        className="admin-sidebar-nav-scroll flex-1 space-y-7 overflow-y-auto overscroll-contain px-3 py-5"
       >
         {navSectionsFiltered.map((section) => (
           <div key={section.title}>
-            <p className="px-3 text-[10px] font-semibold uppercase tracking-[0.22em] text-stone-400 dark:text-zinc-500">
+            <p
+              className={`px-3 text-[10px] font-semibold uppercase tracking-[0.22em] ${sidebarInkMuted}`}
+            >
               {section.title}
             </p>
             <ul className="mt-2.5 space-y-0.5">
@@ -327,9 +338,11 @@ function AdminSidebarInner({
           </div>
         ))}
       </nav>
-      <div className="border-t border-stone-200/90 px-3 pb-2.5 pt-2.5 dark:border-zinc-800">
+      <div className="border-t border-rose-300/40 px-3 pb-2.5 pt-2.5 dark:border-rose-400/30">
         <div className="mb-2.5 flex flex-col items-center gap-1 px-1 text-center">
-          <span className="text-[8px] font-medium uppercase tracking-[0.2em] text-stone-400/85 dark:text-zinc-500/90">
+          <span
+            className={`text-[8px] font-medium uppercase tracking-[0.2em] ${sidebarInk}`}
+          >
             Experiencia por
           </span>
           <Image
@@ -337,13 +350,13 @@ function AdminSidebarInner({
             alt="Berea — diseño y desarrollo"
             width={320}
             height={82}
-            className="h-10 w-auto max-w-[min(100%,8.75rem)] object-contain object-center opacity-[0.72] sm:h-11 sm:max-w-[10rem]"
+            className="h-10 w-auto max-w-[min(100%,8.75rem)] object-contain object-center mix-blend-multiply invert sm:h-11 sm:max-w-[10rem]"
           />
         </div>
         <form action={signOutAdmin}>
           <button
             type="submit"
-            className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-stone-600 transition hover:bg-stone-100 hover:text-red-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-red-400"
+            className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-rose-950/80 transition hover:bg-white/45 hover:text-red-800 dark:text-rose-950/75 dark:hover:bg-white/20 dark:hover:text-red-300"
           >
             Salir
           </button>
@@ -355,18 +368,20 @@ function AdminSidebarInner({
 
 function AdminSidebarFallback() {
   return (
-    <aside className="fixed inset-y-0 left-0 z-[45] hidden w-64 flex-col border-r border-stone-200/90 bg-white print:hidden dark:border-zinc-800 dark:bg-zinc-900 lg:flex lg:flex-col">
-      <div className="flex flex-col items-center border-b border-stone-200/90 px-4 py-6 text-center dark:border-zinc-800">
+    <aside className="fixed inset-y-0 left-0 z-[45] hidden w-64 flex-col border-r border-rose-300/35 bg-[var(--admin-sidebar-bg)] print:hidden dark:border-rose-400/25 lg:flex lg:flex-col">
+      <div className="flex flex-col items-center border-b border-rose-300/40 px-4 py-6 text-center dark:border-rose-400/30">
         <SidebarLogo />
-        <p className="mt-3 text-[9px] font-semibold uppercase tracking-[0.22em] text-stone-500 dark:text-zinc-500">
+        <p
+          className={`mt-3 text-[9px] font-semibold uppercase tracking-[0.22em] ${sidebarInk}`}
+        >
           Backoffice
         </p>
       </div>
       <div className="flex-1 px-3 py-5" aria-busy aria-label="Cargando menú" />
-      <div className="border-t border-stone-200/90 px-3 pb-2.5 pt-2.5 dark:border-zinc-800">
+      <div className="border-t border-rose-300/40 px-3 pb-2.5 pt-2.5 dark:border-rose-400/30">
         <div className="mb-2.5 flex flex-col items-center gap-1">
-          <div className="h-2.5 w-16 rounded bg-stone-200/60 dark:bg-zinc-700/80" aria-hidden />
-          <div className="h-10 w-[8.75rem] max-w-full rounded bg-stone-200/50 dark:bg-zinc-700/60 sm:h-11" aria-hidden />
+          <div className="h-2.5 w-16 rounded bg-rose-200/70 dark:bg-rose-300/40" aria-hidden />
+          <div className="h-10 w-[8.75rem] max-w-full rounded bg-rose-200/60 dark:bg-rose-300/35 sm:h-11" aria-hidden />
         </div>
       </div>
     </aside>

@@ -27,7 +27,7 @@ export function CategoryIconPicker({ name = "icon_key" }: { name?: string }) {
               aria-label={label}
               className={`flex h-10 items-center justify-center rounded-lg border transition ${
                 active
-                  ? "border-zinc-900 bg-zinc-900 text-white"
+                  ? "border-rose-950 bg-rose-950 text-white"
                   : "border-zinc-200 bg-white text-zinc-500 hover:border-zinc-300 hover:text-zinc-800"
               }`}
             >
