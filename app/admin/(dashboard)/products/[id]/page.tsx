@@ -180,25 +180,33 @@ export default async function AdminProductDetailPage({ params }: Props) {
             <div>
               <p className={labelClass}>Precio de venta</p>
               <div className="mt-1 space-y-1">
-                <p className="text-xl font-medium tabular-nums text-zinc-900 dark:text-zinc-100 sm:text-2xl">
-                  {formatCop(priceNet)}
-                  <span className="ml-2 text-base font-normal text-zinc-500 dark:text-zinc-400">
-                    sin IVA
-                  </span>
-                </p>
                 {raw.has_vat ? (
                   <>
-                    <p className="text-lg font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
+                    <p className="text-xl font-medium tabular-nums text-zinc-900 dark:text-zinc-100 sm:text-2xl">
                       {formatCop(priceGross)}
-                      <span className="ml-2 text-sm font-normal text-zinc-500 dark:text-zinc-400">
-                        con IVA ({vatLabel})
+                      <span className="ml-2 text-base font-normal text-zinc-500 dark:text-zinc-400">
+                        con IVA ({vatLabel}) · precio al público
+                      </span>
+                    </p>
+                    <p className="text-sm tabular-nums text-zinc-600 dark:text-zinc-400">
+                      {formatCop(priceNet)}
+                      <span className="ml-2 font-normal text-zinc-500 dark:text-zinc-500">
+                        base sin IVA (catálogo)
                       </span>
                     </p>
                   </>
                 ) : (
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    Sin IVA aplicado al precio de lista (precio final igual al base).
-                  </p>
+                  <>
+                    <p className="text-xl font-medium tabular-nums text-zinc-900 dark:text-zinc-100 sm:text-2xl">
+                      {formatCop(priceNet)}
+                      <span className="ml-2 text-base font-normal text-zinc-500 dark:text-zinc-400">
+                        sin IVA
+                      </span>
+                    </p>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Sin IVA aplicado al precio de lista (precio final igual al base).
+                    </p>
+                  </>
                 )}
               </div>
             </div>

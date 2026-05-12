@@ -17,20 +17,20 @@ function isRetriableSelectError(err: { message?: string; code?: string } | null)
     m.includes("Could not find") ||
     m.includes("Could not find a relationship") ||
     /column .* does not exist/i.test(m) ||
-    (/column/i.test(m) && /reference|cost_cents|category_id|stock_warehouse|stock_local|categories/i.test(m))
+    (/column/i.test(m) && /reference|cost_cents|category_id|stock_warehouse|stock_local|categories|has_vat|vat_percent/i.test(m))
   );
 }
 
 /** Select strings from richest schema → minimal (init-only). */
 const PRODUCT_SELECT_ATTEMPTS = [
-  "id,name,reference,price_cents,stock_quantity,stock_warehouse,stock_local,is_published,image_path,created_at,category_id,categories(id,name)",
-  "id,name,reference,price_cents,stock_quantity,stock_warehouse,stock_local,is_published,image_path,created_at,category_id",
-  "id,name,price_cents,stock_quantity,stock_warehouse,stock_local,is_published,image_path,created_at,category_id,categories(id,name)",
-  "id,name,price_cents,stock_quantity,stock_warehouse,stock_local,is_published,image_path,created_at,category_id",
-  "id,name,reference,price_cents,stock_quantity,is_published,image_path,created_at,category_id,categories(id,name)",
-  "id,name,price_cents,stock_quantity,is_published,image_path,created_at,category_id,categories(id,name)",
-  "id,name,price_cents,stock_quantity,is_published,image_path,created_at,category_id",
-  "id,name,price_cents,stock_quantity,is_published,image_path,created_at",
+  "id,name,reference,price_cents,has_vat,vat_percent,stock_quantity,stock_warehouse,stock_local,is_published,image_path,created_at,category_id,categories(id,name)",
+  "id,name,reference,price_cents,has_vat,vat_percent,stock_quantity,stock_warehouse,stock_local,is_published,image_path,created_at,category_id",
+  "id,name,price_cents,has_vat,vat_percent,stock_quantity,stock_warehouse,stock_local,is_published,image_path,created_at,category_id,categories(id,name)",
+  "id,name,price_cents,has_vat,vat_percent,stock_quantity,stock_warehouse,stock_local,is_published,image_path,created_at,category_id",
+  "id,name,reference,price_cents,has_vat,vat_percent,stock_quantity,is_published,image_path,created_at,category_id,categories(id,name)",
+  "id,name,price_cents,has_vat,vat_percent,stock_quantity,is_published,image_path,created_at,category_id,categories(id,name)",
+  "id,name,price_cents,has_vat,vat_percent,stock_quantity,is_published,image_path,created_at,category_id",
+  "id,name,price_cents,has_vat,vat_percent,stock_quantity,is_published,image_path,created_at",
 ] as const;
 
 export async function fetchAdminProductsList(

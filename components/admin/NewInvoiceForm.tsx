@@ -496,7 +496,7 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
                           </span>
                           <span className="text-xs text-zinc-500 dark:text-zinc-400">
                             {p.reference ? `${p.reference} · ` : null}
-                            {formatCop(Number(p.price_cents ?? 0))}
+                            {formatCop(unitFinalCents(p))}
                             {stock < 6 ? ` · Stock tienda: ${stock}` : null}
                           </span>
                         </button>
@@ -535,7 +535,7 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
                           {line.product.name}
                         </p>
                         <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                          {formatCop(Number(line.product.price_cents ?? 0))} c/u
+                          {formatCop(unitFinalCents(line.product))} c/u
                           {line.product.has_vat
                             ? ` · IVA ${String(saleVatPercentLabel(line.product.has_vat) ?? 0).replace(/\.0+$/, "")}%`
                             : ""}

@@ -21,6 +21,7 @@ import { loadAdminPermissions } from "@/lib/load-admin-permissions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { adminProductCardClass, adminTableWrapClass } from "@/lib/admin-ui";
 import { formatCop } from "@/lib/money";
+import { unitPriceGrossCents } from "@/lib/product-vat-price";
 import { AdminProductsFlashToast } from "@/components/admin/AdminProductsFlashToast";
 
 export const dynamic = "force-dynamic";
@@ -78,6 +79,8 @@ type RawAdminProductRow = {
   name: string;
   reference?: string | null;
   price_cents: number;
+  has_vat?: boolean | null;
+  vat_percent?: number | null;
   stock_quantity: number;
   stock_warehouse: number;
   stock_local: number;
@@ -91,7 +94,10 @@ type RawAdminProductRow = {
 type AdminProductRowModel = {
   id: string;
   name: string;
+  /** Precio de lista en BD (sin IVA). */
   price_cents: number;
+  /** Precio al público (con IVA si el producto lo lleva). */
+  publicPriceCents: number;
   stock_local: number;
   stock_warehouse: number;
   stock_quantity: number;
@@ -106,10 +112,16 @@ function normalizeAdminProductRow(row: unknown): AdminProductRowModel {
     ? raw.categories[0] ?? null
     : raw.categories;
   const stockQty = Number(raw.stock_quantity ?? 0);
+  const publicPriceCents = unitPriceGrossCents(
+    raw.price_cents,
+    raw.has_vat,
+    raw.vat_percent,
+  );
   return {
     id: raw.id,
     name: raw.name,
     price_cents: raw.price_cents,
+    publicPriceCents,
     stock_local: Number(raw.stock_local ?? 0),
     stock_warehouse: Number(raw.stock_warehouse ?? 0),
     stock_quantity: stockQty,
@@ -365,7 +377,7 @@ export default async function AdminProductsPage({
                   </span>
                 </div>
                 <p className="mt-auto pt-4 text-lg font-bold tabular-nums text-zinc-900 dark:text-zinc-50">
-                  {formatCop(p.price_cents)}
+                  {formatCop(p.publicPriceCents)}
                 </p>
               </article>
             </li>
@@ -397,8 +409,11 @@ export default async function AdminProductsPage({
                     Bodega
                   </th>
                   <th className={`${thCell} whitespace-nowrap`}>Estado</th>
-                  <th className={`${thCell} whitespace-nowrap text-right`}>
-                    Precio
+                  <th
+                    className={`${thCell} whitespace-nowrap text-right`}
+                    title="Precio de venta con IVA incluido cuando el producto lo lleva"
+                  >
+                    P. público
                   </th>
                   <th className={`${thCell} whitespace-nowrap text-right`}>
                     Acciones
@@ -453,7 +468,7 @@ export default async function AdminProductsPage({
                     </td>
                     <td className={`${tdCell} text-right`}>
                       <span className="inline-block whitespace-nowrap text-sm font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
-                        {formatCop(p.price_cents)}
+                        {formatCop(p.publicPriceCents)}
                       </span>
                     </td>
                     <td className={tdCell}>

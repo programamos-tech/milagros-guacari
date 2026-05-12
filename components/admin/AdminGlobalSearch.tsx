@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatCop } from "@/lib/money";
+import { unitPriceGrossCents } from "@/lib/product-vat-price";
 import {
   ventaEstadoBadge,
   ventaFormaPagoLabel,
@@ -13,6 +14,8 @@ type ProductHit = {
   name: string;
   reference: string | null;
   price_cents: number;
+  has_vat?: boolean | null;
+  vat_percent?: number | null;
   stock_quantity?: number | null;
   stock_local?: number | null;
 };
@@ -265,7 +268,13 @@ export function AdminGlobalSearch() {
                             <p className="font-medium text-stone-900 dark:text-zinc-100">{p.name}</p>
                             <p className="mt-0.5 font-mono text-xs text-stone-700 dark:text-zinc-400">
                               {p.reference?.trim() || "—"} ·{" "}
-                              {formatCop(Number(p.price_cents ?? 0))}
+                              {formatCop(
+                                unitPriceGrossCents(
+                                  Number(p.price_cents ?? 0),
+                                  p.has_vat,
+                                  p.vat_percent,
+                                ),
+                              )}
                             </p>
                           </div>
                           <span className="shrink-0 tabular-nums rounded-full bg-stone-200/90 px-2 py-0.5 text-xs font-medium text-stone-800 ring-1 ring-stone-300/70 dark:bg-zinc-800 dark:text-zinc-200 dark:ring-zinc-600/80">

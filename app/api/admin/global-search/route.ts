@@ -67,7 +67,7 @@ export async function GET(request: Request) {
     await Promise.all([
       supabase
         .from("products")
-        .select("id,name,reference,price_cents,stock_quantity,stock_local")
+        .select("id,name,reference,price_cents,stock_quantity,stock_local,has_vat,vat_percent")
         .or(`name.ilike.${pattern},reference.ilike.${pattern}`)
         .order("name")
         .limit(8),
