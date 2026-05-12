@@ -28,3 +28,19 @@ export function unitVatAmountCents(
   const gross = unitPriceGrossCents(price_cents, has_vat, vat_percent);
   return Math.max(0, gross - net);
 }
+
+/**
+ * Unitario cobrado en POS (típico: **con IVA** en el ticket) → base sin IVA por unidad.
+ * Si el producto no lleva IVA, el cobrado es la base.
+ */
+export function unitNetFromPosChargedUnitCents(
+  chargedUnitCents: number,
+  has_vat: boolean | null | undefined,
+  vat_percent: number | null | undefined,
+): number {
+  const g = Math.max(0, Math.round(Number(chargedUnitCents ?? 0)));
+  if (!has_vat) return g;
+  const pct = Math.max(0, Number(vat_percent ?? 0));
+  if (pct <= 0) return g;
+  return Math.round(g / (1 + pct / 100));
+}

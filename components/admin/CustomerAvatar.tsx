@@ -34,7 +34,7 @@ export function CustomerAvatar({
 
   return (
     <span
-      className={`inline-flex shrink-0 overflow-hidden rounded-full ring-1 ring-zinc-200/70 [&_svg]:block [&_svg]:size-full ${className}`}
+      className={`pointer-events-none inline-flex shrink-0 select-none overflow-hidden rounded-full shadow-[0_0_0_1px_rgba(24,24,27,0.12)] [caret-color:transparent] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.12)] [&_svg]:pointer-events-none [&_svg]:block [&_svg]:size-full [&_svg]:select-none ${className}`}
       style={{ width: size, height: size }}
       dangerouslySetInnerHTML={{ __html: svg }}
       role="img"

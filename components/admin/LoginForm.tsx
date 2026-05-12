@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 const labelClass =
-  "mb-2 block text-[10px] font-semibold uppercase tracking-[0.2em] text-neutral-500 dark:text-zinc-400";
+  "mb-2 block text-[10px] font-semibold uppercase tracking-[0.2em] text-rose-950/55 dark:text-zinc-400";
 
 const platformEmail = process.env.NEXT_PUBLIC_PLATFORM_EMAIL ?? "";
 
@@ -59,10 +59,10 @@ function IconEyeOff({ className }: { className?: string }) {
 
 /** Misma base que inputs del panel + icono a la izquierda (sin caja de color). */
 const iconInputWrap =
-  "flex items-center gap-2.5 rounded-sm border border-neutral-300 bg-white px-3 transition-[border-color,box-shadow] duration-200 focus-within:border-rose-950 focus-within:shadow-[0_0_0_1px_rgba(136,19,55,0.35)] dark:border-zinc-600 dark:bg-zinc-900/80 dark:focus-within:border-zinc-300 dark:focus-within:shadow-[0_0_0_1px_rgba(212,212,216,0.35)]";
+  "flex items-center gap-2.5 rounded-sm border border-rose-200/70 bg-white px-3 transition-[border-color,box-shadow] duration-200 focus-within:border-rose-950 focus-within:shadow-[0_0_0_1px_rgba(136,19,55,0.28)] dark:border-zinc-600 dark:bg-zinc-900/80 dark:focus-within:border-zinc-300 dark:focus-within:shadow-[0_0_0_1px_rgba(212,212,216,0.35)]";
 
 const iconInputInner =
-  "min-w-0 flex-1 border-0 bg-transparent py-3 text-sm text-neutral-950 placeholder:text-neutral-400 focus:outline-none focus:ring-0 dark:text-zinc-100 dark:placeholder:text-zinc-500";
+  "min-w-0 flex-1 border-0 bg-transparent py-3 text-sm text-rose-950 placeholder:text-stone-400 focus:outline-none focus:ring-0 dark:text-zinc-100 dark:placeholder:text-zinc-500";
 
 /** Supabase suele responder en inglés; lo pasamos a español y damos contexto útil. */
 function friendlyAuthError(raw: string): string {
@@ -119,14 +119,14 @@ export function AdminLoginForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {error ? (
-        <p className="border border-neutral-200 border-l-neutral-950 bg-neutral-50 px-3.5 py-3 text-sm leading-relaxed text-neutral-900 dark:border-zinc-700 dark:border-l-red-400 dark:bg-red-950/25 dark:text-red-100">
+        <p className="border border-rose-200/80 border-l-rose-950 bg-rose-50/80 px-3.5 py-3 text-sm leading-relaxed text-rose-950 dark:border-zinc-700 dark:border-l-red-400 dark:bg-red-950/25 dark:text-red-100">
           {error}
         </p>
       ) : null}
       <label className="block">
         <span className={labelClass}>Correo electrónico</span>
         <div className={iconInputWrap}>
-          <IconMail className="size-[18px] shrink-0 text-neutral-400 dark:text-zinc-500" />
+          <IconMail className="size-[18px] shrink-0 text-rose-950/35 dark:text-zinc-500" />
           <input
             name="email"
             type="email"
@@ -141,7 +141,7 @@ export function AdminLoginForm() {
       <label className="block">
         <span className={labelClass}>Contraseña</span>
         <div className={iconInputWrap}>
-          <IconLock className="size-[18px] shrink-0 text-neutral-400 dark:text-zinc-500" />
+          <IconLock className="size-[18px] shrink-0 text-rose-950/35 dark:text-zinc-500" />
           <input
             name="password"
             type={showPassword ? "text" : "password"}
@@ -153,7 +153,7 @@ export function AdminLoginForm() {
           <button
             type="button"
             onClick={() => setShowPassword((v) => !v)}
-            className="-mr-0.5 flex size-8 shrink-0 items-center justify-center rounded-sm text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-950 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+            className="-mr-0.5 flex size-8 shrink-0 items-center justify-center rounded-sm text-rose-950/45 transition hover:bg-rose-950/8 hover:text-rose-950 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
             aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
             aria-pressed={showPassword}
           >

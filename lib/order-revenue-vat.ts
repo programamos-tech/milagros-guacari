@@ -1,4 +1,8 @@
-import { unitPriceGrossCents } from "@/lib/product-vat-price";
+import {
+  unitNetFromPosChargedUnitCents,
+  unitPriceGrossCents,
+  unitPriceNetCents,
+} from "@/lib/product-vat-price";
 
 export type OrderRowRef = {
   id: string;
@@ -20,6 +24,8 @@ export type ProductVatRow = {
   price_cents: number;
   has_vat: boolean | null;
   vat_percent: number | null;
+  /** Costo de compra sin IVA por unidad (inventario). */
+  cost_cents?: number | null;
 };
 
 function isPosOrder(wompiReference: string | null | undefined): boolean {
@@ -27,9 +33,57 @@ function isPosOrder(wompiReference: string | null | undefined): boolean {
 }
 
 /**
- * NET = base imponible (suma de precios catálogo sin IVA × cantidad).
- * GROSS = total cobrado con IVA cuando aplica (POS siempre guarda unitario final en ítems;
- * web guarda unitario de catálogo = sin IVA).
+ * Aporte de una línea a base (sin IVA) y a cobrado (con IVA), en centavos.
+ * Misma regla que {@link revenueNetGrossFromLines} por línea.
+ */
+export function lineNetGrossCents(
+  order: OrderRowRef,
+  it: OrderItemRow,
+  p: ProductVatRow | undefined,
+): { net: number; gross: number } | null {
+  const qty = Math.max(0, Math.floor(Number(it.quantity ?? 0)));
+  if (qty <= 0) return null;
+  const unit = Math.max(0, Math.round(Number(it.unit_price_cents ?? 0)));
+  const pos = isPosOrder(order.wompi_reference);
+
+  if (pos) {
+    if (p && p.has_vat === true) {
+      const catalogNet = unitPriceNetCents(p.price_cents);
+      const catalogGross = unitPriceGrossCents(
+        p.price_cents,
+        true,
+        p.vat_percent,
+      );
+      const dn = Math.abs(unit - catalogNet);
+      const dg = Math.abs(unit - catalogGross);
+      const tol = Math.max(2, Math.round(catalogNet * 0.005));
+      if (dn < dg && dn <= tol) {
+        return {
+          net: unit * qty,
+          gross: unitPriceGrossCents(unit, true, p.vat_percent) * qty,
+        };
+      }
+      return {
+        gross: unit * qty,
+        net: unitNetFromPosChargedUnitCents(unit, true, p.vat_percent) * qty,
+      };
+    }
+    const line = unit * qty;
+    return { net: line, gross: line };
+  }
+  const lineNet = unit * qty;
+  const lineGross = p
+    ? unitPriceGrossCents(unit, p.has_vat, p.vat_percent) * qty
+    : lineNet;
+  return { net: lineNet, gross: lineGross };
+}
+
+/**
+ * NET = base imponible sin IVA (suma por línea).
+ * GROSS = total cobrado con IVA.
+ * - **Web**: `unit_price_cents` en ítems = catálogo sin IVA; el bruto sale de `has_vat`/`vat_percent`.
+ * - **POS**: el unitario en ítems suele ser el **cobrado con IVA** en ticket; si coincide con el
+ *   catálogo **sin** IVA, se asume que el POS guardó base y el bruto se recalcula con IVA.
  */
 export function revenueNetGrossFromLines(
   order: OrderRowRef,
@@ -42,33 +96,48 @@ export function revenueNetGrossFromLines(
     return { net: t, gross: t };
   }
 
-  const pos = isPosOrder(order.wompi_reference);
   let net = 0;
   let gross = 0;
 
   for (const it of lines) {
-    const qty = Math.max(0, Math.floor(Number(it.quantity ?? 0)));
-    if (qty <= 0) continue;
-    const unit = Math.max(0, Math.round(Number(it.unit_price_cents ?? 0)));
     const pid = it.product_id;
     const p = pid ? productsById.get(pid) : undefined;
-
-    if (pos) {
-      const lineGross = unit * qty;
-      gross += lineGross;
-      const base = p ? Math.max(0, Math.round(Number(p.price_cents ?? 0))) : unit;
-      net += base * qty;
-    } else {
-      const lineNet = unit * qty;
-      net += lineNet;
-      const lineGross = p
-        ? unitPriceGrossCents(unit, p.has_vat, p.vat_percent) * qty
-        : lineNet;
-      gross += lineGross;
+    const lg = lineNetGrossCents(order, it, p);
+    if (lg) {
+      net += lg.net;
+      gross += lg.gross;
     }
   }
 
   return { net, gross };
+}
+
+/**
+ * Ganancia bruta (margen): Σ por línea (base vendida sin IVA − `cost_cents` del producto × cantidad).
+ * Solo líneas con ítem; pedidos sin líneas no aportan (no hay costo por producto).
+ */
+export function sumGrossProfitNetOnLinesForPaidOrders(
+  orders: OrderRowRef[],
+  items: OrderItemRow[],
+  productsById: Map<string, ProductVatRow>,
+): number {
+  let sum = 0;
+  for (const o of orders) {
+    if (o.status !== "paid") continue;
+    const lines = items.filter((i) => i.order_id === o.id);
+    for (const it of lines) {
+      const p = it.product_id ? productsById.get(it.product_id) : undefined;
+      const lg = lineNetGrossCents(o, it, p);
+      if (!lg) continue;
+      const qty = Math.max(0, Math.floor(Number(it.quantity ?? 0)));
+      const costUnit =
+        p != null && p.cost_cents != null && Number.isFinite(Number(p.cost_cents))
+          ? Math.max(0, Math.round(Number(p.cost_cents)))
+          : 0;
+      sum += lg.net - costUnit * qty;
+    }
+  }
+  return sum;
 }
 
 export function sumRevenueNetGrossForOrders(

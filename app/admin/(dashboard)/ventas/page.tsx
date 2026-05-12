@@ -12,6 +12,8 @@ import { VentasPagination } from "@/components/admin/VentasPagination";
 import { VentasSalesTable, type VentaOrderRow } from "@/components/admin/VentasSalesTable";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { adminPanelClass } from "@/lib/admin-ui";
+import { fetchOrdersCreatedInReportYmdWindow } from "@/lib/admin-fetch-orders-for-report";
+import { todayYmdInReportStore } from "@/lib/admin-report-range";
 import {
   matchesVentaPagoFilter,
   ventaNumeroReferencia,
@@ -48,21 +50,6 @@ function normalizeDateRange(
   return { from: f, to: t };
 }
 
-/** Día calendario en Colombia para comparar con filtros YYYY-MM-DD del admin. */
-function formatDayInBogota(iso: string | null | undefined): string | null {
-  if (!iso) return null;
-  try {
-    return new Intl.DateTimeFormat("en-CA", {
-      timeZone: "America/Bogota",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(new Date(iso));
-  } catch {
-    return String(iso).slice(0, 10);
-  }
-}
-
 type Props = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
@@ -88,23 +75,55 @@ export default async function AdminVentasPage({ searchParams }: Props) {
     Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : 1;
 
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from("orders")
-    .select(
+
+  let rows: VentaOrderRow[];
+
+  if (dateFrom || dateTo) {
+    const today = todayYmdInReportStore();
+    let lo: string;
+    let hi: string;
+    if (dateFrom && dateTo) {
+      lo = dateFrom <= dateTo ? dateFrom : dateTo;
+      hi = dateFrom <= dateTo ? dateTo : dateFrom;
+    } else if (dateFrom) {
+      lo = dateFrom;
+      hi = today;
+    } else {
+      lo = "1970-01-01";
+      hi = dateTo as string;
+    }
+    const { rows: fetched, error: rangeErr } = await fetchOrdersCreatedInReportYmdWindow(
+      supabase,
+      lo,
+      hi,
       "id,status,customer_name,total_cents,created_at,wompi_reference,customer_email",
-    )
-    .order("created_at", { ascending: false })
-    .limit(500);
-
-  if (error) {
-    return (
-      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800/80 dark:bg-amber-950/35 dark:text-amber-100">
-        No se pudieron cargar las ventas. Revisa permisos y conexión.
-      </div>
     );
-  }
+    if (rangeErr) {
+      return (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800/80 dark:bg-amber-950/35 dark:text-amber-100">
+          No se pudieron cargar las ventas del periodo: {rangeErr}
+        </div>
+      );
+    }
+    rows = fetched as VentaOrderRow[];
+  } else {
+    const { data, error } = await supabase
+      .from("orders")
+      .select(
+        "id,status,customer_name,total_cents,created_at,wompi_reference,customer_email",
+      )
+      .order("created_at", { ascending: false })
+      .limit(500);
 
-  let rows: VentaOrderRow[] = (data ?? []) as VentaOrderRow[];
+    if (error) {
+      return (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800/80 dark:bg-amber-950/35 dark:text-amber-100">
+          No se pudieron cargar las ventas. Revisa permisos y conexión.
+        </div>
+      );
+    }
+    rows = (data ?? []) as VentaOrderRow[];
+  }
 
   if (status !== "all") {
     rows = rows.filter((r) => r.status === status);
@@ -125,19 +144,6 @@ export default async function AdminVentasPage({ searchParams }: Props) {
         id.includes(qCompact) ||
         ref.includes(q)
       );
-    });
-  }
-
-  if (dateFrom) {
-    rows = rows.filter((r) => {
-      const day = formatDayInBogota(r.created_at);
-      return day !== null && day >= dateFrom;
-    });
-  }
-  if (dateTo) {
-    rows = rows.filter((r) => {
-      const day = formatDayInBogota(r.created_at);
-      return day !== null && day <= dateTo;
     });
   }
 

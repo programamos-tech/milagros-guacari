@@ -13,8 +13,11 @@
  * Convención de montos: igual que el resto del proyecto (`total_cents`, `unit_price_cents` = pesos COP enteros).
  * No descuenta inventario (histórico ya consumido en el sistema anterior).
  *
+ * Post-import: `npm run verify:sales` (opcional `-- --from=YYYY-MM-DD --to=YYYY-MM-DD`).
+ *
  * Uso:
  *   npm run import:sales
+ *   npm run verify:sales
  *   node scripts/import-sales-from-csv.mjs --replace
  *   node scripts/import-sales-from-csv.mjs /ruta/sales_rows.csv /ruta/sale_items_rows.csv [/ruta/sale_payments_rows.csv]
  *

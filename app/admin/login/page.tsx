@@ -2,66 +2,81 @@ import Image from "next/image";
 import Link from "next/link";
 import { AdminThemeToggle } from "@/components/admin/AdminThemeToggle";
 import { AdminLoginForm } from "@/components/admin/LoginForm";
-import { bereaSignaturePath, storeBrand, storeLogoPath } from "@/lib/brand";
+import {
+  adminSidebarLogoPath,
+  bereaSignaturePath,
+  storeBrand,
+} from "@/lib/brand";
 
 const serif = "[font-family:ui-serif,Georgia,Cambria,'Times_New_Roman',serif]";
 
 export default function AdminLoginPage() {
   return (
-    <div className="relative min-h-screen bg-white text-neutral-950 antialiased dark:bg-zinc-950 dark:text-zinc-100">
+    <div className="relative min-h-screen bg-stone-50 text-stone-900 antialiased dark:bg-zinc-950 dark:text-zinc-100">
       <div className="pointer-events-none absolute right-3 top-3 z-20 sm:right-5 sm:top-5">
-        <div className="pointer-events-auto rounded-lg border border-neutral-200/80 bg-white/90 shadow-sm backdrop-blur-sm dark:border-zinc-700 dark:bg-zinc-900/90">
+        <div className="pointer-events-auto rounded-lg border border-rose-200/70 bg-white/90 shadow-sm backdrop-blur-sm dark:border-rose-400/25 dark:bg-zinc-900/90">
           <AdminThemeToggle className="rounded-lg" />
         </div>
       </div>
       <div className="flex min-h-screen flex-col lg:flex-row">
-        {/* Panel editorial — marca */}
-        <aside className="relative flex flex-col justify-center border-b border-neutral-200 px-8 py-14 sm:px-12 dark:border-zinc-800 dark:bg-zinc-900/40 lg:w-[44%] lg:max-w-xl lg:border-b-0 lg:border-r lg:py-20 lg:pl-14 lg:pr-10 xl:pl-20">
-          <div
-            className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_20%_10%,rgba(0,0,0,0.03),transparent_55%)] dark:bg-[radial-gradient(ellipse_80%_60%_at_20%_10%,rgba(255,255,255,0.04),transparent_55%)]"
-            aria-hidden
-          />
-          <div className="relative mx-auto w-full max-w-sm lg:mx-0">
-            <Link
-              href="/"
-              className="group inline-block outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 focus-visible:ring-offset-4 dark:focus-visible:ring-zinc-300 dark:focus-visible:ring-offset-zinc-950"
-            >
-              <Image
-                src={storeLogoPath}
-                alt={storeBrand}
-                width={320}
-                height={140}
-                className="h-auto w-full max-w-[260px] object-contain object-left transition-opacity duration-500 group-hover:opacity-85 sm:max-w-[280px]"
-                priority
-              />
-            </Link>
-            <p className="mt-10 text-[10px] font-semibold uppercase tracking-[0.42em] text-neutral-400 dark:text-zinc-500">
-              Backoffice
-            </p>
-            <p
-              className={`mt-5 max-w-[19rem] text-[17px] leading-[1.55] text-neutral-600 dark:text-zinc-400 ${serif}`}
-            >
-              Gestioná inventario, ventas y clientes desde un solo lugar.
-            </p>
-            <div className="mt-12 flex items-center gap-3" aria-hidden>
-              <span className="h-px w-10 bg-neutral-950 dark:bg-zinc-100" />
-              <span className="text-[9px] font-medium uppercase tracking-[0.28em] text-neutral-300 dark:text-zinc-600">
-                MP
+        {/* Marca — mismo fondo que el sidebar del panel */}
+        <aside className="relative flex min-h-0 flex-1 flex-col border-b border-rose-300/40 bg-[var(--admin-sidebar-bg)] dark:border-rose-400/25 lg:min-h-screen lg:w-[44%] lg:max-w-xl lg:flex-none lg:border-b-0 lg:border-r">
+          <div className="relative flex flex-1 flex-col justify-center px-8 py-12 sm:px-12 lg:py-20 lg:pl-14 lg:pr-10 xl:pl-20">
+            <div className="mx-auto w-full max-w-sm lg:mx-0">
+              <Link
+                href="/"
+                className="inline-block outline-none focus-visible:ring-2 focus-visible:ring-rose-400/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar-bg)] dark:focus-visible:ring-offset-rose-950/50"
+              >
+                <Image
+                  src={adminSidebarLogoPath}
+                  alt={storeBrand}
+                  width={320}
+                  height={320}
+                  className="h-auto w-full max-w-[11rem] object-contain object-left sm:max-w-[13rem] lg:max-w-[15.5rem]"
+                  priority
+                />
+              </Link>
+              <p className="mt-10 text-[10px] font-semibold uppercase tracking-[0.38em] text-rose-950/55 dark:text-rose-950/70">
+                Backoffice
+              </p>
+              <p
+                className={`mt-4 max-w-[19rem] text-[17px] leading-[1.55] text-rose-950/85 dark:text-rose-950/80 ${serif}`}
+              >
+                Gestioná inventario, ventas y clientes desde un solo lugar.
+              </p>
+              <div className="mt-10 flex items-center gap-3" aria-hidden>
+                <span className="h-px w-12 bg-rose-950/25 dark:bg-rose-950/35" />
+                <span className="text-[9px] font-semibold uppercase tracking-[0.32em] text-rose-950/40 dark:text-rose-950/50">
+                  Milagros Guacarí
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="relative shrink-0 border-t border-rose-300/40 px-8 py-6 dark:border-rose-400/25 sm:px-12 lg:px-14 xl:px-20">
+            <div className="mx-auto flex max-w-sm flex-col items-center gap-1.5 text-center lg:mx-0 lg:items-start lg:text-left">
+              <span className="text-[8px] font-medium uppercase tracking-[0.2em] text-rose-950/70 dark:text-rose-950/75">
+                Experiencia por
               </span>
+              <Image
+                src={bereaSignaturePath}
+                alt="Berea — diseño y desarrollo de software a la medida"
+                width={320}
+                height={82}
+                className="h-9 w-auto max-w-[min(100%,9rem)] object-contain object-center mix-blend-multiply invert opacity-95 sm:h-10 dark:opacity-90 lg:object-left"
+              />
             </div>
           </div>
         </aside>
 
         {/* Formulario */}
-        <main className="relative flex flex-1 flex-col justify-center bg-neutral-50/40 px-6 py-14 sm:px-10 dark:bg-zinc-950 lg:px-16 xl:px-24">
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.92)_0%,rgba(250,250,250,0.65)_100%)] dark:bg-[linear-gradient(180deg,rgba(24,24,27,0.92)_0%,rgba(9,9,11,0.85)_100%)]" />
+        <main className="relative flex flex-1 flex-col justify-center bg-stone-50 px-6 py-12 sm:px-10 lg:px-16 xl:px-24 dark:bg-zinc-950">
           <div className="relative mx-auto w-full max-w-[420px]">
-            <div className="border border-neutral-200/90 bg-white px-8 py-10 shadow-[0_32px_90px_-40px_rgba(0,0,0,0.35),0_0_0_1px_rgba(255,255,255,0.8)_inset] dark:border-zinc-700 dark:bg-zinc-900 dark:shadow-[0_32px_90px_-40px_rgba(0,0,0,0.55),inset_0_1px_0_0_rgba(255,255,255,0.04)] sm:px-10 sm:py-12">
-              <h1 className="text-[11px] font-semibold uppercase tracking-[0.32em] text-neutral-950 dark:text-zinc-100">
+            <div className="border border-rose-200/60 bg-white px-8 py-10 shadow-[0_24px_64px_-32px_rgba(190,24,93,0.2)] dark:border-zinc-700 dark:bg-zinc-900 dark:shadow-[0_24px_64px_-32px_rgba(0,0,0,0.45)] sm:px-10 sm:py-12">
+              <h1 className="text-[11px] font-semibold uppercase tracking-[0.32em] text-rose-950 dark:text-zinc-100">
                 Iniciar sesión
               </h1>
               <p
-                className={`mt-5 text-[15px] leading-relaxed text-neutral-500 dark:text-zinc-400 ${serif}`}
+                className={`mt-5 text-[15px] leading-relaxed text-stone-600 dark:text-zinc-400 ${serif}`}
               >
                 Entra con tu cuenta para continuar al panel.
               </p>
@@ -73,7 +88,7 @@ export default function AdminLoginPage() {
               <p className="mt-10 text-center">
                 <Link
                   href="/"
-                  className="inline-flex items-center gap-2 text-[12px] font-medium uppercase tracking-[0.14em] text-neutral-500 transition-colors hover:text-neutral-950 dark:text-zinc-400 dark:hover:text-zinc-100"
+                  className="inline-flex items-center gap-2 text-[12px] font-medium uppercase tracking-[0.14em] text-rose-950/55 transition-colors hover:text-rose-950 dark:text-zinc-400 dark:hover:text-zinc-100"
                 >
                   <span aria-hidden className="text-lg leading-none">
                     ←
@@ -83,23 +98,9 @@ export default function AdminLoginPage() {
               </p>
             </div>
 
-            <div className="mt-10 flex flex-col items-center gap-4 border-t border-neutral-200/80 pt-8 dark:border-zinc-700">
-              <p className="text-center text-[10px] font-medium uppercase tracking-[0.22em] text-neutral-400 dark:text-zinc-500">
-                Solo personal autorizado
-              </p>
-              <div className="flex flex-col items-center gap-2">
-                <span className="text-[9px] font-medium uppercase tracking-[0.24em] text-neutral-300 dark:text-zinc-600">
-                  Experiencia por
-                </span>
-                <Image
-                  src={bereaSignaturePath}
-                  alt="Berea — diseño y desarrollo de software a la medida"
-                  width={320}
-                  height={82}
-                  className="h-12 w-auto max-w-[min(100%,15rem)] object-contain opacity-[0.88] sm:h-14"
-                />
-              </div>
-            </div>
+            <p className="mt-8 text-center text-[10px] font-medium uppercase tracking-[0.22em] text-stone-500 dark:text-zinc-500">
+              Solo personal autorizado
+            </p>
           </div>
         </main>
       </div>

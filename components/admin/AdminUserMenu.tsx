@@ -40,7 +40,7 @@ export function AdminUserMenu({ displayName, email, avatar }: Props) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="ml-1 flex min-w-0 items-center gap-2.5 rounded-xl py-1 pl-2 pr-1 text-left transition hover:bg-rose-50/50 sm:border sm:border-rose-200/65 sm:bg-white sm:shadow-[0_1px_2px_0_rgb(190_24_93/0.06)] sm:hover:bg-rose-50/70 dark:hover:bg-zinc-800/80 dark:sm:border-zinc-700 dark:sm:bg-zinc-900 dark:sm:shadow-none dark:sm:hover:bg-zinc-800"
+        className="ml-1 flex min-w-0 select-none items-center gap-2.5 rounded-xl bg-transparent py-1 pl-2 pr-1 text-left outline-none ring-0 ring-offset-0 [-webkit-tap-highlight-color:transparent] [-webkit-user-select:none] [caret-color:transparent] transition-opacity hover:bg-transparent dark:hover:bg-transparent active:opacity-90 focus:outline-none focus-visible:outline-none"
         aria-haspopup="dialog"
         aria-expanded={open}
       >

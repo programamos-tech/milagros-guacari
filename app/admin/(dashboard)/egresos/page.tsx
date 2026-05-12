@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { ExpenseRowActions } from "@/components/admin/ExpenseRowActions";
 import { ExpensesFiltersBar } from "@/components/admin/ExpensesFiltersBar";
 import { formatCop } from "@/lib/money";
+import { todayYmdInReportStore } from "@/lib/admin-report-range";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -81,7 +82,7 @@ export default async function AdminEgresosPage({
 
   const rows = expenses ?? [];
   const total = rows.reduce((sum, e) => sum + Number(e.amount_cents ?? 0), 0);
-  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayKey = todayYmdInReportStore();
   const todayTotal = rows.reduce((sum, e) => {
     const key =
       typeof e.expense_date === "string"

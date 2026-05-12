@@ -18,6 +18,7 @@
     "import:expenses": "node scripts/import-expenses-from-csv.mjs",
     "import:users": "node scripts/import-users-from-csv.mjs",
     "import:sales": "node scripts/import-sales-from-csv.mjs",
+    "verify:sales": "node scripts/verify-sales-import.mjs",
     "merge:customers-duplicates": "node scripts/merge-customers-duplicates.mjs"
   },
   "dependencies": {

@@ -4,7 +4,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Suspense, type SVGProps } from "react";
-import { signOutAdmin } from "@/app/actions/admin/auth";
 import {
   adminSidebarLogoPath,
   bereaSignaturePath,
@@ -245,7 +244,7 @@ function SidebarLogo() {
   return (
     <Link
       href="/admin"
-      className="inline-block rounded-md outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-rose-400/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar-bg)]"
+      className="inline-block rounded-md outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-rose-400/80 focus-visible:ring-offset-0"
     >
       <Image
         src={adminSidebarLogoPath}
@@ -283,7 +282,7 @@ function AdminSidebarInner({
       "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition duration-200",
       active
         ? "bg-rose-950 text-white shadow-[0_8px_22px_-12px_rgba(136,19,55,0.35)] dark:bg-rose-950 dark:text-rose-50 dark:shadow-[0_8px_22px_-12px_rgba(0,0,0,0.2)]"
-        : "text-rose-950/80 hover:bg-white/45 hover:text-rose-950 dark:text-rose-950/75 dark:hover:bg-white/20 dark:hover:text-rose-950",
+        : "text-rose-950/80 hover:bg-rose-950/10 hover:text-rose-950 dark:text-rose-950/75 dark:hover:bg-rose-950/15 dark:hover:text-rose-950",
     ].join(" ");
 
   const drawerTranslate =
@@ -338,8 +337,8 @@ function AdminSidebarInner({
           </div>
         ))}
       </nav>
-      <div className="border-t border-rose-300/40 px-3 pb-2.5 pt-2.5 dark:border-rose-400/30">
-        <div className="mb-2.5 flex flex-col items-center gap-1 px-1 text-center">
+      <div className="shrink-0 border-t border-rose-300/40 px-3 pb-4 pt-3 dark:border-rose-400/30">
+        <div className="flex flex-col items-center gap-1 px-1 text-center">
           <span
             className={`text-[8px] font-medium uppercase tracking-[0.2em] ${sidebarInk}`}
           >
@@ -353,14 +352,6 @@ function AdminSidebarInner({
             className="h-10 w-auto max-w-[min(100%,8.75rem)] object-contain object-center mix-blend-multiply invert sm:h-11 sm:max-w-[10rem]"
           />
         </div>
-        <form action={signOutAdmin}>
-          <button
-            type="submit"
-            className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-rose-950/80 transition hover:bg-white/45 hover:text-red-800 dark:text-rose-950/75 dark:hover:bg-white/20 dark:hover:text-red-300"
-          >
-            Salir
-          </button>
-        </form>
       </div>
     </aside>
   );
@@ -378,8 +369,8 @@ function AdminSidebarFallback() {
         </p>
       </div>
       <div className="flex-1 px-3 py-5" aria-busy aria-label="Cargando menú" />
-      <div className="border-t border-rose-300/40 px-3 pb-2.5 pt-2.5 dark:border-rose-400/30">
-        <div className="mb-2.5 flex flex-col items-center gap-1">
+      <div className="shrink-0 border-t border-rose-300/40 px-3 pb-4 pt-3 dark:border-rose-400/30">
+        <div className="flex flex-col items-center gap-1">
           <div className="h-2.5 w-16 rounded bg-rose-200/70 dark:bg-rose-300/40" aria-hidden />
           <div className="h-10 w-[8.75rem] max-w-full rounded bg-rose-200/60 dark:bg-rose-300/35 sm:h-11" aria-hidden />
         </div>

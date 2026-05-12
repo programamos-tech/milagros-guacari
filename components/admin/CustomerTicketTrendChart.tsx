@@ -1,9 +1,9 @@
 import { formatCop, formatCopCompact } from "@/lib/money";
 import type { TicketTrendPoint } from "@/lib/customer-ticket-trend";
 
-/** Línea y puntos alineados al acento rosa del admin; rejilla neutra. */
+/** Línea guinda del admin; rejilla y ejes en zinc. */
 const chartPaletteClass =
-  "[--chart-line:#be123c] [--chart-grid:#fce7f3] [--chart-axis:#a1a1aa] [--chart-point-fill:#fff1f2] [--chart-point-stroke:#be123c] dark:[--chart-line:#fb7185] dark:[--chart-grid:#3f3f46] dark:[--chart-axis:#71717a] dark:[--chart-point-fill:#27272a] dark:[--chart-point-stroke:#fb7185]";
+  "[--chart-line:#881337] [--chart-grid:#f4f4f5] [--chart-axis:#a1a1aa] [--chart-point-fill:#ffffff] [--chart-point-stroke:#881337] dark:[--chart-line:#fda4af] dark:[--chart-grid:#3f3f46] dark:[--chart-axis:#71717a] dark:[--chart-point-fill:#27272a] dark:[--chart-point-stroke:#fda4af]";
 
 function monthLabelEs(monthKey: string) {
   const [y, m] = monthKey.split("-").map(Number);
@@ -11,6 +11,26 @@ function monthLabelEs(monthKey: string) {
     month: "short",
     year: "numeric",
   });
+}
+
+function xLabelForPoint(p: TicketTrendPoint, seriesKind: "day" | "month") {
+  if (p.labelX) return p.labelX;
+  if (seriesKind === "month" || /^\d{4}-\d{2}$/.test(p.monthKey)) {
+    return monthLabelEs(p.monthKey);
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(p.monthKey)) {
+    return new Date(`${p.monthKey}T12:00:00`).toLocaleDateString("es-CO", {
+      day: "numeric",
+      month: "short",
+    });
+  }
+  return p.monthKey.slice(0, 8);
+}
+
+function pointTooltipTitle(p: TicketTrendPoint, value: number, seriesKind: "day" | "month") {
+  if (p.detail) return p.detail;
+  const head = xLabelForPoint(p, seriesKind);
+  return `${head}: ${formatCop(value)} · ${p.orderCount} venta${p.orderCount === 1 ? "" : "s"}`;
 }
 
 type ChartPoint = TicketTrendPoint & { value: number; key: string };
@@ -33,7 +53,27 @@ function catmullRomToBezierPath(points: { x: number; y: number }[]): string {
   return d;
 }
 
-export function CustomerTicketTrendChart({ points }: { points: TicketTrendPoint[] }) {
+export function CustomerTicketTrendChart({
+  points,
+  seriesKind,
+  peakCaption,
+  secondaryCaption,
+  fillGradientId = "customerTicketChartFill",
+}: {
+  points: TicketTrendPoint[];
+  /** `day`: ticket promedio por día con ventas. `month`: promedio por mes. */
+  seriesKind: "day" | "month";
+  /** Reemplaza el texto del pico (pie). Si no se envía, se usa el copy del detalle de cliente. */
+  peakCaption?: string;
+  /**
+   * Segunda línea bajo el gráfico.
+   * `undefined` = texto por defecto solo en modo día (detalle cliente).
+   * `null` = no mostrar.
+   */
+  secondaryCaption?: string | null;
+  /** Id único del degradado (evita colisiones si hay varios SVG en la misma página). */
+  fillGradientId?: string;
+}) {
   if (points.length === 0) return null;
 
   const trend: ChartPoint[] = points.map((p) => ({
@@ -47,12 +87,12 @@ export function CustomerTicketTrendChart({ points }: { points: TicketTrendPoint[
   const yMax = maxTrend * 1.08;
 
   const xLabelStep =
-    trend.length <= 16 ? 1 : Math.max(1, Math.ceil(trend.length / 14));
+    trend.length <= 12 ? 1 : Math.max(1, Math.ceil(trend.length / 10));
 
-  const chartW = 880;
+  const chartW = 1000;
   const chartH = 300;
-  const padL = 72;
-  const padR = 20;
+  const padL = 54;
+  const padR = 10;
   const padT = 20;
   const padB = 48;
   const plotW = chartW - padL - padR;
@@ -65,7 +105,10 @@ export function CustomerTicketTrendChart({ points }: { points: TicketTrendPoint[
   const yAt = (v: number) => padT + plotH - (v / yMax) * plotH;
 
   const pts = trend.map((t, i) => ({ x: xAt(i), y: yAt(t.value) }));
-  const smoothStrokePath = pts.length > 1 ? catmullRomToBezierPath(pts) : "";
+  const smoothStrokePath =
+    seriesKind === "month" && pts.length > 1 ? catmullRomToBezierPath(pts) : "";
+
+  const polylinePoints = trend.map((t, i) => `${xAt(i)},${yAt(t.value)}`).join(" ");
 
   let areaPath: string;
   if (trend.length === 1) {
@@ -85,25 +128,49 @@ export function CustomerTicketTrendChart({ points }: { points: TicketTrendPoint[
     yTicks.push((yMax * s) / gridSteps);
   }
 
+  const showMarkers =
+    seriesKind === "month" ? true : trend.length <= 34 || trend.length === 1;
+
+  const defaultPeakFooter =
+    seriesKind === "day"
+      ? `Mayor ticket promedio en un día: ${formatCop(maxRaw)}`
+      : `Pico del periodo: ${formatCop(maxRaw)} ticket promedio mensual`;
+  const peakLineFooter = peakCaption ?? (maxRaw > 0 ? defaultPeakFooter : null);
+  const defaultSecondaryFooter =
+    seriesKind === "day"
+      ? "Solo aparecen días con al menos una venta pagada. Pasá el cursor sobre la línea para ver detalle."
+      : null;
+  const secondaryLineFooter =
+    secondaryCaption === undefined ? defaultSecondaryFooter : secondaryCaption;
+
   return (
-    <div className={`mt-5 overflow-x-auto ${chartPaletteClass}`}>
+    <div className={`mt-3 w-full min-w-0 ${chartPaletteClass}`}>
       <svg
         viewBox={`0 0 ${chartW} ${chartH}`}
-        className="h-[240px] w-full min-h-[220px] min-w-[520px] sm:h-[280px]"
+        className="block h-auto w-full min-w-0"
+        preserveAspectRatio="xMidYMid meet"
         role="img"
-        aria-label="Evolución del ticket promedio por mes"
+        aria-label={
+          seriesKind === "day"
+            ? "Ticket promedio diario en días con ventas pagadas"
+            : "Evolución del ticket promedio por mes"
+        }
       >
-        <title>Ticket promedio por mes</title>
+        <title>
+          {seriesKind === "day"
+            ? "Ticket promedio por día (ventas pagadas)"
+            : "Ticket promedio por mes"}
+        </title>
         <defs>
           <linearGradient
-            id="customerTicketChartFill"
+            id={fillGradientId}
             x1="0"
             y1="0"
             x2="0"
             y2="1"
           >
-            <stop offset="0%" stopColor="var(--chart-line)" stopOpacity="0.14" />
-            <stop offset="55%" stopColor="var(--chart-line)" stopOpacity="0.05" />
+            <stop offset="0%" stopColor="var(--chart-line)" stopOpacity="0.12" />
+            <stop offset="55%" stopColor="var(--chart-line)" stopOpacity="0.04" />
             <stop offset="100%" stopColor="var(--chart-line)" stopOpacity="0" />
           </linearGradient>
         </defs>
@@ -154,8 +221,20 @@ export function CustomerTicketTrendChart({ points }: { points: TicketTrendPoint[
           strokeWidth={1.25}
         />
 
-        <path d={areaPath} fill="url(#customerTicketChartFill)" />
-        {trend.length > 1 && smoothStrokePath ? (
+        <path d={areaPath} fill={`url(#${fillGradientId})`} />
+
+        {seriesKind === "day" && trend.length > 1 ? (
+          <polyline
+            fill="none"
+            stroke="var(--chart-line)"
+            strokeWidth={2.25}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            points={polylinePoints}
+          />
+        ) : null}
+
+        {seriesKind === "month" && trend.length > 1 && smoothStrokePath ? (
           <path
             d={smoothStrokePath}
             fill="none"
@@ -166,19 +245,33 @@ export function CustomerTicketTrendChart({ points }: { points: TicketTrendPoint[
           />
         ) : null}
 
-        {trend.map((t, i) => (
-          <g key={t.key}>
-            <title>{`${monthLabelEs(t.monthKey)}: ${formatCop(t.value)} · ${t.orderCount} venta${t.orderCount === 1 ? "" : "s"}`}</title>
-            <circle
-              cx={xAt(i)}
-              cy={yAt(t.value)}
-              r="5"
-              fill="var(--chart-point-fill)"
-              stroke="var(--chart-point-stroke)"
-              strokeWidth={2}
-            />
-          </g>
-        ))}
+        {showMarkers
+          ? trend.map((t, i) => (
+              <g key={t.key}>
+                <title>{pointTooltipTitle(t, t.value, seriesKind)}</title>
+                <circle
+                  cx={xAt(i)}
+                  cy={yAt(t.value)}
+                  r="4"
+                  fill="var(--chart-point-fill)"
+                  stroke="var(--chart-point-stroke)"
+                  strokeWidth={2}
+                />
+              </g>
+            ))
+          : trend.map((t, i) => (
+              <g key={t.key}>
+                <title>{pointTooltipTitle(t, t.value, seriesKind)}</title>
+                <circle
+                  cx={xAt(i)}
+                  cy={yAt(t.value)}
+                  r="10"
+                  fill="transparent"
+                  stroke="none"
+                  pointerEvents="all"
+                />
+              </g>
+            ))}
 
         {trend.map((t, i) =>
           i % xLabelStep === 0 || i === trend.length - 1 ? (
@@ -188,18 +281,23 @@ export function CustomerTicketTrendChart({ points }: { points: TicketTrendPoint[
               y={chartH - 10}
               textAnchor="middle"
               className="fill-zinc-600 dark:fill-zinc-300"
-              style={{ fontSize: trend.length > 24 ? "10px" : "12px" }}
+              style={{ fontSize: trend.length > 40 ? "9px" : "11px" }}
             >
-              {monthLabelEs(t.monthKey)}
+              {xLabelForPoint(t, seriesKind)}
             </text>
           ) : null,
         )}
       </svg>
-      {maxRaw > 0 ? (
-        <p className="mt-2 text-center text-xs text-zinc-400 dark:text-zinc-500">
-          Pico del periodo: {formatCop(maxRaw)} ticket promedio
-        </p>
-      ) : null}
+      <div className="px-6 pb-6 pt-0 sm:px-8 sm:pb-8">
+        {peakLineFooter ? (
+          <p className="mt-2 text-center text-xs text-zinc-400 dark:text-zinc-500">{peakLineFooter}</p>
+        ) : null}
+        {secondaryLineFooter ? (
+          <p className="mt-1 text-center text-[11px] text-zinc-500 dark:text-zinc-400">
+            {secondaryLineFooter}
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }

@@ -11,14 +11,9 @@ import {
   shouldSkipWompiPayment,
 } from "@/lib/wompi";
 import { findActiveStoreCouponForCheckout } from "@/lib/store-coupons";
+import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-
-function siteUrl() {
-  return (
-    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "http://localhost:3000"
-  );
-}
 
 function isEmail(v: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
@@ -256,7 +251,7 @@ export async function startCheckout(formData: FormData) {
   revalidatePath("/admin/orders");
   revalidatePath("/cuenta/pedidos");
 
-  const returnUrl = `${siteUrl()}/checkout/return?order_id=${orderId}`;
+  const returnUrl = `${getPublicSiteUrl()}/checkout/return?order_id=${orderId}`;
 
   if (shouldSkipWompiPayment()) {
     await supabase

@@ -1,29 +1,9 @@
 "use client";
 
 import { AdminDateInput } from "@/components/admin/product-form-primitives";
+import { prettyReportPeriodLabel } from "@/lib/admin-report-range";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-
-function triggerLabel(from: string, to: string, todayKey: string): string {
-  if (from === to && from === todayKey) return "Hoy";
-  if (from === to) {
-    return new Date(`${from}T12:00:00Z`).toLocaleDateString("es-CO", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  }
-  const a = new Date(`${from}T12:00:00Z`).toLocaleDateString("es-CO", {
-    day: "numeric",
-    month: "short",
-  });
-  const b = new Date(`${to}T12:00:00Z`).toLocaleDateString("es-CO", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-  return `${a} – ${b}`;
-}
 
 const panelClass =
   "absolute right-0 top-[calc(100%+0.35rem)] z-40 w-[min(100vw-1.5rem,22rem)] rounded-xl border border-rose-200/60 bg-white p-4 shadow-[0_16px_48px_-24px_rgba(190,24,93,0.18)] dark:border-zinc-700 dark:bg-zinc-900 dark:shadow-[0_16px_48px_-24px_rgba(0,0,0,0.55)]";
@@ -64,7 +44,7 @@ export function ReportsPeriodFilter({
   }, [open]);
 
   const summary = useMemo(
-    () => triggerLabel(rangeFrom, rangeTo, todayKey),
+    () => prettyReportPeriodLabel(rangeFrom, rangeTo, todayKey),
     [rangeFrom, rangeTo, todayKey],
   );
 

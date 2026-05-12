@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { CustomerDeleteConfirmForm } from "@/components/admin/CustomerDeleteConfirmForm";
+import { adminButtonCancelClass } from "@/lib/admin-ui";
 
 function IconBack() {
   return (
@@ -37,7 +38,7 @@ export function CustomerDetailHeaderActions({ customerId, customerName }: Props)
       </Link>
       <Link
         href={`/admin/customers/${customerId}/edit`}
-        className="inline-flex items-center justify-center rounded-lg border border-rose-950 bg-rose-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-900 hover:border-rose-900 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
+        className={`${adminButtonCancelClass} inline-flex items-center justify-center px-4 py-2.5`}
       >
         Editar
       </Link>
