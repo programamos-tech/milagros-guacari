@@ -14,6 +14,7 @@
     "admin:link-profile": "node scripts/link-admin-profile.mjs",
     "import:clients": "node scripts/import-clients-from-csv.mjs",
     "import:products": "node scripts/import-products-from-csv.mjs",
+    "sync:product-prices": "node scripts/sync-product-prices-from-csv.mjs",
     "import:categories": "node scripts/import-categories-and-link-products.mjs",
     "import:expenses": "node scripts/import-expenses-from-csv.mjs",
     "import:users": "node scripts/import-users-from-csv.mjs",
