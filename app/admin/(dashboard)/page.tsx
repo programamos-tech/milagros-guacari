@@ -1,6 +1,10 @@
 import { ReportsPeriodFilter } from "@/components/admin/ReportsPeriodFilter";
 import { CustomerTicketTrendChart } from "@/components/admin/CustomerTicketTrendChart";
 import {
+  AnimatedCopCents,
+  AnimatedInteger,
+} from "@/components/admin/ReportsAnimatedFigures";
+import {
   dayInRange,
   dayKeysInclusiveReport,
   parseReportRangeFromSearchParams,
@@ -302,14 +306,20 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
         </div>
       </div>
 
-      <div className="border-t border-rose-200/55 pt-10 pb-12 dark:border-zinc-800">
+      <div
+        key={`reports-body-${rangeFrom}-${rangeTo}`}
+        className="border-t border-rose-200/55 pt-10 pb-12 dark:border-zinc-800"
+      >
         <p className={cardLabelClass}>Resumen del periodo</p>
         <p className="mt-1 text-sm text-stone-500 dark:text-zinc-400">{periodLabel}</p>
         <dl className="mt-6 grid grid-cols-1 gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="min-w-0">
+          <div
+            className="reports-metric-card min-w-0"
+            style={{ ["--reports-stagger" as string]: "0ms" }}
+          >
             <dt className={cardLabelClass}>Total ingresos</dt>
             <dd className="mt-1 text-2xl font-normal tabular-nums text-stone-900 dark:text-zinc-100">
-              {formatCop(ingresosConIvaPeriod)}
+              <AnimatedCopCents cents={ingresosConIvaPeriod} delay={40} />
             </dd>
             <p className="mt-1 text-xs text-stone-500 dark:text-zinc-400">
               {ventasPagadasPeriod} venta{ventasPagadasPeriod === 1 ? "" : "s"} · total con IVA
@@ -317,11 +327,11 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
             <div className="mt-3 space-y-1 border-t border-stone-100 pt-3 text-[11px] leading-snug text-stone-500 dark:border-zinc-800 dark:text-zinc-400">
               <p className="tabular-nums">
                 <span className="text-stone-400 dark:text-zinc-500">Total sin IVA (base): </span>
-                {formatCop(ingresosSinIvaPeriod)}
+                <AnimatedCopCents cents={ingresosSinIvaPeriod} delay={180} duration={750} />
               </p>
               <p className="tabular-nums">
                 <span className="text-stone-400 dark:text-zinc-500">IVA recaudado: </span>
-                {formatCop(ivaRecaudadoPeriod)}
+                <AnimatedCopCents cents={ivaRecaudadoPeriod} delay={260} duration={750} />
               </p>
             </div>
           </div>
@@ -329,38 +339,57 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
             [
               {
                 label: "Efectivo",
-                value: formatCop(efectivo),
+                cents: efectivo,
                 hint:
                   totalCobradoPedidos > 0
                     ? `${Math.round((efectivo / totalCobradoPedidos) * 100)}% del cobrado`
                     : "0% del cobrado",
+                staggerMs: 70,
               },
               {
                 label: "Transferencia",
-                value: formatCop(transferencia),
+                cents: transferencia,
                 hint:
                   totalCobradoPedidos > 0
                     ? `${Math.round((transferencia / totalCobradoPedidos) * 100)}% del cobrado`
                     : "0% del cobrado",
+                staggerMs: 135,
               },
-              { label: "Facturas anuladas", value: String(anuladas), hint: "Facturas anuladas" },
+              {
+                label: "Facturas anuladas",
+                count: anuladas,
+                hint: "Facturas anuladas",
+                staggerMs: 200,
+              },
               {
                 label: "Egresos",
-                value: formatCop(egresosPeriod),
+                cents: egresosPeriod,
                 hint: `${cantidadEgresosPeriod} registrados en el periodo`,
+                staggerMs: 265,
               },
             ] as const
-          ).map(({ label, value, hint }) => (
-            <div key={label} className="min-w-0">
-              <dt className={cardLabelClass}>{label}</dt>
+          ).map((item) => (
+            <div
+              key={item.label}
+              className="reports-metric-card min-w-0"
+              style={{ ["--reports-stagger" as string]: `${item.staggerMs}ms` }}
+            >
+              <dt className={cardLabelClass}>{item.label}</dt>
               <dd className="mt-1 text-2xl font-normal tabular-nums text-stone-900 dark:text-zinc-100">
-                {value}
+                {"cents" in item ? (
+                  <AnimatedCopCents cents={item.cents} delay={item.staggerMs + 50} />
+                ) : (
+                  <AnimatedInteger value={item.count} delay={item.staggerMs + 50} />
+                )}
               </dd>
-              <p className="mt-1 text-xs text-stone-500 dark:text-zinc-400">{hint}</p>
+              <p className="mt-1 text-xs text-stone-500 dark:text-zinc-400">{item.hint}</p>
             </div>
           ))}
 
-          <div className="min-w-0">
+          <div
+            className="reports-metric-card min-w-0"
+            style={{ ["--reports-stagger" as string]: "330ms" }}
+          >
             <dt className={cardLabelClass}>Ganancia</dt>
             <dd className="mt-1 flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
               <span className="inline-flex min-w-0 items-baseline gap-1.5">
@@ -368,7 +397,7 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
                   Bruta
                 </span>
                 <span className="text-2xl font-normal tabular-nums text-stone-900 dark:text-zinc-100">
-                  {formatCop(gananciaBruta)}
+                  <AnimatedCopCents cents={gananciaBruta} delay={380} />
                 </span>
               </span>
               <span className="inline-flex min-w-0 items-baseline gap-1.5">
@@ -376,13 +405,16 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
                   Neta
                 </span>
                 <span className="text-sm font-normal tabular-nums text-stone-500 dark:text-zinc-400">
-                  {formatCop(gananciaNeta)}
+                  <AnimatedCopCents cents={gananciaNeta} delay={460} duration={850} />
                 </span>
               </span>
             </dd>
           </div>
 
-          <div className="min-w-0">
+          <div
+            className="reports-metric-card min-w-0"
+            style={{ ["--reports-stagger" as string]: "395ms" }}
+          >
             <dt className={cardLabelClass}>Stock (inversión)</dt>
             <dd className="mt-1 flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
               <span className="inline-flex min-w-0 items-baseline gap-1.5">
@@ -390,7 +422,7 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
                   Sin IVA
                 </span>
                 <span className="text-2xl font-normal tabular-nums text-stone-900 dark:text-zinc-100">
-                  {formatCop(stockInversionNet)}
+                  <AnimatedCopCents cents={stockInversionNet} delay={440} />
                 </span>
               </span>
               {stockInversionGross > 0 ? (
@@ -399,7 +431,7 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
                     Con IVA
                   </span>
                   <span className="text-sm font-normal tabular-nums text-stone-500 dark:text-zinc-400">
-                    {formatCop(stockInversionGross)}
+                    <AnimatedCopCents cents={stockInversionGross} delay={520} duration={850} />
                   </span>
                 </span>
               ) : null}
@@ -422,10 +454,13 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
             ) : null}
           </div>
 
-          <div className="min-w-0">
+          <div
+            className="reports-metric-card min-w-0"
+            style={{ ["--reports-stagger" as string]: "460ms" }}
+          >
             <dt className={cardLabelClass}>Ventas virtuales</dt>
             <dd className="mt-1 text-2xl font-normal tabular-nums text-stone-900 dark:text-zinc-100">
-              {formatCop(ventasVirtuales)}
+              <AnimatedCopCents cents={ventasVirtuales} delay={510} />
             </dd>
             <p className="mt-1 text-xs text-stone-500 dark:text-zinc-400">
               Checkout web (sin mostrador)
@@ -434,7 +469,11 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
         </dl>
       </div>
 
-      <section className={`${adminPanelLgClass} mt-10 overflow-hidden`}>
+      <section
+        key={`reports-chart-${rangeFrom}-${rangeTo}`}
+        className={`reports-chart-reveal ${adminPanelLgClass} mt-10 overflow-hidden`}
+        style={{ ["--reports-chart-delay" as string]: "520ms" }}
+      >
         <div className="px-6 pt-6 pb-3 sm:px-8 sm:pt-8 sm:pb-4">
           <h2 className={sectionTitleClass}>Tendencia de Ingresos</h2>
           <p className="mt-1 max-w-xl text-sm text-zinc-500 dark:text-zinc-400">
