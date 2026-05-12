@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import type { User } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 
 const cuentaPublicPaths = new Set(["/cuenta/entrar", "/cuenta/registro"]);
@@ -10,47 +11,60 @@ function isCuentaPath(path: string) {
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
 
-  // Refresca la sesión en cookies antes de Server Components (tienda, productos, etc.).
-  // Si solo corre en /cuenta y /admin, las rutas como /products pueden ir con JWT
-  // desincronizado y Supabase devuelve errores en consultas pese a que el cliente muestre sesión.
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value),
-          );
-          response = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options),
-          );
-        },
-      },
-    },
-  );
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user: User | null = null;
+  let supabase: ReturnType<typeof createServerClient> | null = null;
+
+  if (supabaseUrl && supabaseAnonKey) {
+    try {
+      supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value }) =>
+              request.cookies.set(name, value),
+            );
+            response = NextResponse.next({ request });
+            cookiesToSet.forEach(({ name, value, options }) =>
+              response.cookies.set(name, value, options),
+            );
+          },
+        },
+      });
+
+      const { data, error } = await supabase.auth.getUser();
+      if (error) {
+        console.error("[middleware] auth.getUser:", error.message);
+      }
+      user = data.user ?? null;
+    } catch (e) {
+      console.error("[middleware] Supabase client / getUser failed:", e);
+      supabase = null;
+      user = null;
+    }
+  } else {
+    console.error(
+      "[middleware] Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY. " +
+        "Define them in Vercel → Settings → Environment Variables (all environments) and redeploy.",
+    );
+  }
 
   const path = request.nextUrl.pathname;
 
   if (isCuentaPath(path)) {
-    const { data: profile } = user
-      ? await supabase
-          .from("profiles")
-          .select("id")
-          .eq("id", user.id)
-          .maybeSingle()
-      : { data: null };
+    const { data: profile } =
+      user && supabase
+        ? await supabase
+            .from("profiles")
+            .select("id")
+            .eq("id", user.id)
+            .maybeSingle()
+        : { data: null };
 
-    // Staff usa el enlace "Backoffice" del footer; aquí no redirigimos a /admin.
-    // Las páginas de registro/login de la tienda no aplican si ya hay sesión de admin.
     if (user && profile && cuentaPublicPaths.has(path)) {
       return NextResponse.redirect(new URL("/admin", request.url));
     }
@@ -67,7 +81,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (path.startsWith("/admin/login")) {
-    if (user) {
+    if (user && supabase) {
       const { data: profile } = await supabase
         .from("profiles")
         .select("id")
@@ -83,9 +97,7 @@ export async function middleware(request: NextRequest) {
         next.searchParams.set("error", "no_profile");
         next.searchParams.set("uid", user.id);
         if (user.email) next.searchParams.set("email", user.email);
-        return NextResponse.redirect(
-          next,
-        );
+        return NextResponse.redirect(next);
       }
     }
     return response;
@@ -93,6 +105,9 @@ export async function middleware(request: NextRequest) {
 
   if (path.startsWith("/admin")) {
     if (!user) {
+      return NextResponse.redirect(new URL("/admin/login", request.url));
+    }
+    if (!supabase) {
       return NextResponse.redirect(new URL("/admin/login", request.url));
     }
     const { data: profile } = await supabase
@@ -105,9 +120,7 @@ export async function middleware(request: NextRequest) {
       next.searchParams.set("error", "no_profile");
       next.searchParams.set("uid", user.id);
       if (user.email) next.searchParams.set("email", user.email);
-      return NextResponse.redirect(
-        next,
-      );
+      return NextResponse.redirect(next);
     }
   }
 
