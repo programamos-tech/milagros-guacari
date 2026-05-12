@@ -9,6 +9,7 @@ import {
   normalizeSizeOptionsFromRow,
 } from "@/lib/product-size-options";
 import {
+  saleVatPercentLabel,
   unitPriceGrossCents,
   unitPriceNetCents,
 } from "@/lib/product-vat-price";
@@ -103,7 +104,7 @@ export default async function AdminProductDetailPage({ params }: Props) {
       ? raw.fragrance_options.join(", ")
       : "—";
   const vatLabel = raw.has_vat
-    ? `${String(raw.vat_percent ?? 0).replace(/\.0+$/, "")}%`
+    ? `${String(saleVatPercentLabel(true) ?? 0).replace(/\.0+$/, "")}%`
     : "No aplica";
 
   const { data: pendingOrders } = await supabase.from("orders").select("id").eq("status", "pending");

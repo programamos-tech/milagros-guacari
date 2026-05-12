@@ -3,6 +3,7 @@
 import { logAdminActivity } from "@/lib/admin-activity-log";
 import { assertActionPermission } from "@/lib/require-admin-permission";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { unitPriceGrossCents } from "@/lib/product-vat-price";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -16,13 +17,6 @@ export type PosInvoicePayload = {
 
 function redirectError(code: string): never {
   redirect(`/admin/ventas/nueva?error=${encodeURIComponent(code)}`);
-}
-
-function unitFinalCents(priceCents: number, hasVat: boolean, vatPercent: number): number {
-  const base = Math.max(0, Math.floor(priceCents));
-  if (!hasVat) return base;
-  const pct = Math.max(0, vatPercent);
-  return Math.round(base * (1 + pct / 100));
 }
 
 export async function createPosInvoiceAction(formData: FormData) {
@@ -102,8 +96,7 @@ export async function createPosInvoiceAction(formData: FormData) {
     if (!p) redirectError("products");
     const price = Math.max(0, Math.floor(Number(p.price_cents ?? 0)));
     const hasVat = Boolean(p.has_vat);
-    const vatPercent = Math.max(0, Number(p.vat_percent ?? 0));
-    const unitFinal = unitFinalCents(price, hasVat, vatPercent);
+    const unitFinal = unitPriceGrossCents(price, hasVat, null);
     const stock = Number(p.stock_local ?? 0);
     if (stock < qty) redirectError("stock");
     subtotalCents += price * qty;
@@ -157,11 +150,7 @@ export async function createPosInvoiceAction(formData: FormData) {
   const itemRows = lines.map((l) => {
     const p = productById.get(l.productId)!;
     const base = Math.max(0, Math.floor(Number(p.price_cents ?? 0)));
-    const unitFinal = unitFinalCents(
-      base,
-      Boolean(p.has_vat),
-      Math.max(0, Number(p.vat_percent ?? 0)),
-    );
+    const unitFinal = unitPriceGrossCents(base, Boolean(p.has_vat), null);
     return {
       order_id: orderId,
       product_id: l.productId,

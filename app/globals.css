@@ -197,3 +197,22 @@ body {
     display: none;
   }
 }
+
+/* Tirilla térmica (~80 mm) al imprimir facturas desde el admin. */
+@media print {
+  @page ticket {
+    size: 80mm auto;
+    margin: 3mm;
+  }
+
+  .invoice-ticket-print {
+    page: ticket;
+    max-width: 72mm !important;
+    margin-inline: auto !important;
+  }
+
+  .invoice-ticket-print * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

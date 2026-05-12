@@ -17,7 +17,7 @@ import {
   productSectionTitle as sectionTitle,
 } from "@/components/admin/product-form-primitives";
 import { formatCop, parseCopInputDigitsToInt } from "@/lib/money";
-import { unitPriceGrossCents } from "@/lib/product-vat-price";
+import { saleVatPercentLabel, unitPriceGrossCents } from "@/lib/product-vat-price";
 
 const cardSectionClass =
   "rounded-xl border border-zinc-200/90 bg-white p-4 shadow-sm ring-1 ring-zinc-950/5 sm:p-6 dark:border-zinc-700/90 dark:bg-zinc-900 dark:shadow-none dark:ring-white/[0.06]";
@@ -537,7 +537,7 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
                         <p className="text-xs text-zinc-500 dark:text-zinc-400">
                           {formatCop(Number(line.product.price_cents ?? 0))} c/u
                           {line.product.has_vat
-                            ? ` · IVA ${String(line.product.vat_percent ?? 0).replace(/\.0+$/, "")}%`
+                            ? ` · IVA ${String(saleVatPercentLabel(line.product.has_vat) ?? 0).replace(/\.0+$/, "")}%`
                             : ""}
                         </p>
                       </div>

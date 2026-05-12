@@ -3,6 +3,20 @@ export const storeBrand =
   process.env.NEXT_PUBLIC_STORE_NAME ?? "Milagros Guacarí";
 
 /**
+ * Razón social en facturas / tirilla (si no va en env, coincide con `storeBrand`).
+ */
+export const storeLegalName =
+  process.env.NEXT_PUBLIC_STORE_LEGAL_NAME?.trim() || storeBrand;
+
+/** NIT u otro ID fiscal (solo se muestra en tirilla si está definido). */
+export const storeTaxNit = process.env.NEXT_PUBLIC_STORE_NIT?.trim() ?? "";
+
+/** Régimen tributario (texto libre; típico en CO: Responsables de IVA). */
+export const storeTaxRegime =
+  process.env.NEXT_PUBLIC_STORE_TAX_REGIME?.trim() ||
+  "Responsables de IVA";
+
+/**
  * Logo en `/public`. El nombre incluye un espacio → la URL se codifica para el navegador.
  */
 export const storeLogoPath = encodeURI("/logobackoficce (1).png");

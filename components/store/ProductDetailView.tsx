@@ -11,6 +11,7 @@ import { useStoreCartDrawer } from "@/components/store/StoreCartDrawerProvider";
 import { useStoreFavorites } from "@/components/store/StoreFavoritesProvider";
 import { formatCop } from "@/lib/money";
 import {
+  saleVatPercentLabel,
   unitPriceGrossCents,
   unitPriceNetCents,
 } from "@/lib/product-vat-price";
@@ -88,7 +89,7 @@ export function ProductDetailView({
   colors,
   fragranceOptions,
   hasVat,
-  vatPercent,
+  vatPercent: _legacyVatPercent,
   couponDiscountPercent = 0,
 }: Props) {
   const router = useRouter();
@@ -119,8 +120,8 @@ export function ProductDetailView({
     sizeLabels.length > 0 ? sizeLabels.join(" · ") : null;
 
   const netCents = unitPriceNetCents(priceCents);
-  const grossCents = unitPriceGrossCents(priceCents, hasVat, vatPercent);
-  const vatPctLabel = String(vatPercent ?? 0).replace(/\.0+$/, "");
+  const grossCents = unitPriceGrossCents(priceCents, hasVat, null);
+  const vatPctLabel = String(saleVatPercentLabel(hasVat) ?? "").replace(/\.0+$/, "");
 
   const colorOptions = colors.filter((c) => c.trim().length > 0);
   const fragranceLabels = fragranceOptions.filter((c) => c.trim().length > 0);

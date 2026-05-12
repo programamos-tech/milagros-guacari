@@ -17,6 +17,7 @@ import {
   blockSubmitIfImageTooLarge,
   MAX_PRODUCT_IMAGE_BYTES,
 } from "@/lib/product-image-upload";
+import { SALE_VAT_PERCENT } from "@/lib/product-vat-price";
 import { shouldUnoptimizeStorageImageUrl } from "@/lib/storage-public-url";
 import { ProductFragranceRows } from "@/components/admin/ProductFragranceRows";
 import {
@@ -77,9 +78,6 @@ export function EditProductForm({
   const [hasExpiration, setHasExpiration] = useState(initial.hasExpiration);
   const [expirationDate, setExpirationDate] = useState(initial.expirationDate);
   const [hasVat, setHasVat] = useState(initial.hasVat);
-  const [vatPercent, setVatPercent] = useState(
-    initial.vatPercent == null ? "" : String(initial.vatPercent),
-  );
   const [selectedColors, setSelectedColors] = useState(initial.colors);
   const [fileLabel, setFileLabel] = useState("Ningún archivo seleccionado");
 
@@ -313,30 +311,27 @@ export function EditProductForm({
                     name="has_vat"
                     checked={hasVat}
                     onChange={(e) => {
-                      const next = e.target.checked;
-                      setHasVat(next);
-                      if (!next) setVatPercent("");
+                      setHasVat(e.target.checked);
                     }}
                     className="rounded border-zinc-300 accent-zinc-900 focus:ring-zinc-200/80 dark:border-zinc-600 dark:accent-zinc-100 dark:focus:ring-zinc-600/40"
                   />
                   Maneja IVA
                 </label>
                 <div className={!hasVat ? "pointer-events-none opacity-60" : ""}>
-                  <label htmlFor="ep-vat" className={labelClass}>
-                    IVA del producto (%)
-                  </label>
-                  <input
-                    id="ep-vat"
-                    name="vat_percent"
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    inputMode="decimal"
-                    value={vatPercent}
-                    onChange={(e) => setVatPercent(e.target.value)}
-                    className={inputClass}
-                  />
+                  <p className={`${labelClass} normal-case tracking-normal`}>
+                    IVA sobre precio de venta
+                  </p>
+                  <p className="mt-1 text-sm leading-snug text-zinc-600 dark:text-zinc-400">
+                    <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                      {SALE_VAT_PERCENT} %
+                    </span>{" "}
+                    (tipo general Colombia). El precio de venta que cargás es la base{" "}
+                    <span className="font-medium">sin IVA</span>; el total al público se calcula
+                    con ese porcentaje.
+                  </p>
+                  {hasVat ? (
+                    <input type="hidden" name="vat_percent" value={String(SALE_VAT_PERCENT)} />
+                  ) : null}
                 </div>
               </div>
 

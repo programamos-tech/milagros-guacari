@@ -5,9 +5,9 @@
  * Reglas (IVA venta + compra sin IVA):
  * - price_cents = redondeo de price_before_tax (base venta sin IVA; igual que la app).
  * - cost_cents = redondeo de cost_before_tax (compra sin IVA).
- * - has_vat + vat_percent: se infieren para que el bruto coincida con `price`
- *   (misma fórmula que lib/product-vat-price.ts: round(net * (1 + pct/100))).
- *   El IVA recaudado por unidad en POS/checkout es gross − net (unitVatAmountCents).
+ * - has_vat: true si el CSV trae `price` (bruto público) mayor que la base sin IVA.
+ * - vat_percent: siempre 19 % cuando hay IVA (tipo general CO); el bruto se calcula con
+ *   round(net * 1.19) y puede diferir en pocos pesos del `price` del CSV (se avisa).
  *
  * Uso:
  *   npm run import:products
@@ -111,19 +111,21 @@ function parseTimestamptz(s) {
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
-/** Igual que unitPriceGrossCents en lib/product-vat-price.ts */
-function unitPriceGrossCents(price_cents, has_vat, vat_percent) {
+/** IVA venta tipo general CO (mismo valor que `SALE_VAT_PERCENT` en lib/product-vat-price.ts). */
+const STANDARD_SALE_VAT = 19;
+
+/** Igual que unitPriceGrossCents en lib/product-vat-price.ts (IVA fijo 19 %). */
+function unitPriceGrossCents(price_cents, has_vat) {
   const base = Math.max(0, Math.round(Number(price_cents ?? 0)));
   if (!has_vat) return base;
-  const pct = Math.max(0, Number(vat_percent ?? 0));
-  return Math.round(base * (1 + pct / 100));
+  return Math.round(base * (1 + STANDARD_SALE_VAT / 100));
 }
 
 /**
- * Busca vat_percent en [0, 100] con paso 0.01 tal que round(net * (1+p/100)) === gross.
- * Si no hay match exacto, elige el p con menor error absoluto en el bruto.
+ * Determina si el producto lleva IVA comparando bruto CSV vs base sin IVA.
+ * El porcentaje guardado es siempre 19 % (no se infiere del cociente bruto/neto).
  */
-function inferSaleVat(netInt, grossInt) {
+function saleVatFromPrices(netInt, grossInt) {
   if (!Number.isFinite(netInt) || netInt <= 0) {
     return { has_vat: false, vat_percent: null };
   }
@@ -133,29 +135,7 @@ function inferSaleVat(netInt, grossInt) {
   if (grossInt <= netInt) {
     return { has_vat: false, vat_percent: null };
   }
-
-  let bestPct = 19;
-  let bestDiff = Infinity;
-  for (let hund = 0; hund <= 10000; hund += 1) {
-    const pct = hund / 100;
-    const g = Math.round(netInt * (1 + pct / 100));
-    const diff = Math.abs(g - grossInt);
-    if (diff < bestDiff) {
-      bestDiff = diff;
-      bestPct = pct;
-    }
-    if (diff === 0) {
-      return { has_vat: true, vat_percent: pct };
-    }
-  }
-
-  if (bestDiff <= 2) {
-    return { has_vat: true, vat_percent: bestPct };
-  }
-
-  const fallback = Math.round(10000 * (grossInt / netInt - 1)) / 100;
-  const clamped = Math.min(100, Math.max(0, fallback));
-  return { has_vat: true, vat_percent: clamped };
+  return { has_vat: true, vat_percent: STANDARD_SALE_VAT };
 }
 
 loadEnvLocal();
@@ -303,17 +283,15 @@ for (let r = 1; r < matrix.length; r += 1) {
 
   const { has_vat, vat_percent: vatPctRaw } =
     priceGross !== null
-      ? inferSaleVat(priceNet, priceGross)
-      : inferSaleVat(priceNet, priceNet);
+      ? saleVatFromPrices(priceNet, priceGross)
+      : saleVatFromPrices(priceNet, priceNet);
 
   const vat_percent =
-    has_vat && vatPctRaw !== null
-      ? Math.round(Number(vatPctRaw) * 100) / 100
-      : null;
+    has_vat && vatPctRaw !== null ? Math.round(Number(vatPctRaw) * 100) / 100 : null;
 
   const grossCheck =
     priceGross !== null
-      ? unitPriceGrossCents(priceNet, has_vat, vat_percent)
+      ? unitPriceGrossCents(priceNet, has_vat)
       : priceNet;
   if (
     priceGross !== null &&

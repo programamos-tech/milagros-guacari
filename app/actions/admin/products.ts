@@ -5,6 +5,7 @@ import {
   legacySizeFromOptions,
   parseSizeOptionsFromFormData,
 } from "@/lib/product-size-options";
+import { SALE_VAT_PERCENT } from "@/lib/product-vat-price";
 import { assertActionPermission } from "@/lib/require-admin-permission";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
@@ -136,15 +137,6 @@ function parseMoneyCents(v: FormDataEntryValue | null) {
 function parseExpirationDate(v: FormDataEntryValue | null): string | null {
   const raw = String(v ?? "").trim();
   return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : null;
-}
-
-function parseVatPercent(v: FormDataEntryValue | null): number | null {
-  const raw = String(v ?? "").trim().replace(",", ".");
-  if (!raw) return null;
-  const n = Number(raw);
-  if (!Number.isFinite(n)) return null;
-  const clamped = Math.min(100, Math.max(0, n));
-  return Number(clamped.toFixed(2));
 }
 
 function parseColors(v: FormDataEntryValue | null): string[] {
@@ -307,7 +299,7 @@ export async function createProduct(formData: FormData) {
     ? parseExpirationDate(formData.get("expiration_date"))
     : null;
   const has_vat = formData.get("has_vat") === "on";
-  const vat_percent = has_vat ? parseVatPercent(formData.get("vat_percent")) : null;
+  const vat_percent = has_vat ? SALE_VAT_PERCENT : null;
   const colors = parseColorsFromFormData(formData);
   const fragrance_options = parseFragranceOptionsFromFormData(formData);
 
@@ -469,7 +461,7 @@ export async function updateProduct(productId: string, formData: FormData) {
     ? parseExpirationDate(formData.get("expiration_date"))
     : null;
   const has_vat = formData.get("has_vat") === "on";
-  const vat_percent = has_vat ? parseVatPercent(formData.get("vat_percent")) : null;
+  const vat_percent = has_vat ? SALE_VAT_PERCENT : null;
   const colors = parseColorsFromFormData(formData);
   const fragrance_options = parseFragranceOptionsFromFormData(formData);
 
