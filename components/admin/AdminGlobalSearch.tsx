@@ -36,7 +36,7 @@ type OrderHit = {
 };
 
 const sectionTitle =
-  "px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-zinc-500";
+  "bg-stone-100 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-600 dark:bg-zinc-800 dark:text-zinc-400";
 
 function IconSearch({ className }: { className?: string }) {
   return (
@@ -73,9 +73,9 @@ function IconX({ className }: { className?: string }) {
 
 /** Buscador del navbar del backoffice (`AdminTopBar`). No confundir con la tienda (`StoreSearch`). */
 
-/** Panel bajo el input: vidrio más denso para leer bien sobre el dashboard. */
+/** Panel bajo el input: fondo opaco para leer resultados sobre el dashboard. */
 const liquidPanelClass =
-  "absolute left-0 right-0 top-[calc(100%+8px)] z-[100] max-h-[min(65vh,440px)] overflow-y-auto overscroll-contain rounded-2xl border border-rose-200/60 bg-gradient-to-b from-white via-rose-50/25 to-stone-50/95 shadow-[0_20px_50px_-18px_rgba(190,24,93,0.14),inset_0_1px_0_0_rgba(255,255,255,0.92)] backdrop-blur-2xl backdrop-saturate-150 dark:border-zinc-700 dark:from-zinc-900 dark:via-zinc-900/98 dark:to-zinc-950 dark:shadow-[0_20px_50px_-18px_rgba(0,0,0,0.45),inset_0_1px_0_0_rgba(255,255,255,0.04)]";
+  "absolute left-0 right-0 top-[calc(100%+8px)] z-[100] max-h-[min(65vh,440px)] overflow-y-auto overscroll-contain rounded-2xl border border-rose-200/80 bg-white shadow-[0_22px_56px_-14px_rgba(0,0,0,0.22),0_0_0_1px_rgba(255,255,255,1)_inset] ring-1 ring-stone-900/[0.06] dark:border-zinc-600 dark:bg-zinc-900 dark:shadow-[0_24px_56px_-12px_rgba(0,0,0,0.55)] dark:ring-white/[0.08]";
 
 export function AdminGlobalSearch() {
   const [q, setQ] = useState("");

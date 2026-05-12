@@ -17,7 +17,7 @@ const NAV_HREFS_WITH_PERMISSION: { href: string; keys: PermissionKey[] }[] = [
 
 /** Lista de hrefs visibles (para serializar al cliente). */
 export function adminNavAllowedHrefList(p: PermissionMap): string[] {
-  const out = new Set<string>(["/admin/cuenta", "/"]);
+  const out = new Set<string>(["/admin/cuenta"]);
   for (const { href, keys } of NAV_HREFS_WITH_PERMISSION) {
     if (keys.some((k) => Boolean(p[k]))) out.add(href);
   }
