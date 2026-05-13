@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CuentaFavoritosResumenCard } from "@/components/store/CuentaFavoritosResumenCard";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatCop } from "@/lib/money";
+import { formatStoreDateTime } from "@/lib/store-datetime-format";
 
 export const metadata = {
   title: "Mi cuenta",
@@ -57,7 +58,7 @@ export default async function CuentaResumenPage({
             {lastOrder ? (
               <div className="w-full text-center">
                 <p className="text-xs text-stone-500">
-                  {new Date(lastOrder.created_at).toLocaleString("es-CO", {
+                  {formatStoreDateTime(lastOrder.created_at, {
                     dateStyle: "medium",
                     timeStyle: "short",
                   })}

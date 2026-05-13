@@ -4,6 +4,7 @@ import { CustomerAvatar } from "@/components/admin/CustomerAvatar";
 import { customerAvatarSeed } from "@/lib/customer-avatar-seed";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatCop } from "@/lib/money";
+import { formatStoreTimeHourMinute } from "@/lib/store-datetime-format";
 import { supplierInvoiceUiStatus } from "@/lib/supplier-invoices";
 import { ClickableTableRow } from "@/components/admin/ClickableTableRow";
 import { SupplierInvoiceStatusPill } from "@/components/admin/SupplierInvoiceStatusPill";
@@ -205,8 +206,6 @@ export default async function AdminProveedorDetailPage({ params, searchParams }:
                 </tr>
               ) : (
                 filtered.map((r) => {
-                  const createdAt =
-                    typeof r.created_at === "string" ? new Date(r.created_at) : null;
                   const issue =
                     typeof r.issue_date === "string"
                       ? new Date(`${r.issue_date}T12:00:00Z`).toLocaleDateString("es-CO", {
@@ -215,12 +214,10 @@ export default async function AdminProveedorDetailPage({ params, searchParams }:
                           year: "numeric",
                         })
                       : "—";
-                  const timeStr = createdAt
-                    ? createdAt.toLocaleTimeString("es-CO", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
-                    : "—";
+                  const timeStr =
+                    typeof r.created_at === "string"
+                      ? formatStoreTimeHourMinute(r.created_at)
+                      : "—";
                   return (
                     <ClickableTableRow
                       key={r.id}

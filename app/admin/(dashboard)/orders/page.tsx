@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { formatStoreDateTime } from "@/lib/store-datetime-format";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatCop } from "@/lib/money";
 
@@ -40,7 +41,10 @@ export default async function AdminOrdersPage() {
                   <p className="font-mono text-xs text-stone-500">{o.id}</p>
                   <p className="font-medium text-stone-900">{o.customer_name}</p>
                   <p className="text-xs text-stone-500">
-                    {new Date(o.created_at as string).toLocaleString("es-CO")}
+                    {formatStoreDateTime(String(o.created_at), {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
                   </p>
                 </div>
                 <div className="text-right">

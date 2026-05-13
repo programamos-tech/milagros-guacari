@@ -4,6 +4,7 @@ import { CustomerAvatar } from "@/components/admin/CustomerAvatar";
 import { ExpenseDetailHeaderActions } from "@/components/admin/ExpenseDetailHeaderActions";
 import { customerAvatarSeed } from "@/lib/customer-avatar-seed";
 import { formatCop } from "@/lib/money";
+import { formatStoreDateTime } from "@/lib/store-datetime-format";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -33,10 +34,7 @@ function paymentMethodLabel(raw: string) {
 }
 
 function prettyDateTime(iso: string | null | undefined) {
-  if (!iso || typeof iso !== "string") return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString("es-CO", {
+  return formatStoreDateTime(iso, {
     dateStyle: "long",
     timeStyle: "short",
   });

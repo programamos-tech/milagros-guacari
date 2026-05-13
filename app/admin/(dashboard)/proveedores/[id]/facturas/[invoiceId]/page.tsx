@@ -6,6 +6,7 @@ import { SupplierAbonoForm } from "@/components/admin/SupplierAbonoForm";
 import { SupplierCancelInvoiceButton } from "@/components/admin/SupplierCancelInvoiceButton";
 import { SupplierInvoiceStatusPill } from "@/components/admin/SupplierInvoiceStatusPill";
 import { formatCop } from "@/lib/money";
+import { formatStoreDateTime } from "@/lib/store-datetime-format";
 import {
   supplierLineGrossCents,
   supplierLineNetCents,
@@ -319,7 +320,10 @@ export default async function AdminProveedorFacturaDetailPage({ params, searchPa
                       </p>
                       <p className="text-xs text-zinc-500 dark:text-zinc-400">
                         {typeof p.paid_at === "string"
-                          ? new Date(p.paid_at).toLocaleString("es-CO")
+                          ? formatStoreDateTime(p.paid_at, {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            })
                           : ""}{" "}
                         · {String(p.payment_method ?? "")}
                       </p>

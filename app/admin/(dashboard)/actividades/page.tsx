@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ActivityLogCard } from "@/components/admin/ActivityLogCard";
 import type { AdminActivityLogRow } from "@/lib/admin-activity-log";
+import { REPORT_STORE_TIME_ZONE } from "@/lib/admin-report-range";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +10,7 @@ function formatWhen(iso: string): string {
   try {
     const d = new Date(iso);
     return new Intl.DateTimeFormat("es-CO", {
+      timeZone: REPORT_STORE_TIME_ZONE,
       dateStyle: "short",
       timeStyle: "short",
     }).format(d);

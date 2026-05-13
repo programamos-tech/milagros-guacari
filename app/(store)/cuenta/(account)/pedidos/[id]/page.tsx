@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatCop } from "@/lib/money";
+import { formatStoreDateTime } from "@/lib/store-datetime-format";
 
 export const metadata = {
   title: "Detalle del pedido",
@@ -76,7 +77,7 @@ export default async function CuentaPedidoDetallePage({
         </h1>
         <p className="mt-2 text-sm text-stone-600">
           {orderStatusLabel(order.status)} ·{" "}
-          {new Date(order.created_at).toLocaleString("es-CO", {
+          {formatStoreDateTime(order.created_at, {
             dateStyle: "full",
             timeStyle: "short",
           })}

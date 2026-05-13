@@ -6,6 +6,7 @@ import { customerAvatarSeed } from "@/lib/customer-avatar-seed";
 import { fetchAdminCustomerDetail } from "@/lib/supabase/admin-customer-detail";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatCop } from "@/lib/money";
+import { formatStoreDateTime } from "@/lib/store-datetime-format";
 import {
   averageTicketByMonthFromPaidOrders,
   averageTicketByCalendarDayFromPaidOrders,
@@ -147,7 +148,7 @@ export default async function AdminCustomerDetailPage({ params, searchParams }: 
   const lastPaidAt = ordersPaid[0]?.created_at;
   const lastPurchaseLabel =
     typeof lastPaidAt === "string"
-      ? new Date(lastPaidAt).toLocaleDateString("es-CO", {
+      ? formatStoreDateTime(lastPaidAt, {
           weekday: "short",
           day: "numeric",
           month: "short",
@@ -249,7 +250,7 @@ export default async function AdminCustomerDetailPage({ params, searchParams }: 
                 )}
                 <span className="text-xs text-zinc-500 dark:text-zinc-400">
                   Cliente desde{" "}
-                  {new Date(customer.created_at).toLocaleDateString("es-CO", {
+                  {formatStoreDateTime(customer.created_at, {
                     month: "short",
                     year: "numeric",
                   })}
@@ -520,7 +521,7 @@ export default async function AdminCustomerDetailPage({ params, searchParams }: 
                 const ref = ventaNumeroReferencia(o.id);
                 const created =
                   typeof o.created_at === "string"
-                    ? new Date(o.created_at).toLocaleString("es-CO", {
+                    ? formatStoreDateTime(o.created_at, {
                         day: "numeric",
                         month: "short",
                         hour: "2-digit",
@@ -598,7 +599,7 @@ export default async function AdminCustomerDetailPage({ params, searchParams }: 
                 const ref = ventaNumeroReferencia(o.id);
                 const created =
                   typeof o.created_at === "string"
-                    ? new Date(o.created_at).toLocaleString("es-CO", {
+                    ? formatStoreDateTime(o.created_at, {
                         day: "numeric",
                         month: "short",
                         year: "numeric",

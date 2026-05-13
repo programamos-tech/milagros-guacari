@@ -14,6 +14,10 @@ import {
 } from "@/lib/brand";
 import { formatCop } from "@/lib/money";
 import {
+  formatStoreInvoiceDateNumeric,
+  formatStoreInvoiceDateTime,
+} from "@/lib/store-datetime-format";
+import {
   ventaEstadoBadge,
   ventaFormaPagoBadge,
   ventaPagoRecibidoBadge,
@@ -136,24 +140,11 @@ function IconSpark({ className }: { className?: string }) {
 }
 
 function formatInvoiceDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleString("es-CO", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
+  return formatStoreInvoiceDateTime(iso);
 }
 
 function formatInvoiceDateShort(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString("es-CO", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+  return formatStoreInvoiceDateNumeric(iso);
 }
 
 export function OrderInvoiceDetailView(props: OrderInvoiceDetailViewProps) {

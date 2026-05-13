@@ -1,3 +1,5 @@
+import { formatStoreVentaFecha } from "@/lib/store-datetime-format";
+
 /** Ventas POS marcan método en `wompi_reference` con prefijo `POS:`. */
 export function isVentaFisica(wompiReference: string | null | undefined): boolean {
   const r = wompiReference?.trim() ?? "";
@@ -151,13 +153,5 @@ export function ventaNumeroReferencia(id: string): string {
 }
 
 export function formatVentaFecha(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  const time = d.toLocaleTimeString("es-CO", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-  const date = d.toLocaleDateString("es-CO", { day: "numeric", month: "short" });
-  return `${time} · ${date}`;
+  return formatStoreVentaFecha(iso);
 }
