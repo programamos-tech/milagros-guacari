@@ -126,6 +126,8 @@ export function ProductQuantityInput({
   );
 }
 
+export const ADMIN_DATE_PORTAL_SELECTOR = "[data-admin-date-portal]";
+
 export function AdminDateInput({
   id,
   name,
@@ -267,6 +269,7 @@ export function AdminDateInput({
         ? createPortal(
             <div
               ref={popupRef}
+              data-admin-date-portal=""
               className="fixed z-[300] w-[18rem] rounded-xl border border-zinc-200 bg-white p-3 shadow-[0_16px_40px_-20px_rgba(0,0,0,0.35)] dark:border-zinc-700 dark:bg-zinc-900 dark:shadow-[0_16px_40px_-20px_rgba(0,0,0,0.55)]"
               style={{ top: popupFixed.top, left: popupFixed.left }}
               role="dialog"

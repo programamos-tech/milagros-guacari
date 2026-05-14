@@ -1,9 +1,9 @@
 import { formatCop, formatCopCompact } from "@/lib/money";
 import type { TicketTrendPoint } from "@/lib/customer-ticket-trend";
 
-/** Línea guinda del admin; rejilla y ejes en zinc. */
+/** Línea guinda (ingresos) y ámbar (egresos); rejilla y ejes en zinc. */
 const chartPaletteClass =
-  "[--chart-line:#881337] [--chart-grid:#f4f4f5] [--chart-axis:#a1a1aa] [--chart-point-fill:#ffffff] [--chart-point-stroke:#881337] dark:[--chart-line:#fda4af] dark:[--chart-grid:#3f3f46] dark:[--chart-axis:#71717a] dark:[--chart-point-fill:#27272a] dark:[--chart-point-stroke:#fda4af]";
+  "[--chart-line:#881337] [--chart-grid:#f4f4f5] [--chart-axis:#a1a1aa] [--chart-point-fill:#ffffff] [--chart-point-stroke:#881337] [--chart-expense-line:#b45309] [--chart-expense-point-fill:#fffbeb] [--chart-expense-point-stroke:#b45309] dark:[--chart-line:#fda4af] dark:[--chart-grid:#3f3f46] dark:[--chart-axis:#71717a] dark:[--chart-point-fill:#27272a] dark:[--chart-point-stroke:#fda4af] dark:[--chart-expense-line:#fbbf24] dark:[--chart-expense-point-fill:#422006] dark:[--chart-expense-point-stroke:#fbbf24]";
 
 function monthLabelEs(monthKey: string) {
   const [y, m] = monthKey.split("-").map(Number);
@@ -33,7 +33,7 @@ function pointTooltipTitle(p: TicketTrendPoint, value: number, seriesKind: "day"
   return `${head}: ${formatCop(value)} · ${p.orderCount} venta${p.orderCount === 1 ? "" : "s"}`;
 }
 
-type ChartPoint = TicketTrendPoint & { value: number; key: string };
+type ChartPoint = TicketTrendPoint & { value: number; expenseValue: number; key: string };
 
 function catmullRomToBezierPath(points: { x: number; y: number }[]): string {
   if (points.length === 0) return "";
@@ -76,13 +76,19 @@ export function CustomerTicketTrendChart({
 }) {
   if (points.length === 0) return null;
 
+  const dualFinance =
+    seriesKind === "day" && points.some((p) => typeof p.expenseCents === "number");
+
   const trend: ChartPoint[] = points.map((p) => ({
     ...p,
     value: p.avgCents,
+    expenseValue: dualFinance ? Math.max(0, Math.floor(Number(p.expenseCents ?? 0))) : 0,
     key: p.monthKey,
   }));
 
-  const maxRaw = Math.max(...trend.map((t) => t.value), 0);
+  const maxIncome = Math.max(...trend.map((t) => t.value), 0);
+  const maxExpense = dualFinance ? Math.max(...trend.map((t) => t.expenseValue), 0) : 0;
+  const maxRaw = dualFinance ? Math.max(maxIncome, maxExpense) : Math.max(maxIncome, 0);
   const maxTrend = maxRaw > 0 ? maxRaw : 1;
   const yMax = maxTrend * 1.08;
 
@@ -109,6 +115,9 @@ export function CustomerTicketTrendChart({
     seriesKind === "month" && pts.length > 1 ? catmullRomToBezierPath(pts) : "";
 
   const polylinePoints = trend.map((t, i) => `${xAt(i)},${yAt(t.value)}`).join(" ");
+  const expensePolylinePoints = dualFinance
+    ? trend.map((t, i) => `${xAt(i)},${yAt(t.expenseValue)}`).join(" ")
+    : "";
 
   let areaPath: string;
   if (trend.length === 1) {
@@ -132,34 +141,62 @@ export function CustomerTicketTrendChart({
     seriesKind === "month" ? true : trend.length <= 34 || trend.length === 1;
 
   const defaultPeakFooter =
-    seriesKind === "day"
-      ? `Mayor ticket promedio en un día: ${formatCop(maxRaw)}`
-      : `Pico del periodo: ${formatCop(maxRaw)} ticket promedio mensual`;
+    seriesKind === "month"
+      ? `Pico del periodo: ${formatCop(maxRaw)} ticket promedio mensual`
+      : dualFinance
+        ? `Mayor ingreso en un día: ${formatCop(maxIncome)} · Mayor egreso en un día: ${formatCop(maxExpense)}`
+        : `Mayor ticket promedio en un día: ${formatCop(maxRaw)}`;
   const peakLineFooter = peakCaption ?? (maxRaw > 0 ? defaultPeakFooter : null);
   const defaultSecondaryFooter =
-    seriesKind === "day"
-      ? "Solo aparecen días con al menos una venta pagada. Pasá el cursor sobre la línea para ver detalle."
-      : null;
+    dualFinance || seriesKind === "month"
+      ? null
+      : seriesKind === "day"
+        ? "Solo aparecen días con al menos una venta pagada. Pasá el cursor sobre la línea para ver detalle."
+        : null;
   const secondaryLineFooter =
     secondaryCaption === undefined ? defaultSecondaryFooter : secondaryCaption;
 
   return (
     <div className={`mt-3 w-full min-w-0 ${chartPaletteClass}`}>
+      {dualFinance ? (
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 px-6 pb-2 sm:px-8">
+          <span className="inline-flex items-center gap-2 text-[11px] font-medium text-zinc-600 dark:text-zinc-300">
+            <span
+              className="size-2.5 shrink-0 rounded-full ring-2 ring-rose-900/25 dark:ring-rose-300/30"
+              style={{ backgroundColor: "var(--chart-line)" }}
+              aria-hidden
+            />
+            Ingresos (IVA)
+          </span>
+          <span className="inline-flex items-center gap-2 text-[11px] font-medium text-zinc-600 dark:text-zinc-300">
+            <span
+              className="size-2.5 shrink-0 rounded-sm ring-2 ring-amber-700/25 dark:ring-amber-300/35"
+              style={{ backgroundColor: "var(--chart-expense-line)" }}
+              aria-hidden
+            />
+            Egresos
+          </span>
+        </div>
+      ) : null}
       <svg
         viewBox={`0 0 ${chartW} ${chartH}`}
         className="block h-auto w-full min-w-0"
         preserveAspectRatio="xMidYMid meet"
         role="img"
         aria-label={
-          seriesKind === "day"
-            ? "Ticket promedio diario en días con ventas pagadas"
-            : "Evolución del ticket promedio por mes"
+          dualFinance
+            ? "Ingresos con IVA y egresos por día en el periodo"
+            : seriesKind === "day"
+              ? "Ticket promedio diario en días con ventas pagadas"
+              : "Evolución del ticket promedio por mes"
         }
       >
         <title>
-          {seriesKind === "day"
-            ? "Ticket promedio por día (ventas pagadas)"
-            : "Ticket promedio por mes"}
+          {dualFinance
+            ? "Ingresos (IVA) y egresos por día"
+            : seriesKind === "day"
+              ? "Ticket promedio por día (ventas pagadas)"
+              : "Ticket promedio por mes"}
         </title>
         <defs>
           <linearGradient
@@ -234,6 +271,18 @@ export function CustomerTicketTrendChart({
           />
         ) : null}
 
+        {dualFinance && trend.length > 1 ? (
+          <polyline
+            fill="none"
+            stroke="var(--chart-expense-line)"
+            strokeWidth={2}
+            strokeDasharray="7 5"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            points={expensePolylinePoints}
+          />
+        ) : null}
+
         {seriesKind === "month" && trend.length > 1 && smoothStrokePath ? (
           <path
             d={smoothStrokePath}
@@ -257,6 +306,16 @@ export function CustomerTicketTrendChart({
                   stroke="var(--chart-point-stroke)"
                   strokeWidth={2}
                 />
+                {dualFinance ? (
+                  <circle
+                    cx={xAt(i)}
+                    cy={yAt(t.expenseValue)}
+                    r="3.5"
+                    fill="var(--chart-expense-point-fill)"
+                    stroke="var(--chart-expense-point-stroke)"
+                    strokeWidth={2}
+                  />
+                ) : null}
               </g>
             ))
           : trend.map((t, i) => (
@@ -270,6 +329,16 @@ export function CustomerTicketTrendChart({
                   stroke="none"
                   pointerEvents="all"
                 />
+                {dualFinance ? (
+                  <circle
+                    cx={xAt(i)}
+                    cy={yAt(t.expenseValue)}
+                    r="8"
+                    fill="transparent"
+                    stroke="none"
+                    pointerEvents="all"
+                  />
+                ) : null}
               </g>
             ))}
 

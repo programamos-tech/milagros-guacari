@@ -11,6 +11,8 @@ import {
   prettyReportDayShortLabel,
   prettyReportPeriodLabel,
   reportCalendarDayKeyFromIso,
+  reportChartDayRange,
+  reportDataFetchYmdRange,
   todayYmdInReportStore,
 } from "@/lib/admin-report-range";
 import { adminPanelLgClass } from "@/lib/admin-ui";
@@ -18,6 +20,7 @@ import { adminLandingPath } from "@/lib/admin-landing";
 import { loadAdminPermissions } from "@/lib/load-admin-permissions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { formatCop } from "@/lib/money";
 import type { TicketTrendPoint } from "@/lib/customer-ticket-trend";
@@ -80,6 +83,13 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
     todayKey,
   );
   const periodLabel = prettyReportPeriodLabel(rangeFrom, rangeTo, todayKey);
+  const { chartFrom, chartTo } = reportChartDayRange(rangeTo);
+  const { fetchFrom, fetchTo } = reportDataFetchYmdRange(
+    rangeFrom,
+    rangeTo,
+    chartFrom,
+    chartTo,
+  );
 
   const supabase = await createSupabaseServerClient();
   const [products, expensesRes] = await Promise.all([
@@ -87,18 +97,18 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
     supabase
       .from("store_expenses")
       .select("id,concept,category,amount_cents,payment_method,notes,expense_date,created_at")
-      .gte("expense_date", rangeFrom)
-      .lte("expense_date", rangeTo)
+      .gte("expense_date", fetchFrom)
+      .lte("expense_date", fetchTo)
       .order("expense_date", { ascending: false })
       .order("created_at", { ascending: false })
-      .limit(500),
+      .limit(1500),
   ]);
 
   const { rows: ordersRaw, error: ordersRangeError } =
     await fetchOrdersCreatedInReportYmdWindow(
       supabase,
-      rangeFrom,
-      rangeTo,
+      fetchFrom,
+      fetchTo,
       "id,status,total_cents,created_at,wompi_reference",
     );
   if (ordersRangeError) {
@@ -115,7 +125,12 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
   let ventasVirtuales = 0;
   let ventasPagadasPeriod = 0;
   let egresosPeriod = 0;
+  /** Egresos cuyo medio de pago es efectivo: se restan del total efectivo del periodo. */
+  let egresosEfectivoCents = 0;
+  /** Egresos en transferencia, tarjeta u otro: se restan del total transferencia/web/mixto. */
+  let egresosTransferenciaBucketCents = 0;
   let cantidadEgresosPeriod = 0;
+  const expensesByDayCents = new Map<string, number>();
 
   for (const o of orders) {
     const createdAt = typeof o.created_at === "string" ? o.created_at : null;
@@ -144,15 +159,18 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
       typeof o.created_at === "string" &&
       dayInRange(reportCalendarDayKeyFromIso(o.created_at), rangeFrom, rangeTo),
   );
-  const paidPeriodIds = paidPeriodOrders.map((o) => o.id).filter(Boolean);
+  const paidOrderIdsForItems = orders
+    .filter((o) => o.status === "paid" && typeof o.created_at === "string")
+    .map((o) => o.id)
+    .filter(Boolean);
 
   let orderItems: OrderItemRow[] = [];
   const productsById = new Map<string, ProductVatRow>();
 
-  if (paidPeriodIds.length > 0) {
+  if (paidOrderIdsForItems.length > 0) {
     const { rows: itemRows, error: itemsErr } = await fetchOrderItemsInChunks(
       supabase,
-      paidPeriodIds,
+      paidOrderIdsForItems,
       "order_id,product_id,quantity,unit_price_cents",
     );
     if (itemsErr) console.error("[admin reportes] order_items:", itemsErr);
@@ -192,12 +210,26 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
         : typeof e.created_at === "string"
           ? e.created_at.slice(0, 10)
           : null;
-    if (!raw || !dayInRange(raw, rangeFrom, rangeTo)) continue;
-    egresosPeriod += Number(e.amount_cents ?? 0);
+    if (!raw) continue;
+    const amount = Number(e.amount_cents ?? 0);
+    if (dayInRange(raw, chartFrom, chartTo)) {
+      expensesByDayCents.set(raw, (expensesByDayCents.get(raw) ?? 0) + amount);
+    }
+    if (!dayInRange(raw, rangeFrom, rangeTo)) continue;
+    egresosPeriod += amount;
     cantidadEgresosPeriod += 1;
+    const pm = String(e.payment_method ?? "").trim().toLowerCase();
+    if (pm === "efectivo") {
+      egresosEfectivoCents += amount;
+    } else {
+      egresosTransferenciaBucketCents += amount;
+    }
   }
 
   const gananciaNeta = gananciaBruta - egresosPeriod;
+
+  const efectivoNetoCaja = efectivo - egresosEfectivoCents;
+  const transferenciaNeta = transferencia - egresosTransferenciaBucketCents;
 
   const stockInversionNet = products.reduce((sum, p) => {
     const cost = Number((p as { cost_cents?: number | null }).cost_cents ?? 0);
@@ -209,56 +241,25 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
     const stock = Number((p as { stock_quantity?: number | null }).stock_quantity ?? 0);
     return sum + gross * stock;
   }, 0);
-  const trendDayKeys = dayKeysInclusiveReport(rangeFrom, rangeTo);
+  const trendDayKeys = dayKeysInclusiveReport(chartFrom, chartTo);
   const trendDays: { key: string; value: number }[] = trendDayKeys.map((key) => ({
     key,
     value: 0,
   }));
 
-  const trendKeySet = new Set(trendDays.map((d) => d.key));
-  const paidTrendOrderIds = orders
-    .filter(
-      (o) =>
-        o.status === "paid" &&
-        typeof o.created_at === "string" &&
-        trendKeySet.has(reportCalendarDayKeyFromIso(o.created_at)),
-    )
-    .map((o) => o.id);
-
-  let trendItems: OrderItemRow[] = [];
-  const trendProductsById = new Map<string, ProductVatRow>();
-  if (paidTrendOrderIds.length > 0) {
-    const { rows: trendItemRows, error: trendItemsErr } = await fetchOrderItemsInChunks(
-      supabase,
-      paidTrendOrderIds,
-      "order_id,product_id,quantity,unit_price_cents",
-    );
-    if (trendItemsErr) console.error("[admin reportes] trend order_items:", trendItemsErr);
-    trendItems = trendItemRows as OrderItemRow[];
-    const trendPids = [
-      ...new Set(
-        trendItems.map((i) => i.product_id).filter((id): id is string => Boolean(id)),
-      ),
-    ];
-    if (trendPids.length > 0) {
-      const { data: trendProdData } = await supabase
-        .from("products")
-        .select("id,price_cents,has_vat,vat_percent")
-        .in("id", trendPids);
-      for (const p of trendProdData ?? []) {
-        trendProductsById.set(p.id as string, p as ProductVatRow);
-      }
-    }
-  }
-
   const trendByDay = new Map(trendDays.map((d) => [d.key, 0]));
   const paidOrdersPerTrendDay = new Map<string, number>();
-  for (const o of orders) {
-    if (o.status !== "paid" || typeof o.created_at !== "string") continue;
+  const paidOrdersForChart = orders.filter(
+    (o) =>
+      o.status === "paid" &&
+      typeof o.created_at === "string" &&
+      dayInRange(reportCalendarDayKeyFromIso(o.created_at), chartFrom, chartTo),
+  );
+  for (const o of paidOrdersForChart) {
     const key = reportCalendarDayKeyFromIso(o.created_at);
     if (!trendByDay.has(key)) continue;
     paidOrdersPerTrendDay.set(key, (paidOrdersPerTrendDay.get(key) ?? 0) + 1);
-    const { gross } = revenueNetGrossFromLines(o, trendItems, trendProductsById);
+    const { gross } = revenueNetGrossFromLines(o, orderItems, productsById);
     trendByDay.set(key, (trendByDay.get(key) ?? 0) + gross);
   }
 
@@ -267,13 +268,20 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
     value: trendByDay.get(d.key) ?? 0,
   }));
 
+  let peakIncomeDayKey: string | null = null;
+  let peakIncomeDayCents = 0;
+  for (const row of trend) {
+    if (row.value > peakIncomeDayCents) {
+      peakIncomeDayCents = row.value;
+      peakIncomeDayKey = row.key;
+    }
+  }
+
   const reportIncomeChartPoints: TicketTrendPoint[] = trend.map((t) => {
     const n = paidOrdersPerTrendDay.get(t.key) ?? 0;
     const label = prettyReportDayShortLabel(t.key);
-    const detail =
-      n === 0
-        ? `${label}: sin ventas pagadas`
-        : `${label}: ${formatCop(t.value)} con IVA · ${n} venta${n === 1 ? "" : "s"}`;
+    const eg = expensesByDayCents.get(t.key) ?? 0;
+    const detail = `${label}: ${formatCop(t.value)} ingresos (IVA, ventas pagadas) · ${formatCop(eg)} egresos`;
     return {
       monthKey: t.key,
       labelX: label,
@@ -281,10 +289,9 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
       detail,
       avgCents: t.value,
       orderCount: n,
+      expenseCents: eg,
     };
   });
-
-  const maxRaw = Math.max(...trend.map((t) => t.value), 0);
 
   return (
     <div className="space-y-0">
@@ -339,20 +346,32 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
             [
               {
                 label: "Efectivo",
-                cents: efectivo,
+                cents: efectivoNetoCaja,
+                centsClassName:
+                  efectivoNetoCaja < 0 ? "text-red-700 dark:text-red-300" : undefined,
                 hint:
                   totalCobradoPedidos > 0
-                    ? `${Math.round((efectivo / totalCobradoPedidos) * 100)}% del cobrado`
-                    : "0% del cobrado",
+                    ? `${Math.round((efectivo / totalCobradoPedidos) * 100)}% cobrado en efectivo${
+                        egresosEfectivoCents > 0
+                          ? ` · menos ${formatCop(egresosEfectivoCents)} egresos en efectivo`
+                          : ""
+                      }`
+                    : egresosEfectivoCents > 0
+                      ? `Solo egresos en efectivo: ${formatCop(egresosEfectivoCents)}`
+                      : "Sin cobros POS en efectivo en el periodo",
                 staggerMs: 70,
               },
               {
                 label: "Transferencia",
-                cents: transferencia,
+                cents: transferenciaNeta,
+                centsClassName:
+                  transferenciaNeta < 0 ? "text-red-700 dark:text-red-300" : undefined,
                 hint:
                   totalCobradoPedidos > 0
                     ? `${Math.round((transferencia / totalCobradoPedidos) * 100)}% del cobrado`
-                    : "0% del cobrado",
+                    : egresosTransferenciaBucketCents > 0
+                      ? `Solo egresos: ${formatCop(egresosTransferenciaBucketCents)}`
+                      : "Sin cobros en este bucket en el periodo",
                 staggerMs: 135,
               },
               {
@@ -377,7 +396,11 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
               <dt className={cardLabelClass}>{item.label}</dt>
               <dd className="mt-1 text-2xl font-normal tabular-nums text-stone-900 dark:text-zinc-100">
                 {"cents" in item ? (
-                  <AnimatedCopCents cents={item.cents} delay={item.staggerMs + 50} />
+                  <AnimatedCopCents
+                    cents={item.cents}
+                    delay={item.staggerMs + 50}
+                    className={"centsClassName" in item ? item.centsClassName : undefined}
+                  />
                 ) : (
                   <AnimatedInteger value={item.count} delay={item.staggerMs + 50} />
                 )}
@@ -475,9 +498,13 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
         style={{ ["--reports-chart-delay" as string]: "520ms" }}
       >
         <div className="px-6 pt-6 pb-3 sm:px-8 sm:pt-8 sm:pb-4">
-          <h2 className={sectionTitleClass}>Tendencia de Ingresos</h2>
+          <h2 className={sectionTitleClass}>Ingresos y egresos por día</h2>
           <p className="mt-1 max-w-xl text-sm text-zinc-500 dark:text-zinc-400">
-            Monto con IVA por día (ventas pagadas) · {periodLabel}
+            Las tarjetas de arriba usan el periodo del filtro ({periodLabel}). Esta curva muestra siempre{" "}
+            <span className="font-medium text-zinc-600 dark:text-zinc-300">7 días</span> calendario
+            terminando en el último día del filtro ({prettyReportDayShortLabel(chartTo)}). Ingresos por
+            día de la venta; egresos por{" "}
+            <span className="font-medium text-zinc-600 dark:text-zinc-300">fecha del egreso</span>.
           </p>
         </div>
         <div className="w-full min-w-0">
@@ -485,9 +512,30 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
             points={reportIncomeChartPoints}
             seriesKind="day"
             fillGradientId="reportsIncomeChartFill"
-            peakCaption={maxRaw > 0 ? `Máximo del periodo: ${formatCop(maxRaw)}` : undefined}
             secondaryCaption={null}
           />
+        </div>
+        <div className="border-t border-zinc-100/90 px-6 py-4 text-xs leading-relaxed text-zinc-500 dark:border-zinc-800 dark:text-zinc-400 sm:px-8">
+          <p>
+            Los ingresos de la curva usan la misma fórmula que el total con IVA (líneas del pedido), pero
+            repartidos en los 7 días del gráfico. Las tarjetas del resumen solo cuentan el periodo del
+            filtro; si elegís un solo día, el total de ingresos no coincide con la suma de la curva. Un
+            día muy alto suele ser importación o muchas ventas con la misma fecha de creación.
+          </p>
+          {peakIncomeDayKey && peakIncomeDayCents > 0 ? (
+            <p className="mt-2">
+              <Link
+                href={`/admin/ventas?from=${encodeURIComponent(peakIncomeDayKey)}&to=${encodeURIComponent(peakIncomeDayKey)}`}
+                className="font-medium text-rose-900 underline decoration-rose-900/35 underline-offset-2 hover:text-rose-950 dark:text-rose-200 dark:decoration-rose-200/40 dark:hover:text-rose-100"
+              >
+                Ver ventas del {prettyReportDayShortLabel(peakIncomeDayKey)}
+              </Link>
+              <span className="text-zinc-400 dark:text-zinc-500">
+                {" "}
+                · pico del gráfico {formatCop(peakIncomeDayCents)}
+              </span>
+            </p>
+          ) : null}
         </div>
       </section>
     </div>

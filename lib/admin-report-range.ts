@@ -41,8 +41,41 @@ export function todayYmdInReportStore(now: Date = new Date()): string {
 }
 
 /**
+ * Instante usado solo para formatear etiquetas (mediodía civil en tienda).
+ * Fijo UTC+17h sobre Y-M-D = mediodía en Colombia (UTC−5, sin DST).
+ * Si cambiás `REPORT_STORE_TIME_ZONE` fuera de −05, generalizar con librería TZ.
+ */
+function noonOnStoreCalendarYmdAsUtcMs(y: number, m: number, d: number): number {
+  return Date.UTC(y, m - 1, d, 17, 0, 0);
+}
+
+function addOneCalendarDayYmd(ymd: string): string {
+  const [ys, ms, ds] = ymd.split("-");
+  const y = Number(ys);
+  const mo = Number(ms);
+  const d = Number(ds);
+  if (!y || !mo || !d) return ymd;
+  const next = new Date(noonOnStoreCalendarYmdAsUtcMs(y, mo, d) + 86_400_000);
+  return reportCalendarDayKeyFromIso(next.toISOString());
+}
+
+/** Cantidad de días calendario (inclusivos) del reporte por defecto sin `from`/`to` en la URL. */
+export const REPORT_DEFAULT_RANGE_DAY_COUNT = 7;
+
+/** Suma o resta días calendario en la zona de la tienda (mismo ancla que el resto de reportes). */
+export function addCalendarDaysReport(ymd: string, deltaDays: number): string {
+  if (!isValidYmd(ymd)) return ymd;
+  const delta = Math.trunc(Number(deltaDays));
+  if (!delta) return ymd;
+  const [ys, ms, ds] = ymd.split("-").map(Number);
+  if (!ys || !ms || !ds) return ymd;
+  const nextMs = noonOnStoreCalendarYmdAsUtcMs(ys, ms, ds) + delta * 86_400_000;
+  return reportCalendarDayKeyFromIso(new Date(nextMs).toISOString());
+}
+
+/**
  * Interpreta `from` / `to` en la URL (fechas de calendario de la tienda, sin hora).
- * Sin params válidos usa `todayYmd` (debe ser el “hoy” en la misma zona, p. ej. `todayYmdInReportStore()`).
+ * Sin params válidos: solo el día de hoy (`todayYmd`).
  */
 export function parseReportRangeFromSearchParams(
   sp: Record<string, string | string[] | undefined>,
@@ -66,23 +99,28 @@ export function parseReportRangeFromSearchParams(
   return { from: todayYmd, to: todayYmd };
 }
 
-/**
- * Instante usado solo para formatear etiquetas (mediodía civil en tienda).
- * Fijo UTC+17h sobre Y-M-D = mediodía en Colombia (UTC−5, sin DST).
- * Si cambiás `REPORT_STORE_TIME_ZONE` fuera de −05, generalizar con librería TZ.
- */
-function noonOnStoreCalendarYmdAsUtcMs(y: number, m: number, d: number): number {
-  return Date.UTC(y, m - 1, d, 17, 0, 0);
+/** Gráfico de reportes: `REPORT_DEFAULT_RANGE_DAY_COUNT` días calendario terminando en `rangeTo` (inclusive). */
+export function reportChartDayRange(rangeToYmd: string): {
+  chartFrom: string;
+  chartTo: string;
+} {
+  const chartTo = rangeToYmd;
+  const span = Math.max(1, REPORT_DEFAULT_RANGE_DAY_COUNT) - 1;
+  const chartFrom = addCalendarDaysReport(chartTo, -span);
+  return { chartFrom, chartTo };
 }
 
-function addOneCalendarDayYmd(ymd: string): string {
-  const [ys, ms, ds] = ymd.split("-");
-  const y = Number(ys);
-  const mo = Number(ms);
-  const d = Number(ds);
-  if (!y || !mo || !d) return ymd;
-  const next = new Date(noonOnStoreCalendarYmdAsUtcMs(y, mo, d) + 86_400_000);
-  return reportCalendarDayKeyFromIso(next.toISOString());
+/** Unión del periodo del reporte y la ventana del gráfico (para pedidos y egresos). */
+export function reportDataFetchYmdRange(
+  rangeFrom: string,
+  rangeTo: string,
+  chartFrom: string,
+  chartTo: string,
+): { fetchFrom: string; fetchTo: string } {
+  return {
+    fetchFrom: rangeFrom < chartFrom ? rangeFrom : chartFrom,
+    fetchTo: rangeTo > chartTo ? rangeTo : chartTo,
+  };
 }
 
 /**

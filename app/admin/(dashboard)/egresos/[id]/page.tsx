@@ -224,8 +224,8 @@ export default async function AdminEgresoDetailPage({ params }: Props) {
               Sin vínculo con pedidos
             </p>
             <p className="mt-2 max-w-xs text-xs text-zinc-500 dark:text-zinc-400">
-              Los egresos son independientes de las facturas de venta. Si en el futuro se asocian
-              documentos, aparecerán aquí.
+              No se asocian a una venta concreta. En Reportes, el monto se descuenta del total de
+              efectivo o de transferencia según el método de pago registrado aquí.
             </p>
           </div>
         </section>

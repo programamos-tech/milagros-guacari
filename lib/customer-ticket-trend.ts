@@ -20,6 +20,11 @@ export type TicketTrendPoint = {
   avgCents: number;
   /** Pedidos pagados en el bucket. */
   orderCount: number;
+  /**
+   * Reportes admin (serie diaria): egresos del mismo día (`expense_date` contable).
+   * Si está definido, el gráfico puede mostrar ingresos vs egresos.
+   */
+  expenseCents?: number;
 };
 
 /**

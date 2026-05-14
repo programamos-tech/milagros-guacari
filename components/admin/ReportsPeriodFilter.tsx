@@ -1,7 +1,11 @@
 "use client";
 
-import { AdminDateInput } from "@/components/admin/product-form-primitives";
-import { prettyReportPeriodLabel } from "@/lib/admin-report-range";
+import { AdminDateInput, ADMIN_DATE_PORTAL_SELECTOR } from "@/components/admin/product-form-primitives";
+import {
+  addCalendarDaysReport,
+  prettyReportPeriodLabel,
+  REPORT_DEFAULT_RANGE_DAY_COUNT,
+} from "@/lib/admin-report-range";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -37,6 +41,8 @@ export function ReportsPeriodFilter({
   useEffect(() => {
     if (!open) return;
     const onDown = (ev: MouseEvent) => {
+      const t = ev.target as HTMLElement | null;
+      if (t?.closest?.(ADMIN_DATE_PORTAL_SELECTOR)) return;
       if (!wrapRef.current?.contains(ev.target as Node)) setOpen(false);
     };
     document.addEventListener("mousedown", onDown);
@@ -60,8 +66,12 @@ export function ReportsPeriodFilter({
   }
 
   function applyToday() {
-    router.push("/admin");
-    setOpen(false);
+    applyParams(todayKey, todayKey);
+  }
+
+  function applyDefaultWeek() {
+    const span = Math.max(1, REPORT_DEFAULT_RANGE_DAY_COUNT) - 1;
+    applyParams(addCalendarDaysReport(todayKey, -span), todayKey);
   }
 
   return (
@@ -95,13 +105,22 @@ export function ReportsPeriodFilter({
 
       {open ? (
         <div className={panelClass} role="dialog" aria-label="Filtro de periodo">
-          <button
-            type="button"
-            onClick={applyToday}
-            className="w-full rounded-lg bg-rose-950 px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-900 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
-          >
-            Hoy
-          </button>
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={applyToday}
+              className="w-full rounded-lg bg-rose-950 px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-900 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
+            >
+              Solo hoy
+            </button>
+            <button
+              type="button"
+              onClick={applyDefaultWeek}
+              className="w-full rounded-lg border border-rose-200/80 bg-white px-3 py-2.5 text-sm font-semibold text-rose-950 transition hover:bg-rose-50/70 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-800"
+            >
+              Últimos 7 días
+            </button>
+          </div>
 
           <div className="mt-4 flex gap-1 rounded-lg bg-rose-100/50 p-1 dark:bg-zinc-800/80">
             <button

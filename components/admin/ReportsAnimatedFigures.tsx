@@ -32,7 +32,8 @@ export function AnimatedCopCents({
   className?: string;
 }) {
   const reduced = usePrefersReducedMotion();
-  const target = Math.max(0, Math.floor(Number(cents)));
+  const raw = Number(cents);
+  const target = Number.isFinite(raw) ? Math.trunc(raw) : 0;
   const [shown, setShown] = useState(reduced ? target : 0);
 
   useEffect(() => {

@@ -50,7 +50,9 @@ export function NewExpenseHeader() {
           Nuevo egreso
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-zinc-500 dark:text-zinc-400">
-          Registra un gasto operativo con el mismo patrón visual de los demás módulos.
+          Registra un gasto operativo con el mismo patrón visual de los demás módulos. El método de
+          pago define en Reportes si el monto se descuenta del total de efectivo o del de
+          transferencia (incluye tarjeta u otro).
         </p>
       </div>
       <Link
