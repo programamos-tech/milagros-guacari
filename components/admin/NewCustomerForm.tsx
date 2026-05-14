@@ -69,6 +69,8 @@ export function NewCustomerForm() {
   const [documentId, setDocumentId] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [customerKind, setCustomerKind] = useState<"retail" | "wholesale">("retail");
+  const [wholesalePct, setWholesalePct] = useState(10);
   const [addresses, setAddresses] = useState<Addr[]>(() => [newAddress()]);
 
   const payload = useMemo(
@@ -97,7 +99,14 @@ export function NewCustomerForm() {
         ? "1 dirección"
         : `${filledCount} direcciones`;
 
-  const canSubmit = name.trim().length > 0;
+  const wholesaleFieldsOk =
+    customerKind !== "wholesale" ||
+    (documentId.trim().length > 0 &&
+      email.trim().length > 0 &&
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) &&
+      phone.trim().length > 0);
+
+  const canSubmit = name.trim().length > 0 && wholesaleFieldsOk;
 
   function updateAddr(i: number, patch: Partial<Addr>) {
     setAddresses((prev) =>
@@ -137,20 +146,35 @@ export function NewCustomerForm() {
               </div>
               <div>
                 <label htmlFor="nc-doc" className={labelClass}>
-                  Cédula
+                  {customerKind === "wholesale" ? (
+                    <>
+                      NIT <span className="text-red-600 dark:text-red-400">*</span>
+                    </>
+                  ) : (
+                    "Cédula"
+                  )}
                 </label>
                 <input
                   id="nc-doc"
                   name="document_id"
                   value={documentId}
                   onChange={(e) => setDocumentId(e.target.value)}
-                  placeholder="Ej. 1234567890"
+                  placeholder={
+                    customerKind === "wholesale"
+                      ? "Ej. 900123456-7 o 900.123.456-7"
+                      : "Ej. 1234567890"
+                  }
+                  required={customerKind === "wholesale"}
+                  autoComplete="off"
                   className={inputClass}
                 />
               </div>
               <div>
                 <label htmlFor="nc-phone" className={labelClass}>
                   Teléfono
+                  {customerKind === "wholesale" ? (
+                    <span className="text-red-600 dark:text-red-400"> *</span>
+                  ) : null}
                 </label>
                 <input
                   id="nc-phone"
@@ -159,12 +183,16 @@ export function NewCustomerForm() {
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="Ej. 312 000 0000"
                   inputMode="tel"
+                  required={customerKind === "wholesale"}
                   className={inputClass}
                 />
               </div>
               <div className="sm:col-span-2">
                 <label htmlFor="nc-email" className={labelClass}>
                   Correo electrónico
+                  {customerKind === "wholesale" ? (
+                    <span className="text-red-600 dark:text-red-400"> *</span>
+                  ) : null}
                 </label>
                 <input
                   id="nc-email"
@@ -174,8 +202,67 @@ export function NewCustomerForm() {
                   type="email"
                   placeholder="Ej. maria@ejemplo.com"
                   autoComplete="email"
+                  required={customerKind === "wholesale"}
                   className={inputClass}
                 />
+              </div>
+              <div className="sm:col-span-2 rounded-lg border border-zinc-200/90 bg-zinc-50/60 p-4 dark:border-zinc-700 dark:bg-zinc-950/40">
+                <p className={labelClass}>Tipo de cliente</p>
+                <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                  <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-800 dark:text-zinc-200">
+                    <input
+                      type="radio"
+                      name="customer_kind"
+                      value="retail"
+                      checked={customerKind === "retail"}
+                      onChange={() => setCustomerKind("retail")}
+                      className="size-4 border-zinc-300 text-rose-950 focus:ring-rose-900/30 dark:border-zinc-600 dark:text-rose-300"
+                    />
+                    Consumidor final
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-800 dark:text-zinc-200">
+                    <input
+                      type="radio"
+                      name="customer_kind"
+                      value="wholesale"
+                      checked={customerKind === "wholesale"}
+                      onChange={() => setCustomerKind("wholesale")}
+                      className="size-4 border-zinc-300 text-rose-950 focus:ring-rose-900/30 dark:border-zinc-600 dark:text-rose-300"
+                    />
+                    Mayorista
+                  </label>
+                </div>
+                {customerKind === "wholesale" ? (
+                  <div className="mt-4">
+                    <label htmlFor="nc-wholesale-pct" className={labelClass}>
+                      Descuento en compra (%)
+                    </label>
+                    <input
+                      id="nc-wholesale-pct"
+                      name="wholesale_discount_percent"
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={wholesalePct}
+                      onChange={(e) =>
+                        setWholesalePct(
+                          Math.max(
+                            0,
+                            Math.min(100, Math.floor(Number(e.target.value) || 0)),
+                          ),
+                        )
+                      }
+                      className={`${inputClass} mt-1 max-w-[10rem]`}
+                    />
+                    <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                      Se aplica sobre el precio de catálogo en tienda en línea (y en factura POS si
+                      corresponde).
+                    </p>
+                  </div>
+                ) : (
+                  <input type="hidden" name="wholesale_discount_percent" value={0} />
+                )}
               </div>
             </div>
           </section>
@@ -287,9 +374,11 @@ export function NewCustomerForm() {
                   </dd>
                 </div>
               </dl>
-              <p className="mt-3 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
-                Completa al menos el nombre. Las direcciones son opcionales.
-              </p>
+                <p className="mt-3 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+                  {customerKind === "wholesale"
+                    ? "Mayorista: NIT, correo y teléfono son obligatorios. Las direcciones siguen siendo opcionales."
+                    : "Completa al menos el nombre. Las direcciones son opcionales."}
+                </p>
             </div>
 
             <p className="mt-5 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">

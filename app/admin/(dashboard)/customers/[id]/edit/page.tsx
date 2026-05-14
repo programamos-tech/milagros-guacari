@@ -23,7 +23,9 @@ export default async function AdminCustomerEditPage({ params, searchParams }: Pr
   const supabase = await createSupabaseServerClient();
   const { data: customer } = await supabase
     .from("customers")
-    .select("id,name,email,phone,document_id,shipping_address")
+    .select(
+      "id,name,email,phone,document_id,shipping_address,customer_kind,wholesale_discount_percent",
+    )
     .eq("id", id)
     .maybeSingle();
 
@@ -53,6 +55,8 @@ export default async function AdminCustomerEditPage({ params, searchParams }: Pr
             "Ya existe otro cliente con ese correo electrónico."
           ) : error === "addresses_invalid" ? (
             "Los datos de dirección no son válidos. Recarga la página e intenta de nuevo."
+          ) : error === "wholesale_required" ? (
+            "Cliente mayorista: completá NIT, correo electrónico válido y teléfono (todos obligatorios)."
           ) : (
             <>
               No se pudo guardar en la base de datos. Si falta la tabla de direcciones,
@@ -75,6 +79,21 @@ export default async function AdminCustomerEditPage({ params, searchParams }: Pr
         initialDocumentId={
           customer.document_id != null ? String(customer.document_id) : ""
         }
+        initialCustomerKind={String(
+          (customer as { customer_kind?: string }).customer_kind ?? "retail",
+        )}
+        initialWholesaleDiscountPercent={Math.max(
+          0,
+          Math.min(
+            100,
+            Math.floor(
+              Number(
+                (customer as { wholesale_discount_percent?: number | null })
+                  .wholesale_discount_percent ?? 0,
+              ),
+            ),
+          ),
+        )}
         addressRows={
           (addressRows ?? []).map((r) => ({
             label: String(r.label ?? ""),

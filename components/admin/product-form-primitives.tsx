@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   formatCopInputGrouping,
   parseCopInputDigitsToInt,
@@ -144,6 +145,12 @@ export function AdminDateInput({
   emptyLabel?: string;
 }) {
   const anchorRef = useRef<HTMLDivElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
+  const [popupFixed, setPopupFixed] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
+
   const selectedDate = allowEmpty
     ? (value.trim() ? parseDateInput(value) : null)
     : (parseDateInput(value) ?? new Date());
@@ -157,11 +164,50 @@ export function AdminDateInput({
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (ev: MouseEvent) => {
-      if (!anchorRef.current?.contains(ev.target as Node)) setOpen(false);
+      const t = ev.target as Node;
+      if (anchorRef.current?.contains(t)) return;
+      if (popupRef.current?.contains(t)) return;
+      setOpen(false);
     };
     document.addEventListener("mousedown", onPointerDown);
     return () => document.removeEventListener("mousedown", onPointerDown);
   }, [open]);
+
+  const POPUP_W = 288;
+  const POPUP_GAP = 6;
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setPopupFixed(null);
+      return;
+    }
+
+    const measure = () => {
+      const el = anchorRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      let left = r.left;
+      if (left + POPUP_W > window.innerWidth - 8) {
+        left = Math.max(8, window.innerWidth - POPUP_W - 8);
+      }
+      let top = r.bottom + POPUP_GAP;
+      const estH = 340;
+      if (top + estH > window.innerHeight - 8 && r.top > estH + POPUP_GAP) {
+        top = Math.max(8, r.top - estH - POPUP_GAP);
+      } else if (top + estH > window.innerHeight - 8) {
+        top = Math.max(8, window.innerHeight - estH - 8);
+      }
+      setPopupFixed({ top, left });
+    };
+
+    measure();
+    window.addEventListener("scroll", measure, true);
+    window.addEventListener("resize", measure);
+    return () => {
+      window.removeEventListener("scroll", measure, true);
+      window.removeEventListener("resize", measure);
+    };
+  }, [open, view]);
 
   const days = useMemo(() => {
     const start = new Date(view.getFullYear(), view.getMonth(), 1);
@@ -217,99 +263,109 @@ export function AdminDateInput({
         </svg>
       </button>
 
-      {open ? (
-        <div className="absolute left-0 top-[calc(100%+0.4rem)] z-30 w-[18rem] rounded-xl border border-zinc-200 bg-white p-3 shadow-[0_16px_40px_-20px_rgba(0,0,0,0.35)] dark:border-zinc-700 dark:bg-zinc-900 dark:shadow-[0_16px_40px_-20px_rgba(0,0,0,0.55)]">
-          <div className="mb-2 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => setView((v) => new Date(v.getFullYear(), v.getMonth() - 1, 1))}
-              className="rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-              aria-label="Mes anterior"
+      {open && popupFixed && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              ref={popupRef}
+              className="fixed z-[300] w-[18rem] rounded-xl border border-zinc-200 bg-white p-3 shadow-[0_16px_40px_-20px_rgba(0,0,0,0.35)] dark:border-zinc-700 dark:bg-zinc-900 dark:shadow-[0_16px_40px_-20px_rgba(0,0,0,0.55)]"
+              style={{ top: popupFixed.top, left: popupFixed.left }}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Elegir fecha"
             >
-              ←
-            </button>
-            <p className="text-sm font-semibold capitalize text-zinc-900 dark:text-zinc-100">
-              {monthLabel(view)}
-            </p>
-            <button
-              type="button"
-              onClick={() => setView((v) => new Date(v.getFullYear(), v.getMonth() + 1, 1))}
-              className="rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-              aria-label="Mes siguiente"
-            >
-              →
-            </button>
-          </div>
-          <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-zinc-500 dark:text-zinc-500">
-            {weekdayShort.map((w, i) => (
-              <span key={`dow-${i}`}>{w}</span>
-            ))}
-          </div>
-          <div className="mt-1 grid grid-cols-7 gap-1">
-            {days.map((d) => {
-              const inMonth = d.getMonth() === view.getMonth();
-              const active =
-                selectedDate !== null &&
-                d.getFullYear() === selectedDate.getFullYear() &&
-                d.getMonth() === selectedDate.getMonth() &&
-                d.getDate() === selectedDate.getDate();
-              return (
-                <button
-                  key={d.toISOString()}
-                  type="button"
-                  onClick={() => {
-                    onChange(toInputDate(d));
-                    setOpen(false);
-                  }}
-                  className={[
-                    "h-8 rounded-md text-sm tabular-nums transition",
-                    active
-                      ? "bg-rose-950 text-white dark:bg-zinc-100 dark:text-zinc-950"
-                      : inMonth
-                        ? "text-zinc-800 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
-                        : "text-zinc-400 hover:bg-zinc-50 dark:text-zinc-600 dark:hover:bg-zinc-800/60",
-                  ].join(" ")}
-                >
-                  {d.getDate()}
-                </button>
-              );
-            })}
-          </div>
-          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap gap-2">
-              {allowEmpty ? (
+              <div className="mb-2 flex min-w-0 items-center justify-between gap-1">
                 <button
                   type="button"
-                  onClick={() => {
-                    onChange("");
-                    setOpen(false);
-                  }}
-                  className="rounded-md px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950/50"
+                  onClick={() => setView((v) => new Date(v.getFullYear(), v.getMonth() - 1, 1))}
+                  className="shrink-0 rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                  aria-label="Mes anterior"
                 >
-                  Borrar
+                  ←
                 </button>
-              ) : null}
-              <button
-                type="button"
-                onClick={() => {
-                  onChange(toInputDate(new Date()));
-                  setOpen(false);
-                }}
-                className="rounded-md px-2 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-              >
-                Hoy
-              </button>
-            </div>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="rounded-md px-2 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-            >
-              Cerrar
-            </button>
-          </div>
-        </div>
-      ) : null}
+                <p className="min-w-0 truncate text-center text-sm font-semibold capitalize text-zinc-900 dark:text-zinc-100">
+                  {monthLabel(view)}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setView((v) => new Date(v.getFullYear(), v.getMonth() + 1, 1))}
+                  className="shrink-0 rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                  aria-label="Mes siguiente"
+                >
+                  →
+                </button>
+              </div>
+              <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-zinc-500 dark:text-zinc-500">
+                {weekdayShort.map((w, i) => (
+                  <span key={`dow-${i}`}>{w}</span>
+                ))}
+              </div>
+              <div className="mt-1 grid grid-cols-7 gap-1">
+                {days.map((d) => {
+                  const inMonth = d.getMonth() === view.getMonth();
+                  const active =
+                    selectedDate !== null &&
+                    d.getFullYear() === selectedDate.getFullYear() &&
+                    d.getMonth() === selectedDate.getMonth() &&
+                    d.getDate() === selectedDate.getDate();
+                  return (
+                    <button
+                      key={d.toISOString()}
+                      type="button"
+                      onClick={() => {
+                        onChange(toInputDate(d));
+                        setOpen(false);
+                      }}
+                      className={[
+                        "h-8 rounded-md text-sm tabular-nums transition",
+                        active
+                          ? "bg-rose-950 text-white dark:bg-zinc-100 dark:text-zinc-950"
+                          : inMonth
+                            ? "text-zinc-800 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                            : "text-zinc-400 hover:bg-zinc-50 dark:text-zinc-600 dark:hover:bg-zinc-800/60",
+                      ].join(" ")}
+                    >
+                      {d.getDate()}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap gap-2">
+                  {allowEmpty ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onChange("");
+                        setOpen(false);
+                      }}
+                      className="rounded-md px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950/50"
+                    >
+                      Borrar
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onChange(toInputDate(new Date()));
+                      setOpen(false);
+                    }}
+                    className="rounded-md px-2 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                  >
+                    Hoy
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="rounded-md px-2 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

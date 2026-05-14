@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { updateStoreCustomer } from "@/app/actions/admin/store-customers";
+import { clampWholesaleDiscountPercent } from "@/lib/customer-wholesale-pricing";
 import { CustomerAvatar } from "@/components/admin/CustomerAvatar";
 import {
   productInputClass as inputClass,
@@ -28,6 +29,8 @@ export type EditCustomerFormProps = {
   initialEmail: string;
   initialPhone: string;
   initialDocumentId: string;
+  initialCustomerKind: string;
+  initialWholesaleDiscountPercent: number;
   addressRows: EditCustomerAddressRow[];
   shippingFallback: string | null;
 };
@@ -161,6 +164,8 @@ export function EditCustomerForm(props: EditCustomerFormProps) {
     initialEmail,
     initialPhone,
     initialDocumentId,
+    initialCustomerKind,
+    initialWholesaleDiscountPercent,
     addressRows,
     shippingFallback,
   } = props;
@@ -169,6 +174,12 @@ export function EditCustomerForm(props: EditCustomerFormProps) {
   const [documentId, setDocumentId] = useState(initialDocumentId);
   const [phone, setPhone] = useState(initialPhone);
   const [email, setEmail] = useState(initialEmail);
+  const [customerKind, setCustomerKind] = useState<"retail" | "wholesale">(() =>
+    initialCustomerKind === "wholesale" ? "wholesale" : "retail",
+  );
+  const [wholesalePct, setWholesalePct] = useState(() =>
+    clampWholesaleDiscountPercent(initialWholesaleDiscountPercent),
+  );
   const [addresses, setAddresses] = useState<Addr[]>(() =>
     initialAddressesFromProps(addressRows, shippingFallback),
   );
@@ -185,7 +196,14 @@ export function EditCustomerForm(props: EditCustomerFormProps) {
     [addresses],
   );
 
-  const canSubmit = name.trim().length > 0;
+  const wholesaleFieldsOk =
+    customerKind !== "wholesale" ||
+    (documentId.trim().length > 0 &&
+      email.trim().length > 0 &&
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) &&
+      phone.trim().length > 0);
+
+  const canSubmit = name.trim().length > 0 && wholesaleFieldsOk;
 
   function updateAddr(i: number, patch: Partial<Addr>) {
     setAddresses((prev) =>
@@ -226,19 +244,34 @@ export function EditCustomerForm(props: EditCustomerFormProps) {
               </div>
               <div>
                 <label htmlFor="ec-doc" className={labelClass}>
-                  Cédula
+                  {customerKind === "wholesale" ? (
+                    <>
+                      NIT <span className="text-red-600 dark:text-red-400">*</span>
+                    </>
+                  ) : (
+                    "Cédula"
+                  )}
                 </label>
                 <input
                   id="ec-doc"
                   name="document_id"
                   value={documentId}
                   onChange={(e) => setDocumentId(e.target.value)}
+                  placeholder={
+                    customerKind === "wholesale"
+                      ? "Ej. 900123456-7 o 900.123.456-7"
+                      : "Ej. 1234567890"
+                  }
+                  required={customerKind === "wholesale"}
                   className={inputClass}
                 />
               </div>
               <div>
                 <label htmlFor="ec-phone" className={labelClass}>
                   Teléfono
+                  {customerKind === "wholesale" ? (
+                    <span className="text-red-600 dark:text-red-400"> *</span>
+                  ) : null}
                 </label>
                 <input
                   id="ec-phone"
@@ -246,12 +279,17 @@ export function EditCustomerForm(props: EditCustomerFormProps) {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   inputMode="tel"
+                  placeholder="Ej. 312 000 0000"
+                  required={customerKind === "wholesale"}
                   className={inputClass}
                 />
               </div>
               <div>
                 <label htmlFor="ec-email" className={labelClass}>
                   Correo electrónico
+                  {customerKind === "wholesale" ? (
+                    <span className="text-red-600 dark:text-red-400"> *</span>
+                  ) : null}
                 </label>
                 <input
                   id="ec-email"
@@ -260,10 +298,74 @@ export function EditCustomerForm(props: EditCustomerFormProps) {
                   onChange={(e) => setEmail(e.target.value)}
                   type="email"
                   autoComplete="email"
+                  placeholder="Ej. maria@ejemplo.com"
+                  required={customerKind === "wholesale"}
                   className={inputClass}
                 />
               </div>
+              <div className="sm:col-span-2 rounded-lg border border-zinc-200/90 bg-zinc-50/60 p-4 dark:border-zinc-700 dark:bg-zinc-950/40">
+                <p className={labelClass}>Tipo de cliente</p>
+                <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                  <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-800 dark:text-zinc-200">
+                    <input
+                      type="radio"
+                      name="customer_kind"
+                      value="retail"
+                      checked={customerKind === "retail"}
+                      onChange={() => setCustomerKind("retail")}
+                      className="size-4 border-zinc-300 text-rose-950 focus:ring-rose-900/30 dark:border-zinc-600 dark:text-rose-300"
+                    />
+                    Consumidor final
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-800 dark:text-zinc-200">
+                    <input
+                      type="radio"
+                      name="customer_kind"
+                      value="wholesale"
+                      checked={customerKind === "wholesale"}
+                      onChange={() => setCustomerKind("wholesale")}
+                      className="size-4 border-zinc-300 text-rose-950 focus:ring-rose-900/30 dark:border-zinc-600 dark:text-rose-300"
+                    />
+                    Mayorista
+                  </label>
+                </div>
+                {customerKind === "wholesale" ? (
+                  <div className="mt-4">
+                    <label htmlFor="ec-wholesale-pct" className={labelClass}>
+                      Descuento en compra (%)
+                    </label>
+                    <input
+                      id="ec-wholesale-pct"
+                      name="wholesale_discount_percent"
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={wholesalePct}
+                      onChange={(e) =>
+                        setWholesalePct(
+                          Math.max(
+                            0,
+                            Math.min(100, Math.floor(Number(e.target.value) || 0)),
+                          ),
+                        )
+                      }
+                      className={`${inputClass} mt-1 max-w-[10rem]`}
+                    />
+                    <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                      Aplica en tienda en línea (cuenta vinculada) y en factura POS.
+                    </p>
+                  </div>
+                ) : (
+                  <input type="hidden" name="wholesale_discount_percent" value={0} />
+                )}
+              </div>
             </div>
+            {customerKind === "wholesale" ? (
+              <p className="mt-4 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+                Mayorista: NIT, correo y teléfono son obligatorios.
+              </p>
+            ) : null}
           </section>
 
           <section className={`${shellCard} p-6 sm:p-8`}>

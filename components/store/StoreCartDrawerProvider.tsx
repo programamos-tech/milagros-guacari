@@ -28,9 +28,11 @@ export type StoreCartDrawerItem = {
   fragrance: string | null;
   name: string;
   priceCents: number;
+  listPriceCents?: number | null;
   imagePath: string | null;
   firstColor: string | null;
   lineTotalCents: number;
+  listLineTotalCents?: number | null;
   maxStock: number;
 };
 
@@ -296,7 +298,17 @@ function DrawerLine({
             </div>
           </div>
           <p className="shrink-0 pt-px text-[14px] font-medium tabular-nums text-stone-900">
-            {formatCop(item.lineTotalCents)}
+            {item.listLineTotalCents != null &&
+            item.listLineTotalCents > item.lineTotalCents ? (
+              <span className="flex flex-col items-end gap-0.5">
+                <span className="text-xs font-normal text-stone-400 line-through">
+                  {formatCop(item.listLineTotalCents)}
+                </span>
+                <span>{formatCop(item.lineTotalCents)}</span>
+              </span>
+            ) : (
+              formatCop(item.lineTotalCents)
+            )}
           </p>
         </div>
       </div>

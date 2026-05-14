@@ -17,6 +17,11 @@ import {
   productSectionTitle as sectionTitle,
 } from "@/components/admin/product-form-primitives";
 import { formatCop, parseCopInputDigitsToInt } from "@/lib/money";
+import {
+  parseStoreCustomerKind,
+  unitPriceAfterWholesaleCents,
+  wholesaleDiscountPercentFromRow,
+} from "@/lib/customer-wholesale-pricing";
 import { saleVatPercentLabel, unitPriceGrossCents } from "@/lib/product-vat-price";
 
 const cardSectionClass =
@@ -51,22 +56,29 @@ type CartLine = {
   quantity: number;
 };
 
-function lineBaseCents(line: CartLine): number {
-  return Number(line.product.price_cents ?? 0) * line.quantity;
-}
-
-function unitFinalCents(product: ProductHit): number {
-  return unitPriceGrossCents(
-    product.price_cents,
-    product.has_vat,
-    product.vat_percent,
+function lineBaseCents(line: CartLine, wholesalePct: number): number {
+  const net = unitPriceAfterWholesaleCents(
+    Number(line.product.price_cents ?? 0),
+    wholesalePct,
   );
+  return net * line.quantity;
 }
 
-function lineVatCents(line: CartLine): number {
-  const unitBase = Math.max(0, Number(line.product.price_cents ?? 0));
-  const unitFinal = unitFinalCents(line.product);
-  return (unitFinal - unitBase) * line.quantity;
+function unitFinalCents(product: ProductHit, wholesalePct: number): number {
+  const net = unitPriceAfterWholesaleCents(
+    Number(product.price_cents ?? 0),
+    wholesalePct,
+  );
+  return unitPriceGrossCents(net, product.has_vat, product.vat_percent);
+}
+
+function lineVatCents(line: CartLine, wholesalePct: number): number {
+  const unitNet = unitPriceAfterWholesaleCents(
+    Number(line.product.price_cents ?? 0),
+    wholesalePct,
+  );
+  const unitFinal = unitFinalCents(line.product, wholesalePct);
+  return (unitFinal - unitNet) * line.quantity;
 }
 
 type PaymentTab = "cash" | "transfer" | "mixed";
@@ -201,6 +213,8 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
   const [customerLoading, setCustomerLoading] = useState(false);
 
   const [customer, setCustomer] = useState<CustomerHit | null>(null);
+  const [customerWholesalePct, setCustomerWholesalePct] = useState(0);
+  const [posCustomerKind, setPosCustomerKind] = useState<"retail" | "wholesale">("retail");
   const [shipOptions, setShipOptions] = useState<ShipOption[]>([]);
   const [shipChoice, setShipChoice] = useState<string | null>(null);
   const [shipLoading, setShipLoading] = useState(false);
@@ -226,10 +240,22 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
       const res = await fetch(`/api/admin/customers/${id}/pos-profile`);
       if (!res.ok) {
         setShipOptions([]);
+        setCustomerWholesalePct(0);
+        setPosCustomerKind("retail");
         return;
       }
-      const json = (await res.json()) as { shipOptions?: ShipOption[] };
+      const json = (await res.json()) as {
+        shipOptions?: ShipOption[];
+        customer?: {
+          customer_kind?: string | null;
+          wholesale_discount_percent?: number | null;
+        };
+      };
       setShipOptions(json.shipOptions ?? []);
+      setPosCustomerKind(parseStoreCustomerKind(json.customer?.customer_kind));
+      setCustomerWholesalePct(
+        wholesaleDiscountPercentFromRow(json.customer ?? {}),
+      );
     } finally {
       setShipLoading(false);
     }
@@ -241,6 +267,8 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
     } else {
       setShipOptions([]);
       setShipChoice(null);
+      setPosCustomerKind("retail");
+      setCustomerWholesalePct(0);
     }
   }, [customer, loadCustomerProfile]);
 
@@ -344,18 +372,45 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
   const subtotalCents = useMemo(() => {
     let s = 0;
     for (const line of lines) {
-      s += lineBaseCents(line);
+      s += lineBaseCents(line, customerWholesalePct);
+    }
+    return s;
+  }, [lines, customerWholesalePct]);
+
+  const wholesaleSavingsNetCents = useMemo(() => {
+    if (customerWholesalePct <= 0) return 0;
+    let s = 0;
+    for (const line of lines) {
+      s += lineBaseCents(line, 0) - lineBaseCents(line, customerWholesalePct);
+    }
+    return s;
+  }, [lines, customerWholesalePct]);
+
+  const catalogNetSubtotalCents = useMemo(() => {
+    let s = 0;
+    for (const line of lines) {
+      s += lineBaseCents(line, 0);
     }
     return s;
   }, [lines]);
 
   const vatCents = useMemo(() => {
     let s = 0;
-    for (const line of lines) s += lineVatCents(line);
+    for (const line of lines) s += lineVatCents(line, customerWholesalePct);
     return s;
-  }, [lines]);
+  }, [lines, customerWholesalePct]);
 
   const totalCents = subtotalCents + vatCents;
+
+  const selectedShipOption = useMemo(
+    () => shipOptions.find((o) => o.id === shipChoice) ?? null,
+    [shipOptions, shipChoice],
+  );
+
+  const savedAddressOptions = useMemo(
+    () => shipOptions.filter((o): o is Extract<ShipOption, { kind: "address" }> => o.kind === "address"),
+    [shipOptions],
+  );
 
   const cashGivenCents = parseCopInputDigitsToInt(cashGivenRaw);
   const mixedCashCents = parseCopInputDigitsToInt(mixedCashRaw);
@@ -496,7 +551,7 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
                           </span>
                           <span className="text-xs text-zinc-500 dark:text-zinc-400">
                             {p.reference ? `${p.reference} · ` : null}
-                            {formatCop(unitFinalCents(p))}
+                            {formatCop(unitFinalCents(p, customerWholesalePct))}
                             {stock < 6 ? ` · Stock tienda: ${stock}` : null}
                           </span>
                         </button>
@@ -522,8 +577,8 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
                   const stock = Number(
                     line.product.stock_local ?? line.product.stock_quantity ?? 0,
                   );
-                  const lineSubtotal = lineBaseCents(line);
-                  const lineVat = lineVatCents(line);
+                  const lineSubtotal = lineBaseCents(line, customerWholesalePct);
+                  const lineVat = lineVatCents(line, customerWholesalePct);
                   const lineTotal = lineSubtotal + lineVat;
                   return (
                     <li
@@ -535,7 +590,7 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
                           {line.product.name}
                         </p>
                         <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                          {formatCop(unitFinalCents(line.product))} c/u
+                          {formatCop(unitFinalCents(line.product, customerWholesalePct))} c/u
                           {line.product.has_vat
                             ? ` · IVA ${String(saleVatPercentLabel(line.product.has_vat) ?? 0).replace(/\.0+$/, "")}%`
                             : ""}
@@ -650,11 +705,19 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
                   <span className="font-medium text-zinc-900 dark:text-zinc-100">
                     {customer.name}
                   </span>
+                  {posCustomerKind === "wholesale" ? (
+                    <span className="rounded-full border border-amber-200/90 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-950 dark:border-amber-800/80 dark:bg-amber-950/40 dark:text-amber-100">
+                      Mayorista
+                      {customerWholesalePct > 0 ? ` · ${customerWholesalePct}%` : null}
+                    </span>
+                  ) : null}
                   <button
                     type="button"
                     className="text-xs font-medium text-zinc-600 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100"
                     onClick={() => {
                       setCustomer(null);
+                      setCustomerWholesalePct(0);
+                      setPosCustomerKind("retail");
                       setShipChoice(null);
                       setShipOptions([]);
                     }}
@@ -679,20 +742,53 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
                   Cargando direcciones…
                 </p>
               ) : (
-                <div className="mt-4">
-                  <label className={labelClass}>Entrega</label>
-                  <select
-                    value={shipChoice ?? shipOptions[0]?.id ?? ""}
-                    onChange={(e) => setShipChoice(e.target.value || null)}
-                    className={inputClass}
-                  >
-                    {shipOptions.map((o) => (
-                      <option key={o.id} value={o.id}>
-                        {o.label}
-                        {o.kind === "address" ? ` — ${o.detail}` : ""}
-                      </option>
-                    ))}
-                  </select>
+                <div className="mt-4 space-y-3">
+                  <div>
+                    <label className={labelClass}>Entrega</label>
+                    <select
+                      value={shipChoice ?? shipOptions[0]?.id ?? ""}
+                      onChange={(e) => setShipChoice(e.target.value || null)}
+                      className={inputClass}
+                    >
+                      {shipOptions.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.label}
+                          {o.kind === "address" ? ` — ${o.detail}` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {selectedShipOption ? (
+                    <div className="rounded-lg border border-zinc-200/90 bg-zinc-50/80 px-3 py-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-950/50">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                        {selectedShipOption.kind === "address" ? "Dirección elegida" : "Detalle"}
+                      </p>
+                      <p className="mt-1 font-medium text-zinc-900 dark:text-zinc-100">
+                        {selectedShipOption.label}
+                      </p>
+                      <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
+                        {selectedShipOption.detail}
+                      </p>
+                    </div>
+                  ) : null}
+                  {shipChoice === "pickup" && savedAddressOptions.length > 0 ? (
+                    <div className="rounded-lg border border-dashed border-zinc-200/90 bg-white/50 px-3 py-2.5 dark:border-zinc-600 dark:bg-zinc-950/30">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                        Otras direcciones guardadas
+                      </p>
+                      <ul className="mt-2 space-y-2 text-sm text-zinc-700 dark:text-zinc-300">
+                        {savedAddressOptions.map((o) => (
+                          <li key={o.id}>
+                            <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                              {o.label}
+                            </span>
+                            <span className="text-zinc-500 dark:text-zinc-400"> — </span>
+                            <span className="whitespace-pre-line">{o.detail}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
                 </div>
               )}
             </section>
@@ -798,8 +894,41 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
               <h2 className={sectionTitle}>Resumen</h2>
               <div className="mt-4 rounded-lg border border-zinc-200/90 bg-white/60 p-3 text-sm sm:p-4 dark:border-zinc-700 dark:bg-zinc-950/70">
                 <dl className="space-y-2 text-zinc-700 dark:text-zinc-300">
+                  {wholesaleSavingsNetCents > 0 ? (
+                    <>
+                      <div className="flex justify-between gap-2">
+                        <dt className="text-zinc-500 dark:text-zinc-400">
+                          Subtotal (precio de lista)
+                        </dt>
+                        <dd className="tabular-nums font-medium text-zinc-900 dark:text-zinc-100">
+                          {formatCop(catalogNetSubtotalCents)}
+                        </dd>
+                      </div>
+                      <div className="flex justify-between gap-2">
+                        <dt className="text-emerald-700 dark:text-emerald-400">
+                          Descuento mayorista ({customerWholesalePct}%)
+                        </dt>
+                        <dd className="tabular-nums font-medium text-emerald-800 dark:text-emerald-300">
+                          −{formatCop(wholesaleSavingsNetCents)}
+                        </dd>
+                      </div>
+                    </>
+                  ) : posCustomerKind === "wholesale" &&
+                    customerWholesalePct <= 0 &&
+                    lines.length > 0 ? (
+                    <div className="rounded-lg border border-amber-200/80 bg-amber-50/60 px-2.5 py-2 text-xs text-amber-950 dark:border-amber-800/60 dark:bg-amber-950/25 dark:text-amber-100">
+                      Cliente mayorista sin porcentaje de descuento configurado en su ficha.
+                    </div>
+                  ) : null}
                   <div className="flex justify-between gap-2">
-                    <dt className="text-zinc-500 dark:text-zinc-400">Subtotal</dt>
+                    <dt className="text-zinc-500 dark:text-zinc-400">
+                      Subtotal
+                      {customerWholesalePct > 0 ? (
+                        <span className="mt-0.5 block text-[10px] font-normal normal-case text-zinc-400 dark:text-zinc-500">
+                          (neto mercancía)
+                        </span>
+                      ) : null}
+                    </dt>
                     <dd className="tabular-nums font-medium text-zinc-900 dark:text-zinc-100">
                       {formatCop(subtotalCents)}
                     </dd>

@@ -39,6 +39,8 @@ export type AdminCustomerDetail = {
     source: string;
     created_at: string;
     birth_date: string | null;
+    customer_kind: string;
+    wholesale_discount_percent: number;
   };
   addresses: CustomerAddressRow[];
   ordersPaid: AdminCustomerOrderRow[];
@@ -138,7 +140,7 @@ export async function fetchAdminCustomerDetail(
   const { data: raw, error: cErr } = await supabase
     .from("customers")
     .select(
-      "id,name,email,phone,document_id,shipping_address,shipping_city,shipping_postal_code,notes,source,created_at,birth_date",
+      "id,name,email,phone,document_id,shipping_address,shipping_city,shipping_postal_code,notes,source,created_at,birth_date,customer_kind,wholesale_discount_percent",
     )
     .eq("id", customerId)
     .maybeSingle();
@@ -152,11 +154,23 @@ export async function fetchAdminCustomerDetail(
   }
 
   const customer = {
-    ...(raw as Omit<AdminCustomerDetail["customer"], "birth_date">),
+    ...(raw as Omit<AdminCustomerDetail["customer"], "birth_date" | "customer_kind" | "wholesale_discount_percent">),
     birth_date:
       (raw as { birth_date?: string | null }).birth_date != null
         ? String((raw as { birth_date?: string | null }).birth_date)
         : null,
+    customer_kind: String(
+      (raw as { customer_kind?: string | null }).customer_kind ?? "retail",
+    ),
+    wholesale_discount_percent: Math.max(
+      0,
+      Math.min(
+        100,
+        Math.floor(
+          Number((raw as { wholesale_discount_percent?: number | null }).wholesale_discount_percent ?? 0),
+        ),
+      ),
+    ),
   };
   const emailNormalized = customer.email?.trim().toLowerCase() ?? null;
 

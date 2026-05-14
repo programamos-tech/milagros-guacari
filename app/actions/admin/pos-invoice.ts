@@ -3,6 +3,10 @@
 import { logAdminActivity } from "@/lib/admin-activity-log";
 import { assertActionPermission } from "@/lib/require-admin-permission";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  unitPriceAfterWholesaleCents,
+  wholesaleDiscountPercentFromRow,
+} from "@/lib/customer-wholesale-pricing";
 import { unitPriceGrossCents } from "@/lib/product-vat-price";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -63,12 +67,20 @@ export async function createPosInvoiceAction(formData: FormData) {
 
   const { data: customer, error: cErr } = await supabase
     .from("customers")
-    .select("id,name,email,phone")
+    .select(
+      "id,name,email,phone,document_id,shipping_address,customer_kind,wholesale_discount_percent",
+    )
     .eq("id", customerId)
     .maybeSingle();
 
   if (cErr || !customer) redirectError("customer");
   const customerRow = customer;
+  const wholesalePct = wholesaleDiscountPercentFromRow(
+    customerRow as {
+      customer_kind?: string | null;
+      wholesale_discount_percent?: number | null;
+    },
+  );
 
   const productIds = [...new Set(lines.map((l) => l.productId))];
   const { data: products, error: pErr } = await supabase
@@ -94,7 +106,8 @@ export async function createPosInvoiceAction(formData: FormData) {
   for (const [pid, qty] of qtyByProduct) {
     const p = productById.get(pid);
     if (!p) redirectError("products");
-    const price = Math.max(0, Math.floor(Number(p.price_cents ?? 0)));
+    const priceCatalog = Math.max(0, Math.floor(Number(p.price_cents ?? 0)));
+    const price = unitPriceAfterWholesaleCents(priceCatalog, wholesalePct);
     const hasVat = Boolean(p.has_vat);
     const unitFinal = unitPriceGrossCents(price, hasVat, null);
     const stock = Number(p.stock_local ?? 0);
@@ -149,8 +162,9 @@ export async function createPosInvoiceAction(formData: FormData) {
 
   const itemRows = lines.map((l) => {
     const p = productById.get(l.productId)!;
-    const base = Math.max(0, Math.floor(Number(p.price_cents ?? 0)));
-    const unitFinal = unitPriceGrossCents(base, Boolean(p.has_vat), null);
+    const priceCatalog = Math.max(0, Math.floor(Number(p.price_cents ?? 0)));
+    const netAfter = unitPriceAfterWholesaleCents(priceCatalog, wholesalePct);
+    const unitFinal = unitPriceGrossCents(netAfter, Boolean(p.has_vat), null);
     return {
       order_id: orderId,
       product_id: l.productId,

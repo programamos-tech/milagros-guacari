@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { imagePathForProductLine } from "@/lib/product-line-image";
+import {
+  unitPriceAfterWholesaleCents,
+  wholesaleDiscountPercentFromRow,
+} from "@/lib/customer-wholesale-pricing";
 import { getStorefrontCartLines } from "@/lib/storefront-cart";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -11,9 +15,12 @@ export type CartDrawerItem = {
   fragrance: string | null;
   name: string;
   priceCents: number;
+  /** Precio de catálogo por unidad (solo si hay descuento mayorista). */
+  listPriceCents?: number | null;
   imagePath: string | null;
   firstColor: string | null;
   lineTotalCents: number;
+  listLineTotalCents?: number | null;
   maxStock: number;
 };
 
@@ -63,10 +70,36 @@ function firstColorLabel(colors: unknown): string | null {
   return typeof c === "string" && c.trim() ? c.trim() : null;
 }
 
+async function loggedStoreCustomerWholesalePercent(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+): Promise<number> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.id) return 0;
+  const { data: prof } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (prof) return 0;
+  const { data: c } = await supabase
+    .from("customers")
+    .select("customer_kind, wholesale_discount_percent")
+    .maybeSingle();
+  return wholesaleDiscountPercentFromRow(
+    (c ?? {}) as {
+      customer_kind?: string | null;
+      wholesale_discount_percent?: number | null;
+    },
+  );
+}
+
 /** Líneas del carrito + ítems enriquecidos para el drawer (y `lines` compat). */
 export async function GET() {
   const lines = await getStorefrontCartLines();
   const supabase = await createSupabaseServerClient();
+  const wholesalePct = await loggedStoreCustomerWholesalePercent(supabase);
 
   if (lines.length === 0) {
     const empty: CartDrawerItem[] = [];
@@ -75,6 +108,7 @@ export async function GET() {
       lines: [],
       items: empty,
       subtotalCents: 0,
+      wholesaleDiscountPercent: wholesalePct,
       suggestions,
     });
   }
@@ -109,7 +143,10 @@ export async function GET() {
   for (const line of lines) {
     const p = byId.get(line.productId);
     if (!p) continue;
-    const lineTotalCents = p.price_cents * line.quantity;
+    const listUnit = p.price_cents;
+    const unit = unitPriceAfterWholesaleCents(listUnit, wholesalePct);
+    const lineTotalCents = unit * line.quantity;
+    const listLineTotalCents = listUnit * line.quantity;
     subtotalCents += lineTotalCents;
     const frag = line.fragrance?.trim() || null;
     items.push({
@@ -117,7 +154,9 @@ export async function GET() {
       quantity: line.quantity,
       fragrance: frag,
       name: p.name,
-      priceCents: p.price_cents,
+      priceCents: unit,
+      listPriceCents:
+        wholesalePct > 0 && unit < listUnit ? listUnit : null,
       imagePath: imagePathForProductLine(
         p.image_path,
         p.fragrance_option_images,
@@ -125,6 +164,10 @@ export async function GET() {
       ),
       firstColor: firstColorLabel(p.colors),
       lineTotalCents,
+      listLineTotalCents:
+        wholesalePct > 0 && listLineTotalCents > lineTotalCents
+          ? listLineTotalCents
+          : null,
       maxStock: Math.max(
         0,
         Math.floor(Number(p.stock_quantity ?? 0)),
@@ -134,5 +177,11 @@ export async function GET() {
 
   const suggestions = await loadCartDrawerSuggestions(supabase, ids);
 
-  return NextResponse.json({ lines, items, subtotalCents, suggestions });
+  return NextResponse.json({
+    lines,
+    items,
+    subtotalCents,
+    wholesaleDiscountPercent: wholesalePct,
+    suggestions,
+  });
 }

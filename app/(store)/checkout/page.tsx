@@ -5,6 +5,10 @@ import { startCheckout } from "@/app/actions/checkout";
 import { syncStoreCustomerFromSession } from "@/app/actions/store-customer";
 import { getCart, normalizeCartForCheckout } from "@/lib/cart";
 import { formatCop } from "@/lib/money";
+import {
+  unitPriceAfterWholesaleCents,
+  wholesaleDiscountPercentFromRow,
+} from "@/lib/customer-wholesale-pricing";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { imagePathForProductLine } from "@/lib/product-line-image";
@@ -266,6 +270,7 @@ export default async function CheckoutPage({
     mobile: "",
   };
   let savedAddresses: CheckoutSavedAddress[] = [];
+  let wholesaleDisplayPct = 0;
 
   if (checkoutUser?.email) {
     const { data: adminProf } = await sessionSb
@@ -287,9 +292,18 @@ export default async function CheckoutPage({
       const { data: cust } = await sessionSb
         .from("customers")
         .select(
-          "name, phone, shipping_address, shipping_city, shipping_postal_code",
+          "name, phone, shipping_address, shipping_city, shipping_postal_code, customer_kind, wholesale_discount_percent",
         )
         .maybeSingle();
+
+      wholesaleDisplayPct = cust
+        ? wholesaleDiscountPercentFromRow(
+            cust as {
+              customer_kind?: string | null;
+              wholesale_discount_percent?: number | null;
+            },
+          )
+        : 0;
 
       if (cust) {
         const nm = cust.name?.trim() ?? "";
@@ -342,11 +356,15 @@ export default async function CheckoutPage({
 
   const rows = displayCart.map((line) => {
     const p = byId.get(line.productId)!;
-    const sub = p.price_cents * line.quantity;
-    return { line, p, sub };
+    const unit = unitPriceAfterWholesaleCents(p.price_cents, wholesaleDisplayPct);
+    const sub = unit * line.quantity;
+    const catalogSub = p.price_cents * line.quantity;
+    return { line, p, sub, catalogSub };
   });
 
+  const catalogTotal = rows.reduce((acc, r) => acc + r.catalogSub, 0);
   const total = rows.reduce((acc, r) => acc + r.sub, 0);
+  const wholesaleSavingCents = Math.max(0, catalogTotal - total);
 
   return (
     <div className="min-h-[calc(100vh-8rem)] bg-white">
@@ -389,7 +407,7 @@ export default async function CheckoutPage({
             <div className="min-w-0 space-y-14">
               <section>
                 <ul className="divide-y divide-stone-200">
-                  {rows.map(({ line, p, sub }) => {
+                  {rows.map(({ line, p, sub, catalogSub }) => {
                     const row = p as typeof p & {
                       colors?: unknown;
                       fragrance_option_images?: unknown;
@@ -406,6 +424,8 @@ export default async function CheckoutPage({
                       Math.floor(Number(p.stock_quantity ?? 0)),
                     );
                     const color = firstColorLabel(row.colors);
+                    const showWholesaleLine =
+                      wholesaleDisplayPct > 0 && catalogSub > sub;
 
                     return (
                       <li
@@ -470,9 +490,20 @@ export default async function CheckoutPage({
                           </div>
                         </div>
                         <div className="shrink-0 text-left sm:pt-0.5 sm:text-right">
-                          <p className="text-[15px] font-medium tabular-nums text-stone-900">
-                            {formatCop(sub)}
-                          </p>
+                          {showWholesaleLine ? (
+                            <div className="space-y-1">
+                              <p className="text-xs tabular-nums text-stone-400 line-through">
+                                {formatCop(catalogSub)}
+                              </p>
+                              <p className="text-[15px] font-medium tabular-nums text-stone-900">
+                                {formatCop(sub)}
+                              </p>
+                            </div>
+                          ) : (
+                            <p className="text-[15px] font-medium tabular-nums text-stone-900">
+                              {formatCop(sub)}
+                            </p>
+                          )}
                         </div>
                       </li>
                     );
@@ -649,6 +680,24 @@ export default async function CheckoutPage({
               </details>
 
               <dl className="space-y-3 text-[13px] text-stone-700">
+                {wholesaleSavingCents > 0 ? (
+                  <>
+                    <div className="flex justify-between gap-4">
+                      <dt className="text-stone-600">Precio catálogo</dt>
+                      <dd className="shrink-0 tabular-nums text-stone-500 line-through">
+                        {formatCop(catalogTotal)}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between gap-4 text-emerald-800">
+                      <dt>
+                        Mayorista ({wholesaleDisplayPct}%)
+                      </dt>
+                      <dd className="shrink-0 font-medium tabular-nums">
+                        −{formatCop(wholesaleSavingCents)}
+                      </dd>
+                    </div>
+                  </>
+                ) : null}
                 <div className="flex justify-between gap-4">
                   <dt className="text-stone-600">
                     Subtotal ({rows.length}{" "}

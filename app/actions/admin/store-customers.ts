@@ -1,6 +1,10 @@
 "use server";
 
 import { logAdminActivity } from "@/lib/admin-activity-log";
+import {
+  clampWholesaleDiscountPercent,
+  parseStoreCustomerKind,
+} from "@/lib/customer-wholesale-pricing";
 import { loadAdminPermissions } from "@/lib/load-admin-permissions";
 import { assertActionPermission } from "@/lib/require-admin-permission";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -78,6 +82,42 @@ function normEmail(v: string): string | null {
   return t ? t : null;
 }
 
+function isEmailLike(v: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+}
+
+/** Mayorista: NIT (document_id), correo y teléfono obligatorios. */
+function assertWholesaleMandatoryFields(
+  customerKind: "retail" | "wholesale",
+  documentId: string,
+  emailRaw: string,
+  phone: string,
+  redirectOnError: (code: string) => never,
+) {
+  if (customerKind !== "wholesale") return;
+  const nit = documentId.trim();
+  const mail = emailRaw.trim();
+  const tel = phone.trim();
+  if (!nit || !mail || !tel || !isEmailLike(mail)) {
+    redirectOnError("wholesale_required");
+  }
+}
+
+function wholesaleFieldsFromForm(formData: FormData): {
+  customer_kind: "retail" | "wholesale";
+  wholesale_discount_percent: number;
+} {
+  const kind = parseStoreCustomerKind(
+    String(formData.get("customer_kind") ?? "").trim(),
+  );
+  const pctRaw = Number(String(formData.get("wholesale_discount_percent") ?? "0"));
+  const pct = clampWholesaleDiscountPercent(pctRaw);
+  return {
+    customer_kind: kind,
+    wholesale_discount_percent: kind === "wholesale" ? pct : 0,
+  };
+}
+
 type AddressPayload = {
   label: string;
   address_line: string;
@@ -118,8 +158,18 @@ export async function createStoreCustomer(formData: FormData) {
   );
 
   const email = normEmail(emailRaw);
+  const { customer_kind, wholesale_discount_percent } =
+    wholesaleFieldsFromForm(formData);
 
   if (!name) redirect("/admin/customers/new?error=name");
+
+  assertWholesaleMandatoryFields(
+    customer_kind,
+    documentId,
+    emailRaw,
+    phone,
+    (code) => redirect(`/admin/customers/new?error=${code}`),
+  );
 
   if (email) {
     const { data: dup } = await supabase
@@ -146,6 +196,8 @@ export async function createStoreCustomer(formData: FormData) {
       shipping_city: null,
       shipping_postal_code: null,
       source: "manual",
+      customer_kind,
+      wholesale_discount_percent,
     })
     .select("id")
     .single();
@@ -179,6 +231,8 @@ export async function createStoreCustomer(formData: FormData) {
     summary: `Nuevo cliente: ${name}`,
     metadata: {
       source: "form",
+      customer_kind,
+      wholesale_discount_percent,
       ...(documentId ? { document_id: documentId } : {}),
       ...(email ? { email } : {}),
       ...(phone ? { phone } : {}),
@@ -228,10 +282,20 @@ export async function updateStoreCustomer(formData: FormData) {
   );
 
   const email = normEmail(emailRaw);
+  const { customer_kind, wholesale_discount_percent } =
+    wholesaleFieldsFromForm(formData);
 
   if (!name) {
     redirect(`/admin/customers/${customerId}/edit?error=name`);
   }
+
+  assertWholesaleMandatoryFields(
+    customer_kind,
+    documentId,
+    emailRaw,
+    phone,
+    (code) => redirect(`/admin/customers/${customerId}/edit?error=${code}`),
+  );
 
   if (email) {
     const { data: dup } = await supabase
@@ -258,6 +322,8 @@ export async function updateStoreCustomer(formData: FormData) {
       phone: phone || null,
       document_id: documentId || null,
       shipping_address: shippingAddress,
+      customer_kind,
+      wholesale_discount_percent,
     })
     .eq("id", customerId);
 
@@ -297,6 +363,8 @@ export async function updateStoreCustomer(formData: FormData) {
     entityId: customerId,
     summary: `Cliente actualizado: ${name}`,
     metadata: {
+      customer_kind,
+      wholesale_discount_percent,
       ...(documentId ? { document_id: documentId } : {}),
       ...(email ? { email } : {}),
       ...(phone ? { phone } : {}),

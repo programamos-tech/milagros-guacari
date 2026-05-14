@@ -22,7 +22,9 @@ export async function GET(
 
   const { data: customer, error: cErr } = await supabase
     .from("customers")
-    .select("id,name,email,phone,document_id,shipping_address")
+    .select(
+      "id,name,email,phone,document_id,shipping_address,customer_kind,wholesale_discount_percent",
+    )
     .eq("id", customerId)
     .maybeSingle();
 

@@ -20,6 +20,8 @@ export type AdminCustomerListRow = {
   phone: string | null;
   documentId: string | null;
   source: string;
+  customerKind: string;
+  wholesaleDiscountPercent: number;
   addressLine: string | null;
   cityLine: string | null;
   purchases: number;
@@ -176,7 +178,7 @@ export async function fetchAdminCustomersWithStats(supabase: SupabaseClient): Pr
   const { data: customerRows, error: cErr } = await supabase
     .from("customers")
     .select(
-      "id,name,email,phone,document_id,shipping_address,shipping_city,shipping_postal_code,source,created_at",
+      "id,name,email,phone,document_id,shipping_address,shipping_city,shipping_postal_code,source,created_at,customer_kind,wholesale_discount_percent",
     )
     .order("name", { ascending: true });
 
@@ -204,6 +206,8 @@ export async function fetchAdminCustomersWithStats(supabase: SupabaseClient): Pr
       shipping_city: string | null;
       shipping_postal_code: string | null;
       source: string;
+      customer_kind?: string | null;
+      wholesale_discount_percent?: number | null;
     };
 
     const emailKey = r.email ? r.email.trim().toLowerCase() : "";
@@ -219,6 +223,11 @@ export async function fetchAdminCustomersWithStats(supabase: SupabaseClient): Pr
       phone: r.phone?.trim() || "—",
       documentId: r.document_id,
       source: r.source,
+      customerKind: String(r.customer_kind ?? "retail"),
+      wholesaleDiscountPercent: Math.max(
+        0,
+        Math.min(100, Math.floor(Number(r.wholesale_discount_percent ?? 0))),
+      ),
       addressLine,
       cityLine,
       purchases: st?.purchases ?? 0,

@@ -233,6 +233,14 @@ export default async function AdminCustomerDetailPage({ params, searchParams }: 
                 <span className="inline-flex rounded-md border border-rose-950/20 bg-rose-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-rose-950 dark:border-rose-400/25 dark:bg-rose-950/35 dark:text-rose-100">
                   Cliente
                 </span>
+                {customer.customer_kind === "wholesale" ? (
+                  <span className="inline-flex rounded-md border border-emerald-800/25 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-100">
+                    Mayorista{" "}
+                    {customer.wholesale_discount_percent > 0
+                      ? `· ${customer.wholesale_discount_percent}%`
+                      : null}
+                  </span>
+                ) : null}
                 {ventas > 0 ? (
                   <span
                     className={
@@ -428,7 +436,9 @@ export default async function AdminCustomerDetailPage({ params, searchParams }: 
                     </svg>
                   </span>
                   <div className="min-w-0">
-                    <p className={labelClass}>Documento</p>
+                    <p className={labelClass}>
+                      {customer.customer_kind === "wholesale" ? "NIT" : "Cédula"}
+                    </p>
                     <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{customer.document_id.trim()}</p>
                   </div>
                 </div>

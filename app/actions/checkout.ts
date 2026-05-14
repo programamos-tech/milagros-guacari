@@ -10,6 +10,10 @@ import {
   getWompiEnv,
   shouldSkipWompiPayment,
 } from "@/lib/wompi";
+import {
+  unitPriceAfterWholesaleCents,
+  wholesaleDiscountPercentFromRow,
+} from "@/lib/customer-wholesale-pricing";
 import { findActiveStoreCouponForCheckout } from "@/lib/store-coupons";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { revalidatePath } from "next/cache";
@@ -105,6 +109,23 @@ export async function startCheckout(formData: FormData) {
     redirect("/checkout?error=empty");
   }
 
+  const emailLc = customerEmailForOrder.toLowerCase();
+
+  const { data: existingCustomer } = await supabase
+    .from("customers")
+    .select("id,customer_kind,wholesale_discount_percent")
+    .eq("email", emailLc)
+    .maybeSingle();
+
+  const wholesalePct = existingCustomer
+    ? wholesaleDiscountPercentFromRow(
+        existingCustomer as {
+          customer_kind?: string | null;
+          wholesale_discount_percent?: number | null;
+        },
+      )
+    : 0;
+
   let total = 0;
   const lines: {
     product_id: string;
@@ -118,13 +139,14 @@ export async function startCheckout(formData: FormData) {
     if (!p) {
       redirect("/checkout?error=removed");
     }
-    const sub = p.price_cents * line.quantity;
+    const unit = unitPriceAfterWholesaleCents(p.price_cents, wholesalePct);
+    const sub = unit * line.quantity;
     total += sub;
     const frag = line.fragrance?.trim();
     lines.push({
       product_id: p.id,
       quantity: line.quantity,
-      unit_price_cents: p.price_cents,
+      unit_price_cents: unit,
       product_name_snapshot: frag ? `${p.name} (${frag})` : p.name,
     });
   }
@@ -147,7 +169,8 @@ export async function startCheckout(formData: FormData) {
             }
             const p = byId.get(line.productId);
             if (!p) return sum;
-            return sum + p.price_cents * line.quantity;
+            const unit = unitPriceAfterWholesaleCents(p.price_cents, wholesalePct);
+            return sum + unit * line.quantity;
           }, 0);
     if (
       couponMatch.eligible_product_ids !== null &&
@@ -165,14 +188,6 @@ export async function startCheckout(formData: FormData) {
 
   const first = byId.get(normalized[0]!.productId);
   const currency = first?.currency ?? "COP";
-
-  const emailLc = customerEmailForOrder.toLowerCase();
-
-  const { data: existingCustomer } = await supabase
-    .from("customers")
-    .select("id")
-    .eq("email", emailLc)
-    .maybeSingle();
 
   let customerId: string;
 

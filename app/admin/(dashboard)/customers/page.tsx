@@ -260,6 +260,16 @@ export default async function AdminCustomersPage({
                             >
                               {r.name}
                             </Link>
+                            {r.customerKind === "wholesale" ? (
+                              <p className="mt-1">
+                                <span className="inline-flex rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-900 dark:border-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-100">
+                                  Mayorista
+                                  {r.wholesaleDiscountPercent > 0
+                                    ? ` ${r.wholesaleDiscountPercent}%`
+                                    : ""}
+                                </span>
+                              </p>
+                            ) : null}
                             <p className="mt-1 font-mono text-xs text-zinc-500 dark:text-zinc-400">
                               {docShow}
                             </p>
@@ -358,6 +368,16 @@ export default async function AdminCustomersPage({
                               >
                                 {r.name}
                               </Link>
+                              {r.customerKind === "wholesale" ? (
+                                <p className="mt-1">
+                                  <span className="inline-flex rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-900 dark:border-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-100">
+                                    Mayorista
+                                    {r.wholesaleDiscountPercent > 0
+                                      ? ` ${r.wholesaleDiscountPercent}%`
+                                      : ""}
+                                  </span>
+                                </p>
+                              ) : null}
                               <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">
                                 {r.purchases}{" "}
                                 {r.purchases === 1 ? "compra" : "compras"} ·{" "}
