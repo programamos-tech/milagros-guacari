@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { StoreAuthModalProvider } from "@/components/store/StoreAuthModals";
 import { StoreCookiesBanner } from "@/components/store/StoreCookiesBanner";
 import { StoreFavoritesProvider } from "@/components/store/StoreFavoritesProvider";
@@ -8,6 +9,7 @@ import { StoreWelcomeDiscountBanner } from "@/components/store/StoreWelcomeDisco
 import { StoreWhatsAppFloatingButton } from "@/components/store/StoreWhatsAppFloatingButton";
 import { StoreCartDrawerProvider } from "@/components/store/StoreCartDrawerProvider";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { STORE_HEADER_BG, STORE_HEADER_FG } from "@/lib/store-theme";
 import { fetchBannerStoreCoupon } from "@/lib/store-coupons";
 import {
   fetchActiveWelcomeModal,
@@ -27,7 +29,15 @@ export default async function StoreLayout({
     <StoreFavoritesProvider>
       <StoreCartDrawerProvider>
         <StoreAuthModalProvider>
-          <div className="flex min-h-full flex-col bg-white text-stone-800">
+          <div
+            className="flex min-h-full flex-col bg-white text-stone-800"
+            style={
+              {
+                "--store-header-bg": STORE_HEADER_BG,
+                "--store-header-fg": STORE_HEADER_FG,
+              } as CSSProperties
+            }
+          >
             <StoreHeader />
             <StoreWelcomeDiscountBanner dbCoupon={promoBanner} />
             <main className="flex-1">{children}</main>

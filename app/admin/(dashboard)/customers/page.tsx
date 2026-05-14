@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { CustomerAvatar } from "@/components/admin/CustomerAvatar";
 import { CustomersSearchBar } from "@/components/admin/CustomersSearchBar";
 import { CustomersPagination } from "@/components/admin/CustomersPagination";
+import { AnimatedCopCents, AnimatedInteger } from "@/components/admin/ReportsAnimatedFigures";
 import { customerAvatarSeed } from "@/lib/customer-avatar-seed";
 import { CustomerRowActions } from "@/components/admin/CustomerRowActions";
 import {
@@ -11,7 +12,6 @@ import {
 } from "@/lib/supabase/admin-customers-list";
 import { loadAdminPermissions } from "@/lib/load-admin-permissions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { formatCop } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
@@ -90,7 +90,7 @@ export default async function AdminCustomersPage({
       error.message.includes("schema cache"));
 
   return (
-    <div className="min-w-0">
+    <div className="w-full min-w-0">
       <div className="flex flex-col gap-4 border-b border-zinc-100 pb-6 dark:border-zinc-800 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 sm:text-3xl">
@@ -98,16 +98,7 @@ export default async function AdminCustomersPage({
           </h1>
           <p className="mt-1 max-w-xl text-sm text-zinc-600 dark:text-zinc-300">
             Un mismo registro para la tienda online y la física: alta manual o cuando compran en
-            la web. Si hay filas duplicadas por la misma cédula o el mismo correo, podés unificarlas
-            con el script{" "}
-            <code className="rounded bg-zinc-100 px-1 py-0.5 font-mono text-[11px] text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200">
-              npm run merge:customers-duplicates
-            </code>{" "}
-            (simulación) y{" "}
-            <code className="rounded bg-zinc-100 px-1 py-0.5 font-mono text-[11px] text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200">
-              --execute
-            </code>{" "}
-            para aplicar.
+            la web.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -212,7 +203,12 @@ export default async function AdminCustomersPage({
           <>
             {q && totalFiltered > 0 ? (
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                {totalFiltered}{" "}
+                <AnimatedInteger
+                  value={totalFiltered}
+                  duration={800}
+                  delay={60}
+                  className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-200"
+                />{" "}
                 {totalFiltered === 1 ? "cliente coincide" : "clientes coinciden"} con «{q}»
                 {pageRequested > totalPages ? (
                   <span className="text-amber-700 dark:text-amber-400">
@@ -224,7 +220,13 @@ export default async function AdminCustomersPage({
             ) : null}
             {!q && totalFiltered > CUSTOMERS_PAGE_SIZE ? (
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                {totalFiltered} clientes en total
+                <AnimatedInteger
+                  value={totalFiltered}
+                  duration={850}
+                  delay={50}
+                  className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-200"
+                />{" "}
+                clientes en total
                 {pageRequested > totalPages ? (
                   <span className="text-amber-700 dark:text-amber-400">
                     {" "}
@@ -238,7 +240,7 @@ export default async function AdminCustomersPage({
               role="list"
               className="grid grid-cols-1 gap-4 border-t border-zinc-100 pt-4 dark:border-zinc-800 sm:grid-cols-2 sm:gap-4 xl:hidden"
             >
-              {rows.map((r) => {
+              {rows.map((r, ri) => {
                 const emailShow = r.email ?? "—";
                 const avatarSeed = customerAvatarSeed(r.id, r.email);
                 const docShow = r.documentId?.trim() ? r.documentId : "—";
@@ -301,9 +303,19 @@ export default async function AdminCustomersPage({
                       </div>
                       <p className="mt-auto pt-3 text-xs text-zinc-400 dark:text-zinc-500">
                         <span className="tabular-nums">
-                          {r.purchases}{" "}
+                          <AnimatedInteger
+                            value={r.purchases}
+                            duration={650}
+                            delay={Math.min(ri * 24, 320)}
+                            className="font-medium text-zinc-600 dark:text-zinc-300"
+                          />{" "}
                           {r.purchases === 1 ? "compra" : "compras"} ·{" "}
-                          {formatCop(r.totalSpent)}
+                          <AnimatedCopCents
+                            cents={r.totalSpent}
+                            duration={720}
+                            delay={Math.min(ri * 24 + 40, 360)}
+                            className="font-medium text-zinc-700 dark:text-zinc-200"
+                          />
                         </span>
                         {r.source === "manual" && r.purchases === 0 ? (
                           <span className="ml-1.5 rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
@@ -379,9 +391,19 @@ export default async function AdminCustomersPage({
                                 </p>
                               ) : null}
                               <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">
-                                {r.purchases}{" "}
+                                <AnimatedInteger
+                                  value={r.purchases}
+                                  duration={650}
+                                  delay={Math.min(index * 22, 300)}
+                                  className="font-medium text-zinc-500 dark:text-zinc-400"
+                                />{" "}
                                 {r.purchases === 1 ? "compra" : "compras"} ·{" "}
-                                {formatCop(r.totalSpent)}
+                                <AnimatedCopCents
+                                  cents={r.totalSpent}
+                                  duration={720}
+                                  delay={Math.min(index * 22 + 35, 340)}
+                                  className="font-medium text-zinc-500 dark:text-zinc-400"
+                                />
                                 {r.source === "manual" && r.purchases === 0 ? (
                                   <span className="ml-1 rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
                                     Manual

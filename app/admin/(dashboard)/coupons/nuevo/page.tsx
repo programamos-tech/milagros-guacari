@@ -17,7 +17,7 @@ export default async function AdminNuevoCuponPage({
   const errMsg = storeCouponAdminErrorMessage(couponError);
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-7xl">
+    <div className="w-full min-w-0">
       <NewCouponHeader />
       {errMsg ? (
         <p

@@ -76,7 +76,7 @@ function SearchResultsPanel({
                 <Link
                   href={`/products/${p.id}`}
                   onClick={onPick}
-                  className="flex items-center gap-3 px-3 py-2.5 transition hover:bg-[#faf8f5]"
+                  className="flex items-center gap-3 px-3 py-2.5 transition hover:bg-[#fff4f8]"
                 >
                   <div className="relative size-12 shrink-0 overflow-hidden rounded-lg bg-stone-100 ring-1 ring-stone-200/80">
                     {img ? (
@@ -95,10 +95,10 @@ function SearchResultsPanel({
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-stone-900">{p.name}</p>
+                    <p className="truncate text-sm font-medium text-[var(--store-brand)]">{p.name}</p>
                     <p className="mt-0.5 flex items-center gap-1.5">
                       <span
-                        className="text-[11px] leading-none tracking-tight text-[#6b7f6a]"
+                        className="text-[11px] leading-none tracking-tight text-amber-500"
                         aria-hidden
                       >
                         ★★★★★
@@ -106,7 +106,7 @@ function SearchResultsPanel({
                       <span className="text-[11px] text-stone-400">({reviews})</span>
                     </p>
                   </div>
-                  <p className="shrink-0 text-sm font-semibold text-[#556654]">
+                  <p className="shrink-0 text-sm font-semibold text-stone-900">
                     {formatCop(p.price_cents)}
                   </p>
                 </Link>
@@ -232,7 +232,7 @@ export function StoreSearch({
       >
         <form
           onSubmit={onSubmit}
-          className="flex items-end gap-2 border-b border-stone-400 pb-1 transition-colors focus-within:border-stone-600"
+          className="flex items-end gap-2 border-b border-white/45 pb-1 text-white/90 transition-colors focus-within:border-white"
         >
           <Search
             className={`mb-0.5 ${STORE_HEADER_ICON_SM}`}
@@ -249,7 +249,7 @@ export function StoreSearch({
             onFocus={() => {
               if (debounced.length >= 2) setOpen(true);
             }}
-            className="min-w-0 flex-1 bg-transparent text-[13px] text-stone-800 placeholder:text-stone-400 focus:outline-none"
+            className="min-w-0 flex-1 bg-transparent text-[13px] text-white placeholder:text-white/50 focus:outline-none"
             aria-controls="store-search-results"
             aria-autocomplete="list"
             aria-haspopup="listbox"
@@ -264,7 +264,7 @@ export function StoreSearch({
     <div ref={wrapRef} className="relative min-w-0 w-full max-w-none flex-1 lg:min-w-[12rem]">
       <form
         onSubmit={onSubmit}
-        className="flex items-center gap-2 rounded-full border border-stone-200 bg-[#faf8f5] py-2 pl-4 pr-3 shadow-sm"
+        className="flex items-center gap-2 rounded-full border border-stone-200 bg-[#fff9fb] py-2 pl-4 pr-3 shadow-sm"
       >
         <input
           name="q"

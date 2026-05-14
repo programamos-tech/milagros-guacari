@@ -11,7 +11,7 @@ import { useStoreAuthModals } from "@/components/store/StoreAuthModals";
 import { useStoreCartDrawer } from "@/components/store/StoreCartDrawerProvider";
 
 const iconBtn =
-  "flex items-center justify-center rounded-none p-1.5 text-stone-600 transition hover:text-stone-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400/35 focus-visible:ring-offset-2";
+  "flex items-center justify-center rounded-none p-1.5 text-white/90 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--store-header-bg)]";
 
 export function StoreHeaderActions({
   isLoggedIn,
@@ -58,7 +58,7 @@ export function StoreHeaderActions({
             aria-hidden
           />
           {isLoggedIn && accountFirstName ? (
-            <span className="hidden text-[13px] font-normal tracking-wide text-stone-600 md:inline">
+            <span className="hidden text-[13px] font-normal tracking-wide text-white/85 md:inline">
               Hola, {accountFirstName}
             </span>
           ) : null}
@@ -77,7 +77,7 @@ export function StoreHeaderActions({
         className={`${iconBtn} gap-1.5`}
       >
         {cartItemCount > 0 ? (
-          <span className="min-w-[1ch] text-center text-[13px] font-medium tabular-nums text-stone-600">
+          <span className="min-w-[1ch] text-center text-[13px] font-medium tabular-nums text-white/90">
             {cartItemCount > 99 ? "99+" : cartItemCount}
           </span>
         ) : null}

@@ -157,7 +157,7 @@ export function ProductDetailView({
   return (
     <div className="grid gap-10 lg:grid-cols-2 lg:gap-16 lg:items-start">
       {/* Imagen */}
-      <div className="relative aspect-square w-full bg-[#f5f5f4]">
+      <div className="relative aspect-square w-full bg-[var(--store-image-well)]">
         {heroImageUrl ? (
           <Image
             src={heroImageUrl}
@@ -178,7 +178,7 @@ export function ProductDetailView({
           onClick={() => toggle(productId)}
           className={
             favorite
-              ? "absolute right-4 top-4 z-10 flex size-10 items-center justify-center rounded-full bg-white/95 text-rose-500 shadow-sm ring-1 ring-stone-200/80 transition hover:bg-white"
+              ? "absolute right-4 top-4 z-10 flex size-10 items-center justify-center rounded-full bg-white/95 text-[var(--store-accent)] shadow-sm ring-1 ring-stone-200/80 transition hover:bg-white"
               : "absolute right-4 top-4 z-10 flex size-10 items-center justify-center rounded-full bg-white/95 text-stone-700 shadow-sm ring-1 ring-stone-200/80 transition hover:bg-white hover:text-stone-900"
           }
           aria-pressed={favorite}
@@ -194,7 +194,7 @@ export function ProductDetailView({
 
       {/* Datos */}
       <div className="flex min-w-0 flex-col lg:max-w-xl lg:pt-2">
-        <h1 className="text-xl font-semibold uppercase leading-snug tracking-[0.06em] text-stone-900 sm:text-2xl">
+        <h1 className="text-xl font-semibold uppercase leading-snug tracking-[0.06em] text-[var(--store-brand)] sm:text-2xl">
           {name}
         </h1>
 
@@ -230,7 +230,7 @@ export function ProductDetailView({
         </div>
 
         <div className="mt-5 flex items-center gap-2">
-          <span className="flex text-stone-900" aria-hidden>
+          <span className="flex text-amber-500" aria-hidden>
             {Array.from({ length: 5 }, (_, i) => (
               <Star
                 key={i}
@@ -258,7 +258,7 @@ export function ProductDetailView({
                   onClick={() => setColorIdx(i)}
                   className={`flex size-10 items-center justify-center rounded-full border-2 transition ${
                     colorIdx === i
-                      ? "border-stone-900 ring-2 ring-stone-900 ring-offset-2"
+                      ? "border-[var(--store-accent)] ring-2 ring-[var(--store-accent)] ring-offset-2"
                       : "border-stone-200 hover:border-stone-400"
                   }`}
                   aria-pressed={colorIdx === i}
@@ -289,7 +289,7 @@ export function ProductDetailView({
                 id={`fragrance-${productId}`}
                 value={fragranceIdx}
                 onChange={(e) => setFragranceIdx(Number(e.target.value))}
-                className="w-full cursor-pointer appearance-none rounded-2xl border border-stone-300 bg-white py-3 pl-4 pr-11 text-left text-[13px] text-stone-900 shadow-sm outline-none transition hover:border-stone-400 focus:border-stone-900 focus:ring-2 focus:ring-stone-900/15"
+                className="w-full cursor-pointer appearance-none rounded-2xl border border-stone-300 bg-white py-3 pl-4 pr-11 text-left text-[13px] text-stone-900 shadow-sm outline-none transition hover:border-stone-400 focus:border-[var(--store-accent)] focus:ring-2 focus:ring-[var(--store-accent)]/20"
                 aria-label="Fragancia o tono"
               >
                 {fragranceLabels.map((label, i) => (
@@ -324,7 +324,7 @@ export function ProductDetailView({
               <div className="flex items-center gap-4">
                 <button
                   type="button"
-                  className="text-lg text-stone-500 transition hover:text-stone-900"
+                  className="text-lg text-stone-500 transition hover:text-[var(--store-accent)]"
                   onClick={() =>
                     setQty((q) => Math.max(1, Math.min(q, maxQty) - 1))
                   }
@@ -337,7 +337,7 @@ export function ProductDetailView({
                 </span>
                 <button
                   type="button"
-                  className="text-lg text-stone-500 transition hover:text-stone-900"
+                  className="text-lg text-stone-500 transition hover:text-[var(--store-accent)]"
                   onClick={() =>
                     setQty((q) => Math.min(maxQty, Math.max(1, q) + 1))
                   }
@@ -355,7 +355,7 @@ export function ProductDetailView({
                 router.refresh();
                 openCart();
               }}
-              className="w-full bg-stone-900 py-3.5 text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-stone-800"
+              className="w-full bg-[var(--store-accent)] py-3.5 text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-[var(--store-accent-hover)]"
             >
               Añadir a la bolsa
             </button>
@@ -363,7 +363,7 @@ export function ProductDetailView({
             <button
               type="submit"
               formAction={buyNowFromDetail}
-              className="w-full bg-transparent py-2 text-center text-sm text-stone-600 underline decoration-stone-300 underline-offset-[6px] transition hover:text-stone-900"
+              className="w-full bg-transparent py-2 text-center text-sm text-stone-600 underline decoration-stone-300 underline-offset-[6px] transition hover:text-[var(--store-accent)]"
             >
               Comprar ahora
             </button>
@@ -379,7 +379,7 @@ export function ProductDetailView({
                   <button
                     type="button"
                     onClick={() => setDescExpanded((v) => !v)}
-                    className="text-sm font-medium text-stone-900 underline decoration-stone-400 underline-offset-4"
+                    className="text-sm font-medium text-[var(--store-accent)] underline decoration-[var(--store-accent)]/40 underline-offset-4"
                   >
                     {descExpanded ? "Ver menos" : "Leer más"}
                   </button>

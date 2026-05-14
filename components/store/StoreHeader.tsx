@@ -44,10 +44,10 @@ export async function StoreHeader() {
   const accountFirstName = accountFirstNameFromUser(user);
 
   return (
-    <header className="border-b border-stone-200/90 bg-white">
+    <header>
       <StoreAnnouncementBar />
 
-      <div className="relative flex items-center justify-between gap-3 px-4 py-4 lg:gap-6 lg:px-10 lg:py-5">
+      <div className="relative flex items-center justify-between gap-3 border-b border-white/20 bg-[var(--store-header-bg)] px-4 py-4 text-[var(--store-header-fg)] lg:gap-6 lg:px-10 lg:py-5">
         <div className="z-10 flex min-w-0 flex-1 items-center justify-start">
           <StoreNavDropdowns
             menuCategories={menuCategories}
@@ -60,7 +60,7 @@ export async function StoreHeader() {
         <div className="pointer-events-none absolute inset-x-0 flex items-center justify-center px-16 sm:px-44 md:px-48 lg:px-[13.5rem]">
           <Link
             href="/"
-            className="pointer-events-auto shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-stone-400/40 focus-visible:ring-offset-2"
+            className="pointer-events-auto shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-white/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--store-header-bg)]"
           >
             <Image
               src={storeLogoPath}
@@ -76,7 +76,7 @@ export async function StoreHeader() {
         <div className="z-10 flex min-w-0 flex-1 items-center justify-end gap-2 sm:gap-4 lg:gap-6">
           <Link
             href="/products"
-            className="flex shrink-0 items-center justify-center p-1.5 text-stone-600 transition hover:text-stone-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400/35 focus-visible:ring-offset-2 sm:hidden"
+            className="flex shrink-0 items-center justify-center p-1.5 text-white/90 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--store-header-bg)] sm:hidden"
             aria-label="Buscar productos"
           >
             <Search

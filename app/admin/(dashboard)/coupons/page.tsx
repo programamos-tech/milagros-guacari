@@ -40,7 +40,7 @@ export default async function AdminCouponsPage({
   }
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-7xl space-y-6">
+    <div className="w-full min-w-0 space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">

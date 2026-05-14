@@ -31,7 +31,7 @@ export default async function CheckoutReturnPage({
   if (!orderId) {
     return (
       <div className="mx-auto max-w-lg space-y-4 px-4 py-10">
-        <h1 className="text-2xl font-semibold text-stone-900">Resultado del pago</h1>
+        <h1 className="text-2xl font-semibold text-[var(--store-brand)]">Resultado del pago</h1>
         <p className="text-stone-600">
           Falta el identificador del pedido en la URL.
         </p>
@@ -80,7 +80,7 @@ export default async function CheckoutReturnPage({
   if (!order) {
     return (
       <div className="mx-auto max-w-lg space-y-4 px-4 py-10">
-        <h1 className="text-2xl font-semibold text-stone-900">Pedido no encontrado</h1>
+        <h1 className="text-2xl font-semibold text-[var(--store-brand)]">Pedido no encontrado</h1>
         <Link
           href="/products"
           className="font-medium text-[var(--store-accent)] underline"
@@ -95,7 +95,7 @@ export default async function CheckoutReturnPage({
 
   return (
     <div className="mx-auto max-w-lg space-y-6 px-4 py-10">
-      <h1 className="text-2xl font-semibold text-stone-900">
+      <h1 className="text-2xl font-semibold text-[var(--store-brand)]">
         Resultado del pago
       </h1>
       {testCheckout ? (
@@ -115,7 +115,7 @@ export default async function CheckoutReturnPage({
         <p className="text-sm text-stone-500">Pedido</p>
         <p className="font-mono text-sm text-stone-800">{order.id}</p>
         <p className="mt-4 text-sm text-stone-500">Estado</p>
-        <p className="text-lg font-medium text-stone-900">{labels[status] ?? status}</p>
+        <p className="text-lg font-medium text-[var(--store-brand)]">{labels[status] ?? status}</p>
         <p className="mt-4 text-sm text-stone-500">Total</p>
         <p className="text-lg font-semibold text-[var(--store-accent)]">
           {formatCop(order.total_cents)}

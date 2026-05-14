@@ -8,7 +8,7 @@ export const metadata = {
 export default function QuienSoyPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 sm:py-16">
-      <h1 className="text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl">
+      <h1 className="text-3xl font-semibold tracking-tight text-[var(--store-brand)] sm:text-4xl">
         Quién Soy
       </h1>
       <p className="mt-2 text-sm font-medium text-stone-600">{storeTagline}</p>

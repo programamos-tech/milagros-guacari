@@ -179,7 +179,7 @@ export function StoreWhatsAppFloatingButton() {
         zIndex: 60,
         touchAction: "none",
       }}
-      className="flex cursor-grab items-center justify-center rounded-full border border-stone-800 bg-stone-950 text-white shadow-[0_14px_36px_-12px_rgba(0,0,0,0.55)] transition-colors hover:bg-stone-900 hover:shadow-[0_18px_40px_-12px_rgba(0,0,0,0.48)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:ring-offset-2 active:cursor-grabbing"
+      className="flex cursor-grab items-center justify-center rounded-full border border-[#e85a8e] bg-[var(--store-accent)] text-white shadow-[0_14px_36px_-12px_rgba(255,118,161,0.55)] transition-colors hover:bg-[var(--store-accent-hover)] hover:shadow-[0_18px_40px_-12px_rgba(255,118,161,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--store-accent)] active:cursor-grabbing"
       aria-label={`Escribir por WhatsApp a ${storeSupportPhone}`}
       title="Arrastrá para mover · Clic para abrir WhatsApp"
       onPointerDown={onPointerDown}

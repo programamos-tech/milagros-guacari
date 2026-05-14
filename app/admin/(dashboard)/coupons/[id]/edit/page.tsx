@@ -57,7 +57,7 @@ export default async function AdminEditCouponPage({
   }
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-7xl">
+    <div className="w-full min-w-0">
       <EditCouponHeader row={coupon} />
       {errMsg ? (
         <p

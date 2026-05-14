@@ -22,6 +22,10 @@ import {
   unitPriceAfterWholesaleCents,
   wholesaleDiscountPercentFromRow,
 } from "@/lib/customer-wholesale-pricing";
+import {
+  applyPosLineNetDiscountCents,
+  discountedUnitNetCentsFromLine,
+} from "@/lib/pos-line-discount";
 import { saleVatPercentLabel, unitPriceGrossCents } from "@/lib/product-vat-price";
 
 const cardSectionClass =
@@ -50,10 +54,16 @@ type ShipOption =
   | { kind: "pickup"; id: "pickup"; label: string; detail: string }
   | { kind: "address"; id: string; label: string; detail: string };
 
+type LineDiscountMode = "none" | "percent" | "amount";
+
 type CartLine = {
   key: string;
   product: ProductHit;
   quantity: number;
+  discountMode: LineDiscountMode;
+  discountPercent: number;
+  /** Dígitos COP (como efectivo) para descuento fijo sobre neto de línea. */
+  discountAmountRaw: string;
 };
 
 function lineBaseCents(line: CartLine, wholesalePct: number): number {
@@ -72,13 +82,47 @@ function unitFinalCents(product: ProductHit, wholesalePct: number): number {
   return unitPriceGrossCents(net, product.has_vat, product.vat_percent);
 }
 
-function lineVatCents(line: CartLine, wholesalePct: number): number {
-  const unitNet = unitPriceAfterWholesaleCents(
-    Number(line.product.price_cents ?? 0),
-    wholesalePct,
+function lineNetBeforeDiscount(line: CartLine, wholesalePct: number): number {
+  return lineBaseCents(line, wholesalePct);
+}
+
+function effectiveLineDiscountPercent(line: CartLine): number | null {
+  if (line.discountMode !== "percent") return null;
+  const p = Math.floor(line.discountPercent);
+  return p > 0 && p <= 100 ? p : null;
+}
+
+function effectiveLineDiscountAmountCents(line: CartLine, wholesalePct: number): number {
+  if (line.discountMode !== "amount") return 0;
+  const raw = parseCopInputDigitsToInt(line.discountAmountRaw);
+  const maxNet = lineNetBeforeDiscount(line, wholesalePct);
+  return Math.min(Math.max(0, raw), maxNet);
+}
+
+function lineNetAfterDiscount(line: CartLine, wholesalePct: number): number {
+  return applyPosLineNetDiscountCents(
+    lineNetBeforeDiscount(line, wholesalePct),
+    effectiveLineDiscountPercent(line),
+    effectiveLineDiscountAmountCents(line, wholesalePct),
   );
-  const unitFinal = unitFinalCents(line.product, wholesalePct);
-  return (unitFinal - unitNet) * line.quantity;
+}
+
+function discountedUnitNetCents(line: CartLine, wholesalePct: number): number {
+  return discountedUnitNetCentsFromLine(
+    lineNetAfterDiscount(line, wholesalePct),
+    line.quantity,
+  );
+}
+
+function lineUnitGrossAfterDiscount(line: CartLine, wholesalePct: number): number {
+  const du = discountedUnitNetCents(line, wholesalePct);
+  return unitPriceGrossCents(du, line.product.has_vat, line.product.vat_percent);
+}
+
+function lineVatCents(line: CartLine, wholesalePct: number): number {
+  const du = discountedUnitNetCents(line, wholesalePct);
+  const ug = lineUnitGrossAfterDiscount(line, wholesalePct);
+  return (ug - du) * line.quantity;
 }
 
 type PaymentTab = "cash" | "transfer" | "mixed";
@@ -175,7 +219,7 @@ function errorMessage(code: string | undefined): string | null {
     case "stock":
       return "Stock insuficiente en tienda para uno o más productos.";
     case "db":
-      return "No se pudo guardar. Aplica la migración de permisos POS en Supabase (20260515120000_admin_orders_write_pos.sql) e intenta de nuevo.";
+      return "No se pudo guardar. Aplica en Supabase las migraciones POS (escritura admin y columnas de descuento en order_items) e intenta de nuevo.";
     default:
       return "Ocurrió un error al confirmar la factura.";
   }
@@ -336,8 +380,11 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
     let cancelled = false;
     setProductLoading(true);
     void fetch(`/api/admin/products-search?q=${encodeURIComponent(q)}`)
-      .then((r) => r.json())
-      .then((j: { products?: ProductHit[] }) => {
+      .then(async (r) => {
+        if (!r.ok) return { products: [] as ProductHit[] };
+        return r.json() as Promise<{ products?: ProductHit[] }>;
+      })
+      .then((j) => {
         if (!cancelled) setProductHits(j.products ?? []);
       })
       .finally(() => {
@@ -372,7 +419,7 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
   const subtotalCents = useMemo(() => {
     let s = 0;
     for (const line of lines) {
-      s += lineBaseCents(line, customerWholesalePct);
+      s += lineNetAfterDiscount(line, customerWholesalePct);
     }
     return s;
   }, [lines, customerWholesalePct]);
@@ -402,6 +449,25 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
 
   const totalCents = subtotalCents + vatCents;
 
+  const cartStockExceeded = useMemo(() => {
+    const byId = new Map<string, number>();
+    const stockById = new Map<string, number>();
+    for (const l of lines) {
+      const pid = l.product.id;
+      byId.set(pid, (byId.get(pid) ?? 0) + l.quantity);
+      if (!stockById.has(pid)) {
+        stockById.set(
+          pid,
+          Number(l.product.stock_local ?? l.product.stock_quantity ?? 0),
+        );
+      }
+    }
+    for (const [pid, sum] of byId) {
+      if (sum > (stockById.get(pid) ?? 0)) return true;
+    }
+    return false;
+  }, [lines]);
+
   const selectedShipOption = useMemo(
     () => shipOptions.find((o) => o.id === shipChoice) ?? null,
     [shipOptions, shipChoice],
@@ -424,12 +490,8 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
   const mixedOk =
     mixedCashCents + mixedTransferCents === totalCents && totalCents > 0;
 
-  const paymentOk =
-    payment === "cash"
-      ? cashGivenCents >= totalCents
-      : payment === "transfer"
-        ? true
-        : mixedOk;
+  /** Efectivo y transferencia no exigen campos extra; el monto en efectivo es solo ayuda para el vuelto. */
+  const paymentOk = payment !== "mixed" || mixedOk;
 
   const canSubmit =
     customer !== null &&
@@ -438,39 +500,81 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
     shipChoice !== null &&
     shipChoice !== "" &&
     !shipLoading &&
+    !cartStockExceeded &&
     paymentOk;
 
   function addProduct(p: ProductHit) {
     setLines((prev) => {
-      const idx = prev.findIndex((l) => l.product.id === p.id);
       const stock = Number(p.stock_local ?? p.stock_quantity ?? 0);
-      if (idx >= 0) {
-        const next = [...prev];
-        const q = next[idx].quantity + 1;
-        if (q > stock) return prev;
-        next[idx] = { ...next[idx], quantity: q };
-        return next;
-      }
       if (stock < 1) return prev;
-      return [...prev, { key: crypto.randomUUID(), product: p, quantity: 1 }];
+      let sum = 0;
+      for (const l of prev) {
+        if (l.product.id === p.id) sum += l.quantity;
+      }
+      if (sum + 1 > stock) return prev;
+      return [
+        ...prev,
+        {
+          key: crypto.randomUUID(),
+          product: p,
+          quantity: 1,
+          discountMode: "none",
+          discountPercent: 0,
+          discountAmountRaw: "",
+        },
+      ];
     });
     setProductQuery("");
     setProductHits([]);
   }
 
   function setQty(key: string, q: number) {
-    setLines((prev) =>
-      prev.map((line) => {
-        if (line.key !== key) return line;
-        const stock = Number(line.product.stock_local ?? line.product.stock_quantity ?? 0);
-        const next = Math.max(1, Math.min(stock, Math.floor(q)));
-        return { ...line, quantity: next };
-      }),
-    );
+    setLines((prev) => {
+      const line = prev.find((l) => l.key === key);
+      if (!line) return prev;
+      const stock = Number(line.product.stock_local ?? line.product.stock_quantity ?? 0);
+      let usedElsewhere = 0;
+      for (const l of prev) {
+        if (l.product.id === line.product.id && l.key !== key) usedElsewhere += l.quantity;
+      }
+      const maxQty = Math.max(1, stock - usedElsewhere);
+      const next = Math.max(1, Math.min(maxQty, Math.floor(q)));
+      return prev.map((l) => (l.key === key ? { ...l, quantity: next } : l));
+    });
   }
 
   function removeLine(key: string) {
     setLines((prev) => prev.filter((l) => l.key !== key));
+  }
+
+  function setLineDiscountMode(key: string, mode: LineDiscountMode) {
+    setLines((prev) =>
+      prev.map((line) =>
+        line.key !== key
+          ? line
+          : {
+              ...line,
+              discountMode: mode,
+              ...(mode === "none"
+                ? { discountPercent: 0, discountAmountRaw: "" }
+                : mode === "percent"
+                  ? { discountAmountRaw: "" }
+                  : { discountPercent: 0 }),
+            },
+      ),
+    );
+  }
+
+  function setLineDiscountPercent(key: string, v: number) {
+    setLines((prev) =>
+      prev.map((line) => (line.key === key ? { ...line, discountPercent: v } : line)),
+    );
+  }
+
+  function setLineDiscountAmountRaw(key: string, raw: string) {
+    setLines((prev) =>
+      prev.map((line) => (line.key === key ? { ...line, discountAmountRaw: raw } : line)),
+    );
   }
 
   const payloadJson = useMemo(() => {
@@ -489,15 +593,22 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
     const phone = customer.phone?.trim() || null;
     return JSON.stringify({
       customerId: customer.id,
-      lines: lines.map((l) => ({
-        productId: l.product.id,
-        quantity: l.quantity,
-      })),
+      lines: lines.map((l) => {
+        const pct = effectiveLineDiscountPercent(l);
+        const amt =
+          pct != null ? 0 : effectiveLineDiscountAmountCents(l, customerWholesalePct);
+        return {
+          productId: l.product.id,
+          quantity: l.quantity,
+          discountPercent: pct,
+          discountAmountCents: amt,
+        };
+      }),
       paymentMethod: payment,
       shippingAddress: address,
       shippingPhone: phone,
     });
-  }, [customer, lines, payment, shipChoice, shipOptions]);
+  }, [customer, lines, payment, shipChoice, shipOptions, customerWholesalePct]);
 
   const banner = errorMessage(initialError);
 
@@ -572,64 +683,155 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
                 Agrega productos desde la búsqueda.
               </p>
             ) : (
-              <ul className="mt-5 divide-y divide-zinc-200/80 dark:divide-zinc-700/90">
+              <>
+                <ul className="mt-5 divide-y divide-zinc-200/80 dark:divide-zinc-700/90">
                 {lines.map((line) => {
                   const stock = Number(
                     line.product.stock_local ?? line.product.stock_quantity ?? 0,
                   );
-                  const lineSubtotal = lineBaseCents(line, customerWholesalePct);
-                  const lineVat = lineVatCents(line, customerWholesalePct);
+                  const w = customerWholesalePct;
+                  let usedElsewhere = 0;
+                  for (const l of lines) {
+                    if (l.product.id === line.product.id && l.key !== line.key) {
+                      usedElsewhere += l.quantity;
+                    }
+                  }
+                  const maxQtyThisLine = Math.max(1, stock - usedElsewhere);
+                  const lineSubtotal = lineNetAfterDiscount(line, w);
+                  const lineVat = lineVatCents(line, w);
                   const lineTotal = lineSubtotal + lineVat;
+                  const unitCatalogGross = unitFinalCents(line.product, w);
+                  const unitLineGross = lineUnitGrossAfterDiscount(line, w);
+                  const hasLineDiscount =
+                    lineNetAfterDiscount(line, w) < lineNetBeforeDiscount(line, w);
+                  const maxDiscNet = lineNetBeforeDiscount(line, w);
+                  const discBtn =
+                    "rounded-md px-2 py-1 text-[11px] font-medium transition";
                   return (
-                    <li
-                      key={line.key}
-                      className="flex flex-wrap items-center gap-3 py-4 first:pt-0"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-zinc-900 dark:text-zinc-100">
-                          {line.product.name}
+                    <li key={line.key} className="space-y-2 py-4 first:pt-0">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-zinc-900 dark:text-zinc-100">
+                            {line.product.name}
+                          </p>
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                            {hasLineDiscount ? (
+                              <>
+                                <span className="mr-1 line-through opacity-60">
+                                  {formatCop(unitCatalogGross)}
+                                </span>
+                                <span className="font-medium text-zinc-700 dark:text-zinc-200">
+                                  {formatCop(unitLineGross)} c/u
+                                </span>
+                              </>
+                            ) : (
+                              <span>{formatCop(unitCatalogGross)} c/u</span>
+                            )}
+                            {line.product.has_vat
+                              ? ` · IVA ${String(saleVatPercentLabel(line.product.has_vat) ?? 0).replace(/\.0+$/, "")}%`
+                              : ""}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            className="rounded-lg border border-zinc-200/90 bg-white px-2.5 py-1 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                            onClick={() => setQty(line.key, line.quantity - 1)}
+                          >
+                            −
+                          </button>
+                          <span className="w-8 text-center text-sm font-medium tabular-nums text-zinc-900 dark:text-zinc-100">
+                            {line.quantity}
+                          </span>
+                          <button
+                            type="button"
+                            className="rounded-lg border border-zinc-200/90 bg-white px-2.5 py-1 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                            onClick={() => setQty(line.key, line.quantity + 1)}
+                            disabled={line.quantity >= maxQtyThisLine}
+                          >
+                            +
+                          </button>
+                        </div>
+                        <p className="text-sm font-medium tabular-nums text-zinc-900 dark:text-zinc-100">
+                          {formatCop(lineTotal)}
                         </p>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                          {formatCop(unitFinalCents(line.product, customerWholesalePct))} c/u
-                          {line.product.has_vat
-                            ? ` · IVA ${String(saleVatPercentLabel(line.product.has_vat) ?? 0).replace(/\.0+$/, "")}%`
-                            : ""}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
                         <button
                           type="button"
-                          className="rounded-lg border border-zinc-200/90 bg-white px-2.5 py-1 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-800"
-                          onClick={() => setQty(line.key, line.quantity - 1)}
+                          onClick={() => removeLine(line.key)}
+                          className="text-xs font-medium text-red-600 hover:underline dark:text-red-400"
                         >
-                          −
+                          Quitar
                         </button>
-                        <span className="w-8 text-center text-sm font-medium tabular-nums text-zinc-900 dark:text-zinc-100">
-                          {line.quantity}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                        <span className="font-medium text-zinc-600 dark:text-zinc-300">
+                          Descuento (neto línea)
                         </span>
-                        <button
-                          type="button"
-                          className="rounded-lg border border-zinc-200/90 bg-white px-2.5 py-1 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-800"
-                          onClick={() => setQty(line.key, line.quantity + 1)}
-                          disabled={line.quantity >= stock}
-                        >
-                          +
-                        </button>
+                        <span className="inline-flex rounded-lg border border-zinc-200 p-0.5 dark:border-zinc-700">
+                          {(["none", "percent", "amount"] as const).map((mode) => (
+                            <button
+                              key={mode}
+                              type="button"
+                              onClick={() => setLineDiscountMode(line.key, mode)}
+                              className={`${discBtn} ${
+                                line.discountMode === mode
+                                  ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950"
+                                  : "text-zinc-600 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                              }`}
+                            >
+                              {mode === "none" ? "Ninguno" : mode === "percent" ? "%" : "$ COP"}
+                            </button>
+                          ))}
+                        </span>
+                        {line.discountMode === "percent" ? (
+                          <label className="inline-flex items-center gap-1.5 text-zinc-600 dark:text-zinc-300">
+                            <span>%</span>
+                            <input
+                              type="number"
+                              min={1}
+                              max={100}
+                              inputMode="numeric"
+                              value={line.discountPercent > 0 ? line.discountPercent : ""}
+                              onChange={(e) =>
+                                setLineDiscountPercent(
+                                  line.key,
+                                  Math.min(100, Math.max(0, Math.floor(Number(e.target.value) || 0))),
+                                )
+                              }
+                              className="w-14 rounded-md border border-zinc-200/90 bg-white px-2 py-1 tabular-nums text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                            />
+                          </label>
+                        ) : null}
+                        {line.discountMode === "amount" ? (
+                          <label className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 sm:max-w-xs">
+                            <span className="shrink-0 text-zinc-600 dark:text-zinc-300">Monto</span>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              placeholder="0"
+                              value={line.discountAmountRaw}
+                              onChange={(e) =>
+                                setLineDiscountAmountRaw(line.key, e.target.value.replace(/\D/g, ""))
+                              }
+                              className="min-w-0 flex-1 rounded-md border border-zinc-200/90 bg-white px-2 py-1 tabular-nums text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                            />
+                            <span className="shrink-0 text-[10px] text-zinc-400">
+                              máx. {formatCop(maxDiscNet)}
+                            </span>
+                          </label>
+                        ) : null}
                       </div>
-                      <p className="text-sm font-medium tabular-nums text-zinc-900 dark:text-zinc-100">
-                        {formatCop(lineTotal)}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => removeLine(line.key)}
-                        className="text-xs font-medium text-red-600 hover:underline dark:text-red-400"
-                      >
-                        Quitar
-                      </button>
                     </li>
                   );
                 })}
               </ul>
+              {cartStockExceeded ? (
+                <p className="mt-3 text-sm text-red-600 dark:text-red-400">
+                  La cantidad total por producto supera el stock en tienda. Ajustá cantidades o
+                  quitá líneas.
+                </p>
+              ) : null}
+              </>
             )}
           </section>
 
@@ -831,7 +1033,7 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
                       value={cashGivenRaw}
                       onChange={(e) => setCashGivenRaw(e.target.value)}
                       inputMode="numeric"
-                      placeholder="0"
+                      placeholder="Opcional"
                       className={inputClass}
                     />
                   </div>

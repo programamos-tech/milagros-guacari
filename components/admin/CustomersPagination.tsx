@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AnimatedInteger } from "@/components/admin/ReportsAnimatedFigures";
 
 type CustomersPaginationProps = {
   page: number;
@@ -24,17 +25,28 @@ export function CustomersPagination({
   const navLinkClass = `${linkClass} px-4`;
 
   return (
-    <div className="flex flex-col gap-3 border-t border-zinc-100 bg-white px-0 py-4 dark:border-zinc-800 dark:bg-zinc-900 sm:flex-row sm:items-center sm:justify-between">
+    <div
+      className="reports-metric-card flex flex-col gap-3 border-t border-zinc-100 bg-white px-0 py-4 dark:border-zinc-800 dark:bg-zinc-900 sm:flex-row sm:items-center sm:justify-between"
+      style={{ ["--reports-stagger" as string]: "70ms" }}
+    >
       <p className="text-sm text-zinc-500 dark:text-zinc-400">
         Mostrando{" "}
         <span className="font-medium text-zinc-800 dark:text-zinc-200">
-          {from}–{to}
+          <AnimatedInteger value={from} duration={700} delay={80} className="tabular-nums" />
+          –
+          <AnimatedInteger value={to} duration={700} delay={120} className="tabular-nums" />
         </span>{" "}
-        de <span className="font-medium text-zinc-800 dark:text-zinc-200">{total}</span>
+        de{" "}
+        <span className="font-medium text-zinc-800 dark:text-zinc-200">
+          <AnimatedInteger value={total} duration={820} delay={160} className="tabular-nums" />
+        </span>
       </p>
       <div className="flex flex-wrap items-center gap-2">
         <span className="mr-1 text-xs text-zinc-400 dark:text-zinc-500">
-          Página {page} de {totalPages}
+          Página{" "}
+          <AnimatedInteger value={page} duration={650} delay={200} className="tabular-nums font-medium text-zinc-600 dark:text-zinc-300" />{" "}
+          de{" "}
+          <AnimatedInteger value={totalPages} duration={650} delay={230} className="tabular-nums font-medium text-zinc-600 dark:text-zinc-300" />
         </span>
         {page > 1 ? (
           <Link href={buildHref(page - 1)} className={navLinkClass}>

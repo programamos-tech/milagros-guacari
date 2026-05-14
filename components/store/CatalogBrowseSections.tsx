@@ -27,7 +27,7 @@ export function CatalogBrowseSections({
           <div className="mb-4 flex flex-wrap items-end justify-between gap-3 px-0 sm:mb-5">
             <h2
               id={`cat-row-${section.categoryId ?? "sin-categoria"}`}
-              className="text-[13px] font-semibold uppercase tracking-[0.14em] text-stone-900"
+              className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[var(--store-brand)]"
             >
               {section.categoryName}
             </h2>

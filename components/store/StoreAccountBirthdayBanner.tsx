@@ -20,7 +20,7 @@ const inputClass =
   "w-full max-w-[11.5rem] rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 shadow-[0_1px_0_0_rgb(24_24_27/0.04)] focus:border-stone-500 focus:outline-none focus:ring-2 focus:ring-stone-400/25";
 
 const btnPrimary =
-  "inline-flex shrink-0 items-center justify-center border border-stone-900 bg-stone-900 px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white transition hover:bg-stone-800 disabled:opacity-50";
+  "inline-flex shrink-0 items-center justify-center border border-[var(--store-accent)] bg-[var(--store-accent)] px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white transition hover:bg-[var(--store-accent-hover)] disabled:opacity-50";
 
 const btnGhost =
   "inline-flex shrink-0 items-center justify-center border border-stone-300 bg-white px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-700 transition hover:bg-stone-50";
@@ -71,7 +71,7 @@ export function StoreAccountBirthdayBanner({ birthDate }: { birthDate: string | 
           />
         </div>
         <div className="min-w-0 flex-1 text-center sm:text-left">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-900">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--store-brand)]">
             Agrega tu cumpleaños
           </p>
           <p className="mt-2 text-sm leading-relaxed text-stone-600">
@@ -103,7 +103,7 @@ export function StoreAccountBirthdayBanner({ birthDate }: { birthDate: string | 
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="border border-stone-900 bg-white px-6 py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-900 transition hover:bg-stone-900 hover:text-white"
+              className="border border-[var(--store-accent)] bg-white px-6 py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-accent)] transition hover:bg-[var(--store-accent)] hover:text-white"
             >
               Actualizar
             </button>
@@ -141,7 +141,7 @@ export function StoreAccountBirthdayBanner({ birthDate }: { birthDate: string | 
         <button
           type="button"
           onClick={dismiss}
-          className="absolute right-3 top-3 flex size-8 items-center justify-center text-stone-500 transition hover:text-stone-900 sm:right-4 sm:top-4"
+          className="absolute right-3 top-3 flex size-8 items-center justify-center text-stone-500 transition hover:text-[var(--store-accent)] sm:right-4 sm:top-4"
           aria-label="Cerrar"
         >
           <span className="text-lg leading-none">×</span>

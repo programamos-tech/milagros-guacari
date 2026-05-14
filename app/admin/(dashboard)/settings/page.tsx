@@ -20,7 +20,7 @@ export default async function AdminSettingsPage({
     .order("created_at", { ascending: false });
 
   return (
-    <div className="space-y-6">
+    <div className="w-full min-w-0 space-y-6">
       <StoreWelcomeModalPanel
         modals={(modals as StoreWelcomeModalRow[] | null) ?? []}
         errorCode={welcomeError}

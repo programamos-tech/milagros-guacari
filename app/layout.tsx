@@ -1,14 +1,23 @@
 import type { Metadata } from "next";
 import type { CSSProperties } from "react";
-import { Geist_Mono, Montserrat } from "next/font/google";
+import { Geist_Mono, Poppins } from "next/font/google";
 import { storeBrand, storeShortDescription } from "@/lib/brand";
 import { ADMIN_SIDEBAR_BG, STORE_CHROME_BG } from "@/lib/admin-theme";
-import { STORE_ACCENT, STORE_ACCENT_HOVER } from "@/lib/store-theme";
+import {
+  STORE_ACCENT,
+  STORE_ACCENT_HOVER,
+  STORE_ANNOUNCEMENT_BG,
+  STORE_BRAND,
+  STORE_BRAND_HOVER,
+  STORE_IMAGE_WELL,
+  STORE_IMAGE_WELL_TINT,
+} from "@/lib/store-theme";
 import "./globals.css";
 
-const montserrat = Montserrat({
-  variable: "--font-montserrat",
+const poppins = Poppins({
+  variable: "--font-poppins",
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
 const geistMono = Geist_Mono({
@@ -19,6 +28,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: storeBrand,
   description: storeShortDescription,
+  icons: {
+    icon: [{ url: "/logo-aleyahso.png", type: "image/png" }],
+    apple: [{ url: "/logo-aleyahso.png", sizes: "180x180", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({
@@ -29,7 +42,7 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${montserrat.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${poppins.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -47,6 +60,11 @@ export default function RootLayout({
             "--store-chrome-bg": STORE_CHROME_BG,
             "--store-accent": STORE_ACCENT,
             "--store-accent-hover": STORE_ACCENT_HOVER,
+            "--store-brand": STORE_BRAND,
+            "--store-brand-hover": STORE_BRAND_HOVER,
+            "--store-image-well": STORE_IMAGE_WELL,
+            "--store-image-well-tint": STORE_IMAGE_WELL_TINT,
+            "--store-announcement-bg": STORE_ANNOUNCEMENT_BG,
           } as CSSProperties
         }
       >

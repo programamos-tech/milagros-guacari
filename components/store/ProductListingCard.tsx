@@ -81,14 +81,14 @@ function ShowcaseProductCard({
     : product.price_cents;
 
   const imageBgClass = accentImageBg
-    ? "bg-[#fceff3]"
-    : "bg-white";
+    ? "bg-[var(--store-image-well-tint)]"
+    : "bg-[var(--store-image-well)]";
 
   return (
     <article className="h-full">
       <Link
         href={`/products/${product.id}`}
-        className="group block outline-none focus-visible:ring-2 focus-visible:ring-stone-400/50 focus-visible:ring-offset-2"
+        className="group block outline-none focus-visible:ring-2 focus-visible:ring-[var(--store-accent)]/35 focus-visible:ring-offset-2"
       >
         <div
           className={`relative aspect-[4/5] w-full shrink-0 overflow-hidden ${imageBgClass} transition-colors duration-300 ${
@@ -114,7 +114,7 @@ function ShowcaseProductCard({
           <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-stone-400">
             {showcaseBrandLabel(product)}
           </p>
-          <p className="text-[13px] font-medium uppercase leading-snug tracking-wide text-stone-900 line-clamp-3">
+          <p className="text-[13px] font-medium uppercase leading-snug tracking-wide text-[var(--store-brand)] line-clamp-3">
             {product.name}
           </p>
           <div className="space-y-0.5 pt-0.5">
@@ -185,7 +185,9 @@ function CatalogProductCard({
   const titleWithSize = sizeLine ? `${product.name} · ${sizeLine}` : product.name;
   const needsFragranceOnPdp = productRequiresFragranceChoice(product);
 
-  const imageBgClass = accentImageBg ? "bg-[#fceff3]" : "bg-white";
+  const imageBgClass = accentImageBg
+    ? "bg-[var(--store-image-well-tint)]"
+    : "bg-[var(--store-image-well)]";
 
   return (
     <article className="flex h-full flex-col">
@@ -194,7 +196,7 @@ function CatalogProductCard({
       >
         <Link
           href={`/products/${product.id}`}
-          className="group/image absolute inset-0 block outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-stone-400/70"
+          className="group/image absolute inset-0 block outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--store-accent)]/40"
         >
           {img ? (
             <Image
@@ -219,7 +221,7 @@ function CatalogProductCard({
           }}
           className={
             favorite
-              ? "absolute right-3 top-3 z-10 flex size-9 items-center justify-center rounded-full bg-white/95 text-rose-500 shadow-none ring-1 ring-stone-200/80 transition hover:bg-white"
+              ? "absolute right-3 top-3 z-10 flex size-9 items-center justify-center rounded-full bg-white/95 text-[var(--store-accent)] shadow-none ring-1 ring-stone-200/80 transition hover:bg-white"
               : "absolute right-3 top-3 z-10 flex size-9 items-center justify-center rounded-full bg-white/95 text-stone-600 shadow-none ring-1 ring-stone-200/80 transition hover:bg-white hover:text-stone-900"
           }
           aria-pressed={favorite}
@@ -232,7 +234,7 @@ function CatalogProductCard({
           />
         </button>
         {hasCouponPrice ? (
-          <span className="pointer-events-none absolute left-3 top-3 z-10 border border-stone-900 bg-white px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-stone-900">
+          <span className="pointer-events-none absolute left-3 top-3 z-10 border border-[var(--store-accent)] bg-white px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--store-accent)]">
             −{pct}%
           </span>
         ) : null}
@@ -244,7 +246,7 @@ function CatalogProductCard({
         </p>
         <Link
           href={`/products/${product.id}`}
-          className="text-[13px] font-medium uppercase leading-snug tracking-wide text-stone-900 transition hover:text-stone-600"
+          className="text-[13px] font-medium uppercase leading-snug tracking-wide text-[var(--store-brand)] transition hover:text-[var(--store-brand-hover)]"
         >
           <span className="line-clamp-3">{titleWithSize}</span>
         </Link>
@@ -275,13 +277,13 @@ function CatalogProductCard({
         ) : needsFragranceOnPdp ? (
           <Link
             href={`/products/${product.id}`}
-            className="mt-auto block border border-stone-900 bg-white py-2.5 text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-900 transition hover:bg-stone-900 hover:text-white"
+            className="mt-auto block border border-[var(--store-accent)] bg-white py-2.5 text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-accent)] transition hover:bg-[var(--store-accent)] hover:text-white"
           >
             Elegir fragancia
           </Link>
         ) : inCart ? (
           <div
-            className="mt-auto flex w-full items-center gap-0.5 border border-stone-900 bg-white p-0.5"
+            className="mt-auto flex w-full items-center gap-0.5 border border-[var(--store-accent)] bg-white p-0.5"
             role="group"
             aria-label="Cantidad en la bolsa"
           >
@@ -295,7 +297,7 @@ function CatalogProductCard({
                   );
                 })
               }
-              className="flex size-9 shrink-0 items-center justify-center text-stone-900 transition hover:bg-stone-100 disabled:opacity-40"
+              className="flex size-9 shrink-0 items-center justify-center text-[var(--store-accent)] transition hover:bg-[#fff4f8] disabled:opacity-40"
               aria-label={
                 cartQuantity <= 1 ? "Quitar de la bolsa" : "Restar una unidad"
               }
@@ -315,7 +317,7 @@ function CatalogProductCard({
                   );
                 })
               }
-              className="flex size-9 shrink-0 items-center justify-center text-stone-900 transition hover:bg-stone-100 disabled:opacity-40"
+              className="flex size-9 shrink-0 items-center justify-center text-[var(--store-accent)] transition hover:bg-[#fff4f8] disabled:opacity-40"
               aria-label="Sumar una unidad"
             >
               <Plus className="size-4" strokeWidth={1.5} aria-hidden />
@@ -334,7 +336,7 @@ function CatalogProductCard({
             <input type="hidden" name="quantity" value="1" />
             <button
               type="submit"
-              className="w-full border border-stone-900 bg-white py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-900 transition hover:bg-stone-900 hover:text-white"
+              className="w-full bg-[var(--store-accent)] py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-white transition hover:bg-[var(--store-accent-hover)]"
             >
               Añadir a la bolsa
             </button>

@@ -13,10 +13,10 @@ import {
 } from "@/lib/brand";
 
 const footerColumnTitle =
-  "text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-900";
+  "text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-brand)]";
 
 const footerLink =
-  "block text-sm leading-relaxed text-stone-700 transition hover:text-stone-900 hover:underline underline-offset-4";
+  "block text-sm leading-relaxed text-stone-700 transition hover:text-[var(--store-brand)] hover:underline underline-offset-4";
 
 const telHref = `tel:${storeSupportPhone.replace(/[^\d+]/g, "")}`;
 
@@ -24,15 +24,15 @@ export function StoreFooter() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-stone-200/90">
+    <footer className="border-t border-[#ffd6e8]/80">
       {/* 1 · Columnas de navegación */}
       <div className="bg-white">
         <div className="mx-auto max-w-7xl px-4 py-10 sm:py-12 lg:py-14">
           <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:gap-12 xl:gap-16">
             <div className="shrink-0 lg:max-w-[13rem] lg:pt-0.5">
-              <Link
+                <Link
                 href="/"
-                className="inline-block outline-none transition-opacity hover:opacity-85 focus-visible:ring-2 focus-visible:ring-stone-400/40 focus-visible:ring-offset-2"
+                className="inline-block outline-none transition-opacity hover:opacity-85 focus-visible:ring-2 focus-visible:ring-[var(--store-accent)]/35 focus-visible:ring-offset-2"
               >
                 <Image
                   src={storeLogoPath}
@@ -141,7 +141,7 @@ export function StoreFooter() {
       </div>
 
       {/* 2 · Legal */}
-      <div className="border-t border-stone-200/90 bg-white">
+      <div className="border-t border-[#ffd6e8]/60 bg-white">
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
           <p className="text-[11px] text-stone-500 sm:text-xs">
             © {year} {storeCopyrightHolder}. Todos los derechos reservados.
@@ -160,7 +160,7 @@ export function StoreFooter() {
               <Link href="/cookies" className={`${footerLink} text-stone-500`}>
                 Cookies
               </Link>
-              <Link href="/admin" className={`${footerLink} font-medium text-stone-600`}>
+              <Link href="/admin" className={`${footerLink} font-medium text-stone-600 hover:text-[var(--store-brand)]`}>
                 Backoffice
               </Link>
             </nav>

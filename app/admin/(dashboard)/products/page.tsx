@@ -20,9 +20,9 @@ import {
 import { loadAdminPermissions } from "@/lib/load-admin-permissions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { adminProductCardClass, adminTableWrapClass } from "@/lib/admin-ui";
-import { formatCop } from "@/lib/money";
 import { unitPriceGrossCents } from "@/lib/product-vat-price";
 import { AdminProductsFlashToast } from "@/components/admin/AdminProductsFlashToast";
+import { AnimatedCopCents, AnimatedInteger } from "@/components/admin/ReportsAnimatedFigures";
 
 export const dynamic = "force-dynamic";
 
@@ -146,9 +146,17 @@ export default async function AdminProductsPage({
   const canManageCategories = Boolean(authPerm?.permissions.categorias_gestionar);
 
   const spRecord = sp as Record<string, string | string[] | undefined>;
-  const q = (sp.q ?? "").trim();
-  const status = (sp.status ?? "all").trim() || "all";
-  const categoryId = (sp.category_id ?? "").trim();
+  const qParam = spRecord.q;
+  const q =
+    (typeof qParam === "string" ? qParam : Array.isArray(qParam) ? qParam[0] : "")
+      .trim();
+  const statusRaw = spRecord.status;
+  const status =
+    (typeof statusRaw === "string" ? statusRaw : Array.isArray(statusRaw) ? statusRaw[0] : "")
+      .trim() || "all";
+  const categoryRaw = spRecord.category_id;
+  const categoryId =
+    (typeof categoryRaw === "string" ? categoryRaw : Array.isArray(categoryRaw) ? categoryRaw[0] : "").trim();
   const err = sp.error;
   const flashSaved = sp.saved === "1" || sp.saved === "true";
   const flashUploadError =
@@ -228,7 +236,7 @@ export default async function AdminProductsPage({
 
   return (
     <>
-    <div className="min-w-0">
+    <div className="w-full min-w-0">
       <div className="flex flex-col gap-4 border-b border-zinc-100 pb-6 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 sm:text-3xl">
@@ -306,6 +314,23 @@ export default async function AdminProductsPage({
           categories={categoryList}
           categoriesModalOpen={showCategories}
         />
+        {!queryError && totalCount > 0 ? (
+          <div
+            className="reports-metric-card rounded-xl border border-rose-100/80 bg-gradient-to-r from-rose-50/50 to-white px-4 py-3 text-sm shadow-sm dark:border-zinc-700 dark:from-rose-950/25 dark:to-zinc-900"
+            style={{ ["--reports-stagger" as string]: "40ms" }}
+          >
+            <p className="text-zinc-600 dark:text-zinc-300">
+              <AnimatedInteger
+                value={totalCount}
+                duration={920}
+                delay={50}
+                className="font-semibold tabular-nums text-zinc-900 dark:text-zinc-50"
+              />{" "}
+              {totalCount === 1 ? "producto" : "productos"}
+              {q.trim() || status !== "all" || categoryId ? " con los filtros actuales" : " en el catálogo"}
+            </p>
+          </div>
+        ) : null}
       </div>
 
       {!queryError && totalCount === 0 ? (
@@ -327,7 +352,7 @@ export default async function AdminProductsPage({
           role="list"
           className="grid grid-cols-1 gap-4 border-t border-zinc-100 pb-2 pt-4 sm:grid-cols-2 sm:gap-4 xl:hidden"
         >
-          {productRows.map((p) => (
+          {productRows.map((p, pi) => (
             <li key={p.id} className="min-w-0">
               <article className={adminProductCardClass}>
                 <div className="flex items-start justify-between gap-3">
@@ -359,13 +384,21 @@ export default async function AdminProductsPage({
                   <div>
                     <span className="text-zinc-400 dark:text-zinc-500">Local</span>
                     <p className="tabular-nums font-semibold text-zinc-900 dark:text-zinc-100">
-                      {p.stock_local}
+                      <AnimatedInteger
+                        value={p.stock_local}
+                        duration={650}
+                        delay={Math.min(pi * 18, 280)}
+                      />
                     </p>
                   </div>
                   <div>
                     <span className="text-zinc-400 dark:text-zinc-500">Bodega</span>
                     <p className="tabular-nums font-semibold text-zinc-900 dark:text-zinc-100">
-                      {p.stock_warehouse}
+                      <AnimatedInteger
+                        value={p.stock_warehouse}
+                        duration={650}
+                        delay={Math.min(pi * 18 + 25, 300)}
+                      />
                     </p>
                   </div>
                 </div>
@@ -377,7 +410,11 @@ export default async function AdminProductsPage({
                   </span>
                 </div>
                 <p className="mt-auto pt-4 text-lg font-bold tabular-nums text-zinc-900 dark:text-zinc-50">
-                  {formatCop(p.publicPriceCents)}
+                  <AnimatedCopCents
+                    cents={p.publicPriceCents}
+                    duration={720}
+                    delay={Math.min(pi * 20, 320)}
+                  />
                 </p>
               </article>
             </li>
@@ -421,7 +458,7 @@ export default async function AdminProductsPage({
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100 bg-white dark:divide-zinc-800 dark:bg-zinc-900">
-                {productRows.map((p) => (
+                {productRows.map((p, pi) => (
                   <tr
                     key={p.id}
                     className="bg-white transition-colors hover:bg-zinc-50/80 dark:bg-zinc-900 dark:hover:bg-zinc-800/80"
@@ -452,12 +489,20 @@ export default async function AdminProductsPage({
                     <td
                       className={`${tdCell} whitespace-nowrap text-right tabular-nums text-zinc-800 dark:text-zinc-200`}
                     >
-                      {p.stock_local}
+                      <AnimatedInteger
+                        value={p.stock_local}
+                        duration={620}
+                        delay={Math.min(pi * 16, 300)}
+                      />
                     </td>
                     <td
                       className={`${tdCell} whitespace-nowrap text-right tabular-nums text-zinc-800 dark:text-zinc-200`}
                     >
-                      {p.stock_warehouse}
+                      <AnimatedInteger
+                        value={p.stock_warehouse}
+                        duration={620}
+                        delay={Math.min(pi * 16 + 24, 320)}
+                      />
                     </td>
                     <td className={`${tdCell} whitespace-nowrap`}>
                       <span
@@ -468,7 +513,11 @@ export default async function AdminProductsPage({
                     </td>
                     <td className={`${tdCell} text-right`}>
                       <span className="inline-block whitespace-nowrap text-sm font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
-                        {formatCop(p.publicPriceCents)}
+                        <AnimatedCopCents
+                          cents={p.publicPriceCents}
+                          duration={700}
+                          delay={Math.min(pi * 18, 340)}
+                        />
                       </span>
                     </td>
                     <td className={tdCell}>

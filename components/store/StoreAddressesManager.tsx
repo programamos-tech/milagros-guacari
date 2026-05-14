@@ -15,13 +15,13 @@ const labelClass = "mb-2 block text-sm font-medium text-stone-800";
 const inputClass =
   "w-full rounded-lg border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 shadow-[0_1px_0_0_rgb(24_24_27/0.04)] focus:border-stone-500 focus:outline-none focus:ring-2 focus:ring-[var(--store-accent)]/20";
 const inputClassSettings =
-  "w-full border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:border-stone-900 focus:outline-none focus:ring-0";
+  "w-full border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:border-[var(--store-accent)] focus:outline-none focus:ring-0";
 const btnPrimary =
   "rounded-full bg-[var(--store-accent)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[var(--store-accent-hover)] disabled:opacity-60";
 const btnGhost =
   "rounded-full border border-stone-200 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 hover:bg-stone-50";
 const btnOutlineBoutique =
-  "inline-flex shrink-0 items-center justify-center border border-stone-900 bg-white px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-900 transition hover:bg-stone-900 hover:text-white disabled:opacity-50";
+  "inline-flex shrink-0 items-center justify-center border border-[var(--store-accent)] bg-white px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--store-accent)] transition hover:bg-[var(--store-accent)] hover:text-white disabled:opacity-50";
 
 type Props = {
   variant?: "default" | "settings";
@@ -144,7 +144,7 @@ export function StoreAddressesManager({ variant = "default" }: Props) {
     return (
       <div className="space-y-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-900">
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-brand)]">
             Direcciones de envío
           </h2>
           <button
@@ -305,7 +305,7 @@ export function StoreAddressesManager({ variant = "default" }: Props) {
         onSubmit={handleAdd}
         className="rounded-xl border border-stone-200/90 bg-[var(--store-chrome-bg)] p-5 sm:p-6"
       >
-        <h2 className="text-lg font-semibold text-stone-900">
+        <h2 className="text-lg font-semibold text-[var(--store-brand)]">
           Agregar dirección
         </h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">

@@ -26,15 +26,15 @@ import { CheckoutLineControls } from "@/components/store/CheckoutLineControls";
 const labelClass =
   "mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-900";
 const inputClass =
-  "w-full border-0 border-b border-stone-300 bg-transparent py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:border-stone-900 focus:outline-none focus:ring-0";
+  "w-full border-0 border-b border-stone-300 bg-transparent py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:border-[var(--store-accent)] focus:outline-none focus:ring-0";
 const selectClass =
-  "w-full border border-stone-300 bg-white px-0 py-2.5 text-sm text-stone-900 focus:border-stone-900 focus:outline-none focus:ring-0";
+  "w-full border border-stone-300 bg-white px-0 py-2.5 text-sm text-stone-900 focus:border-[var(--store-accent)] focus:outline-none focus:ring-0";
 const sidebarInputClass =
-  "mt-3 w-full border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:border-stone-900 focus:outline-none";
+  "mt-3 w-full border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:border-[var(--store-accent)] focus:outline-none";
 const primaryBtnClass =
-  "w-full bg-stone-900 py-4 text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-stone-800";
+  "w-full bg-[var(--store-accent)] py-4 text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-[var(--store-accent-hover)]";
 const secondaryBtnClass =
-  "flex w-full items-center justify-center border border-stone-900 bg-white py-3.5 text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-900 transition hover:bg-stone-50";
+  "flex w-full items-center justify-center border border-[var(--store-accent)] bg-white py-3.5 text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-accent)] transition hover:bg-[#fff8fb]";
 
 function firstColorLabel(colors: unknown): string | null {
   if (!Array.isArray(colors) || colors.length === 0) return null;
@@ -165,7 +165,7 @@ function CheckoutBolsaVaciaView({
           </ol>
         </nav>
 
-        <h1 className="text-center text-sm font-semibold uppercase tracking-[0.22em] text-stone-900 sm:text-left sm:text-[15px] sm:tracking-[0.26em]">
+        <h1 className="text-center text-sm font-semibold uppercase tracking-[0.22em] text-[var(--store-brand)] sm:text-left sm:text-[15px] sm:tracking-[0.26em]">
           Bolsa de compras
         </h1>
 
@@ -204,20 +204,20 @@ function CheckoutBolsaVaciaView({
           >
             <ShoppingBag className="size-10" strokeWidth={1.15} />
           </div>
-          <h2 className="mt-6 text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-900">
+          <h2 className="mt-6 text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--store-brand)]">
             {title}
           </h2>
           <p className="mt-4 text-sm leading-relaxed text-stone-600">{body}</p>
           <div className="mt-10 flex flex-col items-stretch gap-3 sm:flex-row sm:justify-center">
             <Link
               href="/products"
-              className="inline-flex items-center justify-center bg-stone-900 px-6 py-3.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-stone-800"
+              className="inline-flex items-center justify-center bg-[var(--store-accent)] px-6 py-3.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-[var(--store-accent-hover)]"
             >
               Ver productos
             </Link>
             <Link
               href="/"
-              className="inline-flex items-center justify-center border border-stone-900 bg-white px-6 py-3.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-900 transition hover:bg-stone-50"
+              className="inline-flex items-center justify-center border border-[var(--store-accent)] bg-white px-6 py-3.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-accent)] transition hover:bg-[#fff8fb]"
             >
               Ir al inicio
             </Link>
@@ -383,7 +383,7 @@ export default async function CheckoutPage({
           </ol>
         </nav>
 
-        <h1 className="text-center text-sm font-semibold uppercase tracking-[0.22em] text-stone-900 sm:text-left sm:text-[15px] sm:tracking-[0.26em]">
+        <h1 className="text-center text-sm font-semibold uppercase tracking-[0.22em] text-[var(--store-brand)] sm:text-left sm:text-[15px] sm:tracking-[0.26em]">
           Bolsa de compras
         </h1>
 
@@ -455,7 +455,7 @@ export default async function CheckoutPage({
                           <div className="min-w-0 flex-1">
                             <Link
                               href={`/products/${p.id}`}
-                              className="text-[15px] font-semibold leading-snug text-stone-900 transition hover:text-stone-600"
+                              className="text-[15px] font-semibold leading-snug text-[var(--store-brand)] transition hover:text-[var(--store-brand-hover)]"
                             >
                               {p.name}
                             </Link>
@@ -512,7 +512,7 @@ export default async function CheckoutPage({
               </section>
 
               <section className="border-t border-stone-200 pt-12">
-                <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-900">
+                <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-brand)]">
                   Datos de envío
                 </h2>
                 <p className="mt-2 text-sm leading-relaxed text-stone-500">
@@ -608,7 +608,7 @@ export default async function CheckoutPage({
               </section>
 
               <section className="border-t border-stone-200 pt-12">
-                <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-900">
+                <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-brand)]">
                   Pago seguro (Wompi)
                 </h2>
                 <p className="mt-2 text-sm leading-relaxed text-stone-500">
@@ -617,13 +617,13 @@ export default async function CheckoutPage({
 
                 <fieldset className="mt-6 space-y-3">
                   <legend className="sr-only">Elige método de pago</legend>
-                  <label className="flex cursor-pointer items-center gap-3 border border-stone-900 bg-white p-4 ring-1 ring-stone-900">
+                  <label className="flex cursor-pointer items-center gap-3 border border-[var(--store-accent)] bg-white p-4 ring-1 ring-[var(--store-accent)]">
                     <input
                       type="radio"
                       name="paymentMethod"
                       value="wompi"
                       defaultChecked
-                      className="size-4 border-stone-400 text-stone-900 focus:ring-stone-900"
+                      className="size-4 border-stone-400 text-[var(--store-accent)] focus:ring-[var(--store-accent)]"
                     />
                     <span className="text-sm font-medium text-stone-900">
                       Pago en línea
@@ -657,7 +657,7 @@ export default async function CheckoutPage({
 
             <aside className="sticky top-28 space-y-6 bg-[#f4f4f3] p-6 lg:p-8">
               <details className="group border-b border-stone-300/80 pb-5 open:pb-4">
-                <summary className="cursor-pointer list-none text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-900 marker:hidden [&::-webkit-details-marker]:hidden">
+                <summary className="cursor-pointer list-none text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-brand)] marker:hidden [&::-webkit-details-marker]:hidden">
                   <span className="flex items-center justify-between gap-2">
                     Código promocional
                     <span className="text-stone-400 transition group-open:rotate-180">

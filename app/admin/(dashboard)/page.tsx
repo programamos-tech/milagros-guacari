@@ -1,4 +1,6 @@
 import { ReportsPeriodFilter } from "@/components/admin/ReportsPeriodFilter";
+import { ReportLiquidityMetricCards } from "@/components/admin/ReportLiquidityMetricCards";
+import type { ReportExpenseDetailLine } from "@/components/admin/ReportLiquidityMetricCards";
 import { CustomerTicketTrendChart } from "@/components/admin/CustomerTicketTrendChart";
 import {
   AnimatedCopCents,
@@ -131,6 +133,8 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
   let egresosTransferenciaBucketCents = 0;
   let cantidadEgresosPeriod = 0;
   const expensesByDayCents = new Map<string, number>();
+  const reportExpensesEfectivoLines: ReportExpenseDetailLine[] = [];
+  const reportExpensesOtrosLines: ReportExpenseDetailLine[] = [];
 
   for (const o of orders) {
     const createdAt = typeof o.created_at === "string" ? o.created_at : null;
@@ -219,12 +223,39 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
     egresosPeriod += amount;
     cantidadEgresosPeriod += 1;
     const pm = String(e.payment_method ?? "").trim().toLowerCase();
+    const line: ReportExpenseDetailLine = {
+      id: String(e.id),
+      concept: String((e as { concept?: string }).concept ?? ""),
+      amount_cents: amount,
+      expense_date: raw,
+      payment_method: String((e as { payment_method?: string }).payment_method ?? ""),
+      category:
+        (e as { category?: string | null }).category != null
+          ? String((e as { category?: string | null }).category)
+          : null,
+      created_at: typeof (e as { created_at?: string }).created_at === "string"
+        ? (e as { created_at: string }).created_at
+        : null,
+    };
     if (pm === "efectivo") {
       egresosEfectivoCents += amount;
+      reportExpensesEfectivoLines.push(line);
     } else {
       egresosTransferenciaBucketCents += amount;
+      reportExpensesOtrosLines.push(line);
     }
   }
+
+  function compareReportExpenseLines(
+    a: ReportExpenseDetailLine,
+    b: ReportExpenseDetailLine,
+  ): number {
+    const byDate = b.expense_date.localeCompare(a.expense_date);
+    if (byDate !== 0) return byDate;
+    return (b.created_at ?? "").localeCompare(a.created_at ?? "");
+  }
+  reportExpensesEfectivoLines.sort(compareReportExpenseLines);
+  reportExpensesOtrosLines.sort(compareReportExpenseLines);
 
   const gananciaNeta = gananciaBruta - egresosPeriod;
 
@@ -342,38 +373,21 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
               </p>
             </div>
           </div>
+          <ReportLiquidityMetricCards
+            cardLabelClass={cardLabelClass}
+            periodLabel={periodLabel}
+            totalCobradoPedidos={totalCobradoPedidos}
+            efectivo={efectivo}
+            efectivoNetoCaja={efectivoNetoCaja}
+            egresosEfectivoCents={egresosEfectivoCents}
+            expensesEfectivo={reportExpensesEfectivoLines}
+            transferencia={transferencia}
+            transferenciaNeta={transferenciaNeta}
+            egresosTransferenciaBucketCents={egresosTransferenciaBucketCents}
+            expensesOtros={reportExpensesOtrosLines}
+          />
           {(
             [
-              {
-                label: "Efectivo",
-                cents: efectivoNetoCaja,
-                centsClassName:
-                  efectivoNetoCaja < 0 ? "text-red-700 dark:text-red-300" : undefined,
-                hint:
-                  totalCobradoPedidos > 0
-                    ? `${Math.round((efectivo / totalCobradoPedidos) * 100)}% cobrado en efectivo${
-                        egresosEfectivoCents > 0
-                          ? ` · menos ${formatCop(egresosEfectivoCents)} egresos en efectivo`
-                          : ""
-                      }`
-                    : egresosEfectivoCents > 0
-                      ? `Solo egresos en efectivo: ${formatCop(egresosEfectivoCents)}`
-                      : "Sin cobros POS en efectivo en el periodo",
-                staggerMs: 70,
-              },
-              {
-                label: "Transferencia",
-                cents: transferenciaNeta,
-                centsClassName:
-                  transferenciaNeta < 0 ? "text-red-700 dark:text-red-300" : undefined,
-                hint:
-                  totalCobradoPedidos > 0
-                    ? `${Math.round((transferencia / totalCobradoPedidos) * 100)}% del cobrado`
-                    : egresosTransferenciaBucketCents > 0
-                      ? `Solo egresos: ${formatCop(egresosTransferenciaBucketCents)}`
-                      : "Sin cobros en este bucket en el periodo",
-                staggerMs: 135,
-              },
               {
                 label: "Facturas anuladas",
                 count: anuladas,
@@ -396,11 +410,7 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
               <dt className={cardLabelClass}>{item.label}</dt>
               <dd className="mt-1 text-2xl font-normal tabular-nums text-stone-900 dark:text-zinc-100">
                 {"cents" in item ? (
-                  <AnimatedCopCents
-                    cents={item.cents}
-                    delay={item.staggerMs + 50}
-                    className={"centsClassName" in item ? item.centsClassName : undefined}
-                  />
+                  <AnimatedCopCents cents={item.cents} delay={item.staggerMs + 50} />
                 ) : (
                   <AnimatedInteger value={item.count} delay={item.staggerMs + 50} />
                 )}

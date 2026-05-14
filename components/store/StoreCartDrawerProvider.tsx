@@ -93,7 +93,7 @@ function CartDrawerSuggestionsRow({
   if (suggestions.length === 0) return null;
 
   const arrowBtnClass =
-    "flex size-8 shrink-0 items-center justify-center border border-stone-300 text-stone-600 transition hover:border-stone-900 hover:bg-stone-50 hover:text-stone-900";
+    "flex size-8 shrink-0 items-center justify-center border border-stone-300 text-stone-600 transition hover:border-[var(--store-accent)] hover:bg-[#fff8fb] hover:text-[var(--store-accent)]";
 
   return (
     <section
@@ -103,7 +103,7 @@ function CartDrawerSuggestionsRow({
       <div className="mb-5 flex items-center justify-between gap-3">
         <h3
           id="store-cart-drawer-suggestions-title"
-          className="text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-900"
+          className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-brand)]"
         >
           También te puede gustar
         </h3>
@@ -144,7 +144,7 @@ function CartDrawerSuggestionsRow({
               <Link
                 href={`/products/${s.id}`}
                 onClick={onPickProduct}
-                className="block outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-stone-900/25 focus-visible:ring-offset-2"
+                className="block outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-[var(--store-accent)]/25 focus-visible:ring-offset-2"
               >
                 <div className="relative aspect-[11/13] w-full bg-[#f4f4f3]">
                   {img ? (
@@ -162,7 +162,7 @@ function CartDrawerSuggestionsRow({
                     </div>
                   )}
                 </div>
-                <p className="mt-2 line-clamp-2 text-[10px] font-semibold uppercase leading-snug tracking-[0.08em] text-stone-900">
+                <p className="mt-2 line-clamp-2 text-[10px] font-semibold uppercase leading-snug tracking-[0.08em] text-[var(--store-brand)]">
                   {s.name}
                 </p>
                 <p className="mt-1 text-[11px] font-medium tabular-nums text-stone-900">
@@ -248,7 +248,7 @@ function DrawerLine({
           <div className="min-w-0 flex-1">
             <Link
               href={`/products/${item.productId}`}
-              className="text-[13px] font-semibold uppercase leading-snug tracking-wide text-stone-900 transition hover:text-stone-600"
+              className="text-[13px] font-semibold uppercase leading-snug tracking-wide text-[var(--store-brand)] transition hover:text-[var(--store-brand-hover)]"
             >
               {item.name}
             </Link>
@@ -267,7 +267,7 @@ function DrawerLine({
               ) : null}
               <div className="flex flex-wrap items-center gap-3 pt-2">
                 <span className="text-stone-500">Cant.</span>
-                <div className="inline-flex items-center border border-stone-900/25 bg-white">
+                <div className="inline-flex items-center border border-[var(--store-accent)]/25 bg-white">
                   <button
                     type="button"
                     disabled={pending}
@@ -430,7 +430,7 @@ export function StoreCartDrawerProvider({
             <header className="flex items-start justify-between gap-4 border-b border-stone-200/80 px-6 py-5 sm:px-8">
               <h2
                 id="store-cart-drawer-title"
-                className="text-[12px] font-semibold uppercase tracking-[0.18em] text-stone-900"
+                className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[var(--store-brand)]"
               >
                 Bolsa de compras
               </h2>
@@ -438,7 +438,7 @@ export function StoreCartDrawerProvider({
                 ref={closeRef}
                 type="button"
                 onClick={closeCart}
-                className="flex size-9 shrink-0 items-center justify-center border border-stone-900/80 text-stone-900 transition hover:bg-stone-900 hover:text-white"
+                className="flex size-9 shrink-0 items-center justify-center border border-[var(--store-accent)]/80 text-[var(--store-accent)] transition hover:bg-[var(--store-accent)] hover:text-white"
                 aria-label="Cerrar"
               >
                 <span className="text-lg font-light leading-none">×</span>
@@ -459,7 +459,7 @@ export function StoreCartDrawerProvider({
                     <Link
                       href="/products"
                       onClick={closeCart}
-                      className="border border-stone-900 bg-stone-900 px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-stone-800"
+                      className="border border-[var(--store-accent)] bg-[var(--store-accent)] px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-[var(--store-accent-hover)]"
                     >
                       Explorar productos
                     </Link>
@@ -504,14 +504,14 @@ export function StoreCartDrawerProvider({
                 <Link
                   href="/checkout"
                   onClick={closeCart}
-                  className="mt-5 flex w-full items-center justify-center bg-stone-900 py-4 text-center text-[11px] font-semibold uppercase tracking-[0.22em] text-white transition hover:bg-stone-800"
+                  className="mt-5 flex w-full items-center justify-center bg-[var(--store-accent)] py-4 text-center text-[11px] font-semibold uppercase tracking-[0.22em] text-white transition hover:bg-[var(--store-accent-hover)]"
                 >
                   Revisar y finalizar compra
                 </Link>
                 <Link
                   href="/products"
                   onClick={closeCart}
-                  className="mt-4 block text-center text-[12px] font-semibold uppercase tracking-[0.12em] text-stone-700 underline decoration-stone-400 underline-offset-4 transition hover:text-stone-900"
+                  className="mt-4 block text-center text-[12px] font-semibold uppercase tracking-[0.12em] text-stone-700 underline decoration-stone-400 underline-offset-4 transition hover:text-[var(--store-accent)]"
                 >
                   Seguir comprando
                 </Link>

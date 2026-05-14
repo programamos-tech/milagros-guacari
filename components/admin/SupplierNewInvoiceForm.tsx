@@ -161,8 +161,11 @@ export function SupplierNewInvoiceForm({
     let cancelled = false;
     setProductLoading(true);
     void fetch(`/api/admin/products-search?q=${encodeURIComponent(q)}`)
-      .then((r) => r.json())
-      .then((j: { products?: ProductHit[] }) => {
+      .then(async (r) => {
+        if (!r.ok) return { products: [] as ProductHit[] };
+        return r.json() as Promise<{ products?: ProductHit[] }>;
+      })
+      .then((j) => {
         if (!cancelled) setProductHits(j.products ?? []);
       })
       .finally(() => {

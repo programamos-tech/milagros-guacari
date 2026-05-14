@@ -7,13 +7,26 @@ import {
   unitPriceAfterWholesaleCents,
   wholesaleDiscountPercentFromRow,
 } from "@/lib/customer-wholesale-pricing";
+import {
+  applyPosLineNetDiscountCents,
+  discountedUnitNetCentsFromLine,
+} from "@/lib/pos-line-discount";
 import { unitPriceGrossCents } from "@/lib/product-vat-price";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+export type PosInvoiceLinePayload = {
+  productId: string;
+  quantity: number;
+  /** 1–100: descuento % sobre neto de línea (post-mayorista). Si se envía, ignora monto. */
+  discountPercent?: number | null;
+  /** COP en centavos sobre neto total de línea; solo si no hay % válido. */
+  discountAmountCents?: number | null;
+};
+
 export type PosInvoicePayload = {
   customerId: string;
-  lines: { productId: string; quantity: number }[];
+  lines: PosInvoiceLinePayload[];
   paymentMethod: "cash" | "transfer" | "mixed";
   shippingAddress: string | null;
   shippingPhone: string | null;
@@ -52,13 +65,28 @@ export async function createPosInvoiceAction(formData: FormData) {
 
   const linesRaw = Array.isArray(payload.lines) ? payload.lines : [];
   const lines = linesRaw
-    .map((row) => ({
-      productId: String((row as { productId?: string }).productId ?? "").trim(),
-      quantity: Math.floor(Number((row as { quantity?: number }).quantity)),
-    }))
+    .map((row) => {
+      const productId = String((row as { productId?: string }).productId ?? "").trim();
+      const quantity = Math.floor(Number((row as { quantity?: number }).quantity));
+      const pctRaw = (row as { discountPercent?: unknown }).discountPercent;
+      const amtRaw = (row as { discountAmountCents?: unknown }).discountAmountCents;
+      const pct =
+        pctRaw != null && pctRaw !== "" && Number.isFinite(Number(pctRaw))
+          ? Math.floor(Number(pctRaw))
+          : null;
+      const amt = Math.max(0, Math.floor(Number(amtRaw ?? 0)));
+      return { productId, quantity, discountPercent: pct, discountAmountCents: amt };
+    })
     .filter((r) => r.productId && r.quantity > 0);
 
   if (lines.length === 0) redirectError("validation");
+
+  for (const l of lines) {
+    if (l.discountPercent != null) {
+      if (l.discountPercent < 0 || l.discountPercent > 100) redirectError("validation");
+    }
+    if (l.discountAmountCents < 0) redirectError("validation");
+  }
 
   const paymentMethod = payload.paymentMethod;
   if (paymentMethod !== "cash" && paymentMethod !== "transfer" && paymentMethod !== "mixed") {
@@ -100,20 +128,38 @@ export async function createPosInvoiceAction(formData: FormData) {
     qtyByProduct.set(l.productId, (qtyByProduct.get(l.productId) ?? 0) + l.quantity);
   }
 
-  let subtotalCents = 0;
-  let vatCents = 0;
-  let totalCents = 0;
   for (const [pid, qty] of qtyByProduct) {
     const p = productById.get(pid);
     if (!p) redirectError("products");
-    const priceCatalog = Math.max(0, Math.floor(Number(p.price_cents ?? 0)));
-    const price = unitPriceAfterWholesaleCents(priceCatalog, wholesalePct);
-    const hasVat = Boolean(p.has_vat);
-    const unitFinal = unitPriceGrossCents(price, hasVat, null);
     const stock = Number(p.stock_local ?? 0);
     if (stock < qty) redirectError("stock");
-    subtotalCents += price * qty;
-    totalCents += unitFinal * qty;
+  }
+
+  let subtotalCents = 0;
+  let vatCents = 0;
+  let totalCents = 0;
+  for (const l of lines) {
+    const p = productById.get(l.productId);
+    if (!p) redirectError("products");
+    const priceCatalog = Math.max(0, Math.floor(Number(p.price_cents ?? 0)));
+    const netUnit = unitPriceAfterWholesaleCents(priceCatalog, wholesalePct);
+    const lineNetBefore = netUnit * l.quantity;
+    const pctForCalc =
+      l.discountPercent != null && l.discountPercent > 0 && l.discountPercent <= 100
+        ? l.discountPercent
+        : null;
+    const amtForCalc = pctForCalc != null ? 0 : l.discountAmountCents;
+    if (amtForCalc > lineNetBefore) redirectError("validation");
+    const lineNetAfter = applyPosLineNetDiscountCents(
+      lineNetBefore,
+      pctForCalc,
+      amtForCalc,
+    );
+    const discNetUnit = discountedUnitNetCentsFromLine(lineNetAfter, l.quantity);
+    const hasVat = Boolean(p.has_vat);
+    const unitFinal = unitPriceGrossCents(discNetUnit, hasVat, null);
+    subtotalCents += lineNetAfter;
+    totalCents += unitFinal * l.quantity;
   }
   vatCents = Math.max(0, totalCents - subtotalCents);
 
@@ -163,14 +209,28 @@ export async function createPosInvoiceAction(formData: FormData) {
   const itemRows = lines.map((l) => {
     const p = productById.get(l.productId)!;
     const priceCatalog = Math.max(0, Math.floor(Number(p.price_cents ?? 0)));
-    const netAfter = unitPriceAfterWholesaleCents(priceCatalog, wholesalePct);
-    const unitFinal = unitPriceGrossCents(netAfter, Boolean(p.has_vat), null);
+    const netUnit = unitPriceAfterWholesaleCents(priceCatalog, wholesalePct);
+    const lineNetBefore = netUnit * l.quantity;
+    const pctForCalc =
+      l.discountPercent != null && l.discountPercent > 0 && l.discountPercent <= 100
+        ? l.discountPercent
+        : null;
+    const amtForCalc = pctForCalc != null ? 0 : l.discountAmountCents;
+    const lineNetAfter = applyPosLineNetDiscountCents(
+      lineNetBefore,
+      pctForCalc,
+      amtForCalc,
+    );
+    const discNetUnit = discountedUnitNetCentsFromLine(lineNetAfter, l.quantity);
+    const unitFinal = unitPriceGrossCents(discNetUnit, Boolean(p.has_vat), null);
     return {
       order_id: orderId,
       product_id: l.productId,
       quantity: l.quantity,
       unit_price_cents: unitFinal,
       product_name_snapshot: String(p.name ?? "Producto"),
+      line_discount_percent: pctForCalc,
+      line_discount_amount_cents: pctForCalc != null ? 0 : amtForCalc,
     };
   });
 

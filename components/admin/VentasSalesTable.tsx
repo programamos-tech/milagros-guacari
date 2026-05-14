@@ -6,7 +6,7 @@ import {
   ventaFormaPagoBadge,
   ventaNumeroReferencia,
 } from "@/lib/ventas-sales";
-import { formatCop } from "@/lib/money";
+import { AnimatedCopCents } from "@/components/admin/ReportsAnimatedFigures";
 
 export type VentaOrderRow = {
   id: string;
@@ -72,7 +72,19 @@ function IconEye() {
 const thClass =
   "px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400 dark:text-zinc-500 sm:px-4 md:px-5";
 
-export function VentasSalesTable({ rows }: { rows: VentaOrderRow[] }) {
+export function VentasSalesTable({
+  rows,
+  orderListReturnHref,
+}: {
+  rows: VentaOrderRow[];
+  /** Si se pasa, el detalle del pedido vuelve a este listado (misma página y filtros). */
+  orderListReturnHref?: string;
+}) {
+  const orderDetailHref = (orderId: string) =>
+    orderListReturnHref
+      ? `/admin/orders/${orderId}?returnTo=${encodeURIComponent(orderListReturnHref)}`
+      : `/admin/orders/${orderId}`;
+
   if (rows.length === 0) {
     return (
       <div className="px-4 py-12 text-center text-sm text-zinc-500 dark:text-zinc-400 sm:px-5">
@@ -91,7 +103,7 @@ export function VentasSalesTable({ rows }: { rows: VentaOrderRow[] }) {
         role="list"
         className="grid grid-cols-1 gap-3 px-3 pb-3 pt-2 sm:gap-3.5 sm:px-4 sm:pb-4 xl:hidden"
       >
-        {rows.map((row) => {
+        {rows.map((row, i) => {
           const fisica = isVentaFisica(row.wompi_reference);
           const ref = ventaNumeroReferencia(row.id);
           const estado = ventaEstadoBadge(row.status);
@@ -116,7 +128,7 @@ export function VentasSalesTable({ rows }: { rows: VentaOrderRow[] }) {
                     </div>
                   </div>
                   <Link
-                    href={`/admin/orders/${row.id}`}
+                    href={orderDetailHref(row.id)}
                     className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg border border-zinc-200/90 bg-white text-zinc-500 shadow-[0_1px_0_0_rgb(24_24_27/0.04)] transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-800 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400 dark:shadow-none dark:hover:border-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
                     aria-label={`Ver detalle del pedido ${ref}`}
                   >
@@ -141,7 +153,11 @@ export function VentasSalesTable({ rows }: { rows: VentaOrderRow[] }) {
                   </div>
                 </div>
                 <p className="mt-3 text-xl tabular-nums tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-2xl">
-                  {formatCop(Number(row.total_cents ?? 0))}
+                  <AnimatedCopCents
+                    cents={Number(row.total_cents ?? 0)}
+                    duration={780}
+                    delay={Math.min(i * 18, 320)}
+                  />
                 </p>
               </article>
             </li>
@@ -164,7 +180,7 @@ export function VentasSalesTable({ rows }: { rows: VentaOrderRow[] }) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => {
+            {rows.map((row, i) => {
               const fisica = isVentaFisica(row.wompi_reference);
               const ref = ventaNumeroReferencia(row.id);
               const estado = ventaEstadoBadge(row.status);
@@ -207,11 +223,15 @@ export function VentasSalesTable({ rows }: { rows: VentaOrderRow[] }) {
                     </span>
                   </td>
                   <td className="whitespace-nowrap px-3 py-3.5 text-right text-sm tabular-nums text-zinc-900 dark:text-zinc-50 sm:px-4 md:px-5">
-                    {formatCop(Number(row.total_cents ?? 0))}
+                    <AnimatedCopCents
+                      cents={Number(row.total_cents ?? 0)}
+                      duration={780}
+                      delay={Math.min(i * 16, 300)}
+                    />
                   </td>
                   <td className="px-3 py-3.5 text-center sm:px-4 md:px-5">
                     <Link
-                      href={`/admin/orders/${row.id}`}
+                      href={orderDetailHref(row.id)}
                       className="inline-flex size-9 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-500 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-800 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400 dark:shadow-none dark:hover:border-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
                       aria-label={`Ver detalle del pedido ${ref}`}
                     >

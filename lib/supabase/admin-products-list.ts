@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { adminProductsNameReferenceOrIlikeFilter } from "@/lib/admin-product-search-filter";
 
 type ListOpts = {
   q: string;
@@ -61,7 +62,14 @@ export async function fetchAdminProductsList(
       .range(from, to);
 
     if (q) {
-      query = query.ilike("name", `%${q}%`);
+      const qt = q.trim();
+      if (qt) {
+        if (sel.includes("reference")) {
+          query = query.or(adminProductsNameReferenceOrIlikeFilter(qt));
+        } else {
+          query = query.ilike("name", `%${qt}%`);
+        }
+      }
     }
     if (categoryId && sel.includes("category_id")) {
       query = query.eq("category_id", categoryId);

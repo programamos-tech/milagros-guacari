@@ -43,14 +43,23 @@ export function ProductFiltersBar({
         <label htmlFor="q" className={labelClass}>
           Nombre / código
         </label>
-        <input
-          id="q"
-          name="q"
-          type="search"
-          defaultValue={defaultQ}
-          placeholder="Buscar…"
-          className={fieldClass}
-        />
+        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch">
+          <input
+            id="q"
+            name="q"
+            type="search"
+            defaultValue={defaultQ}
+            placeholder="Buscar…"
+            enterKeyHint="search"
+            className={`${fieldClass} min-w-0 flex-1`}
+          />
+          <button
+            type="submit"
+            className="inline-flex shrink-0 items-center justify-center rounded-lg border border-rose-200/80 bg-rose-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-900 dark:border-rose-400/30 dark:bg-rose-400/15 dark:text-rose-50 dark:hover:bg-rose-400/25"
+          >
+            Buscar
+          </button>
+        </div>
       </div>
       <div className="sm:col-span-3">
         <label htmlFor="status" className={labelClass}>

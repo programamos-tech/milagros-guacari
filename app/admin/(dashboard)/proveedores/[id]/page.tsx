@@ -96,7 +96,7 @@ export default async function AdminProveedorDetailPage({ params, searchParams }:
   const avatarSeed = customerAvatarSeed(s.id, s.email);
 
   return (
-    <div className="mx-auto max-w-7xl space-y-4">
+    <div className="w-full min-w-0 space-y-4">
       <div className="flex flex-col gap-3 border-b border-zinc-100 pb-4 dark:border-zinc-800 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 items-center gap-3 sm:gap-4">
           <CustomerAvatar

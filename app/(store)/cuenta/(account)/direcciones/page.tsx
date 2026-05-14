@@ -11,15 +11,15 @@ export const metadata = {
 const cardClass =
   "border border-stone-200 bg-white px-6 py-8 sm:px-8 sm:py-9";
 const cardTitle =
-  "text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-900";
+  "text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-brand)]";
 const btnOutline =
-  "inline-flex shrink-0 items-center justify-center border border-stone-900 bg-white px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-900 transition hover:bg-stone-900 hover:text-white";
+  "inline-flex shrink-0 items-center justify-center border border-[var(--store-accent)] bg-white px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--store-accent)] transition hover:bg-[var(--store-accent)] hover:text-white";
 const labelMuted = "text-[11px] font-semibold uppercase tracking-[0.1em] text-stone-500";
 const valueText = "mt-1 text-sm text-stone-900";
 const dateInputClass =
-  "mt-2 w-full max-w-[12rem] rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 shadow-[0_1px_0_0_rgb(24_24_27/0.04)] focus:border-stone-500 focus:outline-none focus:ring-2 focus:ring-stone-400/25";
+  "mt-2 w-full max-w-[12rem] rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 shadow-[0_1px_0_0_rgb(24_24_27/0.04)] focus:border-[var(--store-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--store-accent)]/20";
 const btnSaveClass =
-  "inline-flex shrink-0 items-center justify-center border border-stone-900 bg-stone-900 px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-white transition hover:bg-stone-800";
+  "inline-flex shrink-0 items-center justify-center border border-[var(--store-accent)] bg-[var(--store-accent)] px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-white transition hover:bg-[var(--store-accent-hover)]";
 
 function profileLocationLine(
   city: string | null | undefined,
@@ -87,7 +87,7 @@ export default async function CuentaDireccionesPage({
 
   return (
     <div className="mx-auto max-w-xl space-y-8">
-      <h1 className="text-center text-sm font-semibold uppercase tracking-[0.22em] text-stone-900 sm:text-[15px] sm:tracking-[0.26em]">
+      <h1 className="text-center text-sm font-semibold uppercase tracking-[0.22em] text-[var(--store-brand)] sm:text-[15px] sm:tracking-[0.26em]">
         Ajustes
       </h1>
 

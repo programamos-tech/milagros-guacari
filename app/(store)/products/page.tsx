@@ -334,7 +334,7 @@ export default async function ProductsPage({ searchParams }: Props) {
       {categoryView && categoryName && !showCategoryListingHero ? (
         <RevealOnScroll className="w-full">
           <header className="mx-auto max-w-7xl border-b border-stone-100 px-4 pb-6 pt-8 text-center sm:pb-8 sm:pt-10">
-            <h1 className="text-xl font-semibold uppercase tracking-[0.12em] text-stone-900 sm:text-2xl">
+            <h1 className="text-xl font-semibold uppercase tracking-[0.12em] text-[var(--store-brand)] sm:text-2xl">
               {categoryName}
             </h1>
           </header>

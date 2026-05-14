@@ -49,7 +49,7 @@ export function StoreNavDropdowns({
   }, [open, close]);
 
   const shopBtnClass =
-    "group inline-flex items-center gap-2 rounded-none py-1 text-[13px] font-medium tracking-wide text-stone-600 transition hover:text-stone-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400/40 focus-visible:ring-offset-2";
+    "group inline-flex items-center gap-2 rounded-none py-1 text-[13px] font-medium tracking-wide text-white/90 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--store-header-bg)]";
 
   return (
     <nav aria-label="Principal" className="relative flex items-center">

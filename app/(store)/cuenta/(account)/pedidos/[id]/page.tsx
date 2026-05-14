@@ -72,7 +72,7 @@ export default async function CuentaPedidoDetallePage({
       </nav>
 
       <div>
-        <h1 className="text-2xl font-semibold text-stone-900">
+        <h1 className="text-2xl font-semibold text-[var(--store-brand)]">
           Pedido {order.id.slice(0, 8)}…
         </h1>
         <p className="mt-2 text-sm text-stone-600">
@@ -85,7 +85,7 @@ export default async function CuentaPedidoDetallePage({
       </div>
 
       <section className="rounded-xl border border-stone-200/90 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-6">
-        <h2 className="text-lg font-semibold text-stone-900">Envío</h2>
+        <h2 className="text-lg font-semibold text-[var(--store-brand)]">Envío</h2>
         <dl className="mt-4 space-y-2 text-sm text-stone-700">
           <div>
             <dt className="text-stone-500">Nombre</dt>
@@ -119,7 +119,7 @@ export default async function CuentaPedidoDetallePage({
       </section>
 
       <section className="rounded-xl border border-stone-200/90 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-6">
-        <h2 className="text-lg font-semibold text-stone-900">Productos</h2>
+        <h2 className="text-lg font-semibold text-[var(--store-brand)]">Productos</h2>
         <ul className="mt-4 divide-y divide-stone-100">
           {lines.map((line) => (
             <li

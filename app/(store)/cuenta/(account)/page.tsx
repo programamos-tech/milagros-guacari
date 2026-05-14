@@ -24,7 +24,7 @@ function orderStatusLabel(status: string) {
 }
 
 const cardTitle =
-  "text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-900";
+  "text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-brand)]";
 const cardBody = "mt-6 flex flex-1 flex-col items-center justify-center text-sm leading-relaxed text-stone-600";
 
 export default async function CuentaResumenPage({
@@ -71,7 +71,7 @@ export default async function CuentaResumenPage({
                 </p>
                 <Link
                   href={`/cuenta/pedidos/${lastOrder.id}`}
-                  className="mt-6 inline-block text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-900 underline decoration-stone-400 underline-offset-4 transition hover:text-stone-600"
+                  className="mt-6 inline-block text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--store-accent)] underline decoration-[var(--store-accent)]/35 underline-offset-4 transition hover:text-[var(--store-brand-hover)]"
                 >
                   Ver pedido
                 </Link>
@@ -94,7 +94,7 @@ export default async function CuentaResumenPage({
             </p>
             <Link
               href="/products"
-              className="mt-6 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-900 underline decoration-stone-400 underline-offset-4 transition hover:text-stone-600"
+              className="mt-6 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--store-accent)] underline decoration-[var(--store-accent)]/35 underline-offset-4 transition hover:text-[var(--store-brand-hover)]"
             >
               Explorar catálogo
             </Link>

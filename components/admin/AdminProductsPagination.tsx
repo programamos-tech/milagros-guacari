@@ -1,9 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import {
   adminProductsListHref,
   clampAdminProductsPageSize,
   type AdminProductsListQuery,
 } from "@/lib/admin-products-url";
+import { AnimatedInteger } from "@/components/admin/ReportsAnimatedFigures";
 
 type Props = {
   page: number;
@@ -71,13 +74,21 @@ export function AdminProductsPagination({
   };
 
   return (
-    <div className="flex flex-col gap-4 border-t border-zinc-100 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+    <div
+      className="reports-metric-card flex flex-col gap-4 border-t border-zinc-100 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
+      style={{ ["--reports-stagger" as string]: "60ms" }}
+    >
       <p className="text-sm text-zinc-600">
         Mostrando{" "}
         <span className="font-semibold tabular-nums text-zinc-900">
-          {from}-{to}
+          <AnimatedInteger value={from} duration={700} delay={80} />
+          -
+          <AnimatedInteger value={to} duration={700} delay={110} />
         </span>{" "}
-        de <span className="font-semibold tabular-nums text-zinc-900">{totalCount}</span>
+        de{" "}
+        <span className="font-semibold tabular-nums text-zinc-900">
+          <AnimatedInteger value={totalCount} duration={850} delay={150} />
+        </span>
       </p>
 
       <div className="flex flex-wrap items-center gap-2">

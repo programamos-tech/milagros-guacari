@@ -18,7 +18,7 @@ export function StoreFavoritesNavLink() {
       aria-label={
         count > 0 ? `Favoritos, ${count} producto${count === 1 ? "" : "s"}` : "Favoritos"
       }
-      className="flex items-center justify-center rounded-none p-1.5 text-stone-600 transition hover:text-stone-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400/35 focus-visible:ring-offset-2"
+      className="flex items-center justify-center rounded-none p-1.5 text-white/90 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--store-header-bg)]"
     >
       <Heart
         className={STORE_HEADER_ICON_LG}

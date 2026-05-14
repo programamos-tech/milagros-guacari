@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { useStoreFavorites } from "@/components/store/StoreFavoritesProvider";
 
 const cardTitle =
-  "text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-900";
+  "text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-brand)]";
 const cardBody =
   "mt-6 flex flex-1 flex-col items-center justify-center text-sm leading-relaxed text-stone-600";
 
@@ -51,13 +51,13 @@ export function CuentaFavoritosResumenCard() {
           <p className="text-center text-sm text-stone-500">Cargando…</p>
         ) : count === 0 ? (
           <>
-            <Heart className="size-8 text-stone-900" strokeWidth={1.25} aria-hidden />
+            <Heart className="size-8 text-[var(--store-accent)]" strokeWidth={1.25} aria-hidden />
             <p className="max-w-[14rem] text-center text-sm">
               Esta lista está vacía — guarda favoritos mientras compras.
             </p>
             <Link
               href="/favoritos"
-              className="text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-900 underline decoration-stone-400 underline-offset-4 transition hover:text-stone-600"
+              className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--store-brand)] underline decoration-[var(--store-accent)]/35 underline-offset-4 transition hover:text-[var(--store-brand-hover)]"
             >
               Ver favoritos
             </Link>
@@ -65,12 +65,12 @@ export function CuentaFavoritosResumenCard() {
         ) : (
           <>
             <Heart
-              className="size-8 text-stone-900"
+              className="size-8 text-[var(--store-accent)]"
               strokeWidth={1.25}
               fill="currentColor"
               aria-hidden
             />
-            <p className="max-w-[16rem] text-center text-sm font-medium text-stone-900">
+            <p className="max-w-[16rem] text-center text-sm font-medium text-[var(--store-brand)]">
               {count === 1 ? "Tenés 1 producto guardado." : `Tenés ${count} productos guardados.`}
             </p>
             {loadingNames && preview.length === 0 ? (
@@ -104,7 +104,7 @@ export function CuentaFavoritosResumenCard() {
             ) : null}
             <Link
               href="/favoritos"
-              className="text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-900 underline decoration-stone-400 underline-offset-4 transition hover:text-stone-600"
+              className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--store-brand)] underline decoration-[var(--store-accent)]/35 underline-offset-4 transition hover:text-[var(--store-brand-hover)]"
             >
               Ver favoritos
             </Link>

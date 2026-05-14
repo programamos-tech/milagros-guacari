@@ -11,6 +11,27 @@ export const storeLegalName =
 /** NIT u otro ID fiscal (solo se muestra en tirilla si está definido). */
 export const storeTaxNit = process.env.NEXT_PUBLIC_STORE_NIT?.trim() ?? "";
 
+/**
+ * Razón social en factura / tirilla (prioridad sobre `storeLegalName` en ese documento).
+ * `NEXT_PUBLIC_INVOICE_LEGAL_NAME` para personalizar sin cambiar el resto del sitio.
+ */
+export const invoiceLegalName =
+  process.env.NEXT_PUBLIC_INVOICE_LEGAL_NAME?.trim() ||
+  process.env.NEXT_PUBLIC_STORE_LEGAL_NAME?.trim() ||
+  "Aleya Shop SAS";
+
+/** NIT en cabecera de factura (prioridad sobre `storeTaxNit` en ese documento). */
+export const invoiceTaxNit =
+  process.env.NEXT_PUBLIC_INVOICE_NIT?.trim() ||
+  process.env.NEXT_PUBLIC_STORE_NIT?.trim() ||
+  "901.522.077";
+
+/** Nombre comercial corto en tirilla (“Tienda”, pie de agradecimiento). */
+export const invoiceTradeName =
+  process.env.NEXT_PUBLIC_INVOICE_TRADE_NAME?.trim() ||
+  process.env.NEXT_PUBLIC_STORE_NAME?.trim() ||
+  "Aleya Shop";
+
 /** Régimen tributario (texto libre; típico en CO: Responsables de IVA). */
 export const storeTaxRegime =
   process.env.NEXT_PUBLIC_STORE_TAX_REGIME?.trim() ||
@@ -21,8 +42,8 @@ export const storeTaxRegime =
  */
 export const storeLogoPath = encodeURI("/logobackoficce (1).png");
 
-/** Logo del sidebar del backoffice (`/public/logo-milagros-2.jpg`). */
-export const adminSidebarLogoPath = "/logo-milagros-2.jpg";
+/** Logo del sidebar del backoffice (`/public/logo-aleyahso.png`). */
+export const adminSidebarLogoPath = "/logo-aleyahso.png";
 
 /** Firma Berea (“Experiencia por”) en `/public/berea.png`. */
 export const bereaSignaturePath = "/berea.png";

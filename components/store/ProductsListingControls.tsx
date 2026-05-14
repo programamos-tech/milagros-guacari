@@ -248,8 +248,8 @@ export function ProductsListingControls({
   function chipClass(active: boolean) {
     return `flex min-h-[2.5rem] cursor-pointer items-center justify-center gap-2 rounded border px-2 py-2 text-center text-[11px] font-medium uppercase leading-tight tracking-wide transition sm:text-[12px] ${
       active
-        ? "border-stone-900 bg-stone-900 text-white"
-        : "border-stone-200 text-stone-800 hover:border-stone-400"
+        ? "border-[var(--store-accent)] bg-[var(--store-accent)] text-white"
+        : "border-stone-200 text-stone-800 hover:border-[var(--store-accent)]/35"
     }`;
   }
 
@@ -294,12 +294,12 @@ export function ProductsListingControls({
                       role="option"
                       aria-selected={sort === opt.value}
                       onClick={() => navigate({ sort: opt.value })}
-                      className={`flex w-full items-center gap-2 px-4 py-2.5 text-left text-[13px] font-normal tracking-normal normal-case text-stone-800 transition hover:bg-stone-50 ${
-                        sort === opt.value ? "bg-stone-50 font-medium" : ""
+                      className={`flex w-full items-center gap-2 px-4 py-2.5 text-left text-[13px] font-normal tracking-normal normal-case text-stone-800 transition hover:bg-[#fff8fb] ${
+                        sort === opt.value ? "bg-[#fff4f8] font-medium" : ""
                       }`}
                     >
                       {sort === opt.value ? (
-                        <span className="text-stone-900">✓</span>
+                        <span className="text-[var(--store-accent)]">✓</span>
                       ) : (
                         <span className="w-[1em]" aria-hidden />
                       )}
@@ -338,7 +338,7 @@ export function ProductsListingControls({
           <div className="flex shrink-0 items-center justify-between border-b border-stone-200 px-4 py-4">
             <h2
               id={`${baseId}-filter-title`}
-              className="text-[13px] font-semibold uppercase tracking-[0.14em] text-stone-900"
+              className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[var(--store-brand)]"
             >
               Filtrar
             </h2>
@@ -514,14 +514,14 @@ export function ProductsListingControls({
             <button
               type="button"
               onClick={applyFilters}
-              className="w-full bg-stone-900 py-3.5 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-white transition hover:bg-stone-800"
+              className="w-full bg-[var(--store-accent)] py-3.5 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-white transition hover:bg-[var(--store-accent-hover)]"
             >
               Aplicar
             </button>
             <button
               type="button"
               onClick={clearFilters}
-              className="mt-3 w-full py-2 text-center text-xs text-stone-600 underline decoration-stone-300 underline-offset-4 hover:text-stone-900"
+              className="mt-3 w-full py-2 text-center text-xs text-stone-600 underline decoration-stone-300 underline-offset-4 hover:text-[var(--store-accent)]"
             >
               Limpiar filtros
             </button>

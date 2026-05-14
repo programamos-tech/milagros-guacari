@@ -82,14 +82,14 @@ export function StoreRegisterModal({
         <header className="flex shrink-0 items-start justify-between gap-4 border-b border-stone-200/80 px-6 py-5 sm:px-8">
           <h2
             id={titleId}
-            className="pr-8 text-[12px] font-semibold uppercase tracking-[0.18em] text-stone-900 sm:text-sm"
+            className="pr-8 text-[12px] font-semibold uppercase tracking-[0.18em] text-[var(--store-brand)] sm:text-sm"
           >
             Crear cuenta
           </h2>
           <button
             type="button"
             onClick={dismiss}
-            className="flex size-9 shrink-0 items-center justify-center border border-stone-900/80 text-stone-900 transition hover:bg-stone-900 hover:text-white"
+            className="flex size-9 shrink-0 items-center justify-center border border-[var(--store-accent)]/80 text-[var(--store-accent)] transition hover:bg-[var(--store-accent)] hover:text-white"
             aria-label="Cerrar"
           >
             <span className="text-lg font-light leading-none">×</span>

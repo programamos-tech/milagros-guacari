@@ -98,7 +98,7 @@ export default async function HomePage() {
               <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-stone-400 sm:text-xs">
                 Destacado en {storeBrand.split(/\s+/)[0]}
               </p>
-              <h2 className="mt-2 text-2xl font-semibold uppercase tracking-[0.06em] text-stone-900 sm:text-3xl">
+              <h2 className="mt-2 text-2xl font-semibold uppercase tracking-[0.06em] text-[var(--store-brand)] sm:text-3xl">
                 Productos destacados
               </h2>
               <p className="mx-auto mt-3 max-w-lg text-sm font-normal leading-relaxed text-stone-500">
@@ -148,7 +148,7 @@ export default async function HomePage() {
                 >
                   <Link
                     href="/products"
-                    className="inline-flex border border-stone-900 bg-white px-10 py-3 text-[11px] font-medium uppercase tracking-[0.14em] text-stone-900 transition hover:bg-stone-900 hover:text-white"
+                    className="inline-flex border border-[var(--store-accent)] bg-white px-10 py-3 text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--store-accent)] transition hover:bg-[var(--store-accent)] hover:text-white"
                   >
                     Ver catálogo completo
                   </Link>

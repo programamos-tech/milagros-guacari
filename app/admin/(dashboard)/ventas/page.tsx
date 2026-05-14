@@ -1,9 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import {
-  VentasFilteredSummary,
-  computeVentasFilterStats,
-} from "@/components/admin/VentasFilteredSummary";
+import { VentasFilteredSummary } from "@/components/admin/VentasFilteredSummary";
+import { computeVentasFilterStats } from "@/lib/ventas-filter-stats";
 import {
   VentasFiltersBar,
   VentasRefreshButton,
@@ -13,6 +11,7 @@ import { VentasSalesTable, type VentaOrderRow } from "@/components/admin/VentasS
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { adminPanelClass } from "@/lib/admin-ui";
 import { fetchOrdersCreatedInReportYmdWindow } from "@/lib/admin-fetch-orders-for-report";
+import { buildAdminVentasListHref } from "@/lib/admin-ventas-list-url";
 import { todayYmdInReportStore } from "@/lib/admin-report-range";
 import {
   matchesVentaPagoFilter,
@@ -154,20 +153,27 @@ export default async function AdminVentasPage({ searchParams }: Props) {
   const pageRows = rows.slice(offset, offset + VENTAS_PAGE_SIZE);
   const filterStats = computeVentasFilterStats(rows);
 
-  const buildPageHref = (p: number) => {
-    const params = new URLSearchParams();
-    if (qRaw.trim()) params.set("q", qRaw.trim());
-    if (status !== "all") params.set("status", status);
-    if (payment !== "all") params.set("payment", payment);
-    if (dateFrom) params.set("from", dateFrom);
-    if (dateTo) params.set("to", dateTo);
-    if (p > 1) params.set("page", String(p));
-    const qs = params.toString();
-    return qs ? `/admin/ventas?${qs}` : "/admin/ventas";
-  };
+  const buildPageHref = (p: number) =>
+    buildAdminVentasListHref({
+      q: qRaw,
+      status,
+      payment,
+      from: dateFrom,
+      to: dateTo,
+      page: p > 1 ? p : undefined,
+    });
+
+  const orderListReturnHref = buildAdminVentasListHref({
+    q: qRaw,
+    status,
+    payment,
+    from: dateFrom,
+    to: dateTo,
+    page,
+  });
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5 sm:space-y-6">
+    <div className="w-full min-w-0 space-y-5 sm:space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h1 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 sm:text-2xl md:text-3xl">
@@ -199,7 +205,7 @@ export default async function AdminVentasPage({ searchParams }: Props) {
             initialTo={dateTo ?? ""}
           />
         </Suspense>
-        <VentasSalesTable rows={pageRows} />
+        <VentasSalesTable rows={pageRows} orderListReturnHref={orderListReturnHref} />
         <VentasPagination
           page={page}
           pageSize={VENTAS_PAGE_SIZE}

@@ -73,7 +73,7 @@ export default async function AdminUsuariosRolesPage() {
 
   if (error) {
     return (
-      <div className="mx-auto max-w-3xl rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800/60 dark:bg-amber-950/35 dark:text-amber-100">
+      <div className="w-full min-w-0 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800/60 dark:bg-amber-950/35 dark:text-amber-100">
         No se pudieron cargar los perfiles. Aplica la migración{" "}
         <code className="rounded bg-amber-100/80 px-1 py-0.5 text-xs dark:bg-amber-900/50">
           20260516120000_profiles_team_roles.sql
@@ -86,7 +86,7 @@ export default async function AdminUsuariosRolesPage() {
   const rows = (profiles ?? []) as ProfileRow[];
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="w-full min-w-0 space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 sm:text-3xl">

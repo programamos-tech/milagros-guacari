@@ -65,10 +65,18 @@ export function adminProductsListHref(q: AdminProductsListQuery): string {
 export function adminProductsUrlWithoutFlash(
   sp: Record<string, string | string[] | undefined>,
 ): string {
+  const qRaw = sp.q;
+  const q = typeof qRaw === "string" ? qRaw : Array.isArray(qRaw) ? qRaw[0] ?? "" : "";
+  const statusRaw = sp.status;
+  const status =
+    typeof statusRaw === "string" ? statusRaw : Array.isArray(statusRaw) ? statusRaw[0] ?? "all" : "all";
+  const catRaw = sp.category_id;
+  const category_id =
+    typeof catRaw === "string" ? catRaw : Array.isArray(catRaw) ? catRaw[0] ?? "" : "";
   return adminProductsListHref({
-    q: typeof sp.q === "string" ? sp.q : "",
-    status: typeof sp.status === "string" ? sp.status : "all",
-    category_id: typeof sp.category_id === "string" ? sp.category_id : "",
+    q,
+    status,
+    category_id,
     page: parseAdminProductsPage(sp),
     per_page: parseAdminProductsPerPage(sp),
     categories: parseAdminProductsCategoriesModal(sp),

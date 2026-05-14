@@ -13,18 +13,18 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-montserrat);
+  --font-sans: var(--font-poppins);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
   background: #ffffff;
   color: var(--foreground);
-  font-family: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
 }
 
 .font-berea-nova {
-  font-family: "Stack Sans Notch", var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
+  font-family: "Stack Sans Notch", var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
   font-weight: 500;
 }
 
@@ -202,13 +202,26 @@ body {
 @media print {
   @page ticket {
     size: 80mm auto;
-    margin: 3mm;
+    margin: 4mm;
   }
 
   .invoice-ticket-print {
     page: ticket;
     max-width: 72mm !important;
     margin-inline: auto !important;
+    font-family:
+      system-ui,
+      -apple-system,
+      "Segoe UI",
+      Roboto,
+      "Helvetica Neue",
+      Arial,
+      "Noto Sans",
+      sans-serif !important;
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+    color: #0a0a0a !important;
+    font-weight: 500;
   }
 
   .invoice-ticket-print * {
@@ -251,4 +264,25 @@ body {
     transform: none;
     filter: none;
   }
+}
+
+/*
+ * Backoffice (tema claro): un tono más oscuro en grises de apoyo
+ * (tablas, hints, cabeceras) para legibilidad con mucha luz.
+ * Solo `[data-admin-theme="light"]`; no afecta la tienda pública ni el modo oscuro.
+ */
+[data-admin-theme="light"] .text-zinc-400 {
+  color: rgb(113 113 122); /* zinc-500 */
+}
+
+[data-admin-theme="light"] .text-zinc-500 {
+  color: rgb(82 82 91); /* zinc-600 */
+}
+
+[data-admin-theme="light"] .text-stone-400 {
+  color: rgb(120 113 108); /* stone-500 */
+}
+
+[data-admin-theme="light"] .text-stone-500 {
+  color: rgb(87 83 78); /* stone-600 */
 }

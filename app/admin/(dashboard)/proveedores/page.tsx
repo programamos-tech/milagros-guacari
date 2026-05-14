@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { CustomerAvatar } from "@/components/admin/CustomerAvatar";
+import { AnimatedCopCents, AnimatedInteger } from "@/components/admin/ReportsAnimatedFigures";
 import { customerAvatarSeed } from "@/lib/customer-avatar-seed";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { formatCop } from "@/lib/money";
 import { buildSupplierHubRows } from "@/lib/supplier-hub-aggregate";
 import { supplierInvoiceStatusBadge } from "@/lib/supplier-invoices";
 import { ClickableTableRow } from "@/components/admin/ClickableTableRow";
@@ -67,7 +67,7 @@ export default async function AdminProveedoresPage({
   const totalPorPagar = hubRows.reduce((s, r) => s + r.pendingCents, 0);
 
   return (
-    <div className="mx-auto max-w-7xl space-y-4">
+    <div className="w-full min-w-0 space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -84,12 +84,15 @@ export default async function AdminProveedoresPage({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-right shadow-sm dark:border-zinc-700 dark:bg-zinc-900 dark:shadow-none">
+          <div
+            className="reports-metric-card rounded-lg border border-zinc-200 bg-white px-3 py-2 text-right shadow-sm dark:border-zinc-700 dark:bg-zinc-900 dark:shadow-none"
+            style={{ ["--reports-stagger" as string]: "50ms" }}
+          >
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">
               Total por pagar
             </p>
             <p className="text-lg font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
-              {formatCop(totalPorPagar)}
+              <AnimatedCopCents cents={totalPorPagar} duration={1100} delay={70} />
             </p>
           </div>
           <Link
@@ -189,7 +192,7 @@ export default async function AdminProveedoresPage({
                   </td>
                 </tr>
               ) : (
-                filtered.map((row) => {
+                filtered.map((row, rowIndex) => {
                   const st =
                     row.rollUpStatus === "empty"
                       ? {
@@ -216,16 +219,32 @@ export default async function AdminProveedoresPage({
                         </div>
                       </td>
                       <td className="px-3 py-2 tabular-nums text-zinc-700 dark:text-zinc-300">
-                        {row.invoiceCount}
+                        <AnimatedInteger
+                          value={row.invoiceCount}
+                          duration={700}
+                          delay={Math.min(rowIndex * 28, 360)}
+                        />
                       </td>
                       <td className="px-3 py-2 tabular-nums text-zinc-900 dark:text-zinc-100">
-                        {formatCop(row.totalCents)}
+                        <AnimatedCopCents
+                          cents={row.totalCents}
+                          duration={720}
+                          delay={Math.min(rowIndex * 28 + 20, 380)}
+                        />
                       </td>
                       <td className="px-3 py-2 tabular-nums text-emerald-700 dark:text-emerald-400">
-                        {formatCop(row.paidCents)}
+                        <AnimatedCopCents
+                          cents={row.paidCents}
+                          duration={720}
+                          delay={Math.min(rowIndex * 28 + 40, 400)}
+                        />
                       </td>
                       <td className="px-3 py-2 tabular-nums text-amber-800 dark:text-amber-400">
-                        {formatCop(row.pendingCents)}
+                        <AnimatedCopCents
+                          cents={row.pendingCents}
+                          duration={720}
+                          delay={Math.min(rowIndex * 28 + 60, 420)}
+                        />
                       </td>
                       <td className="px-3 py-2">
                         {row.rollUpStatus === "empty" ? (

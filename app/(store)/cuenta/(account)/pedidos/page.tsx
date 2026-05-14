@@ -37,7 +37,7 @@ export default async function CuentaPedidosPage() {
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-500">
           Pedidos
         </p>
-        <h1 className="mt-2 text-xl font-semibold uppercase tracking-[0.08em] text-stone-900 sm:text-2xl">
+        <h1 className="mt-2 text-xl font-semibold uppercase tracking-[0.08em] text-[var(--store-brand)] sm:text-2xl">
           Historial de compras
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-stone-600">

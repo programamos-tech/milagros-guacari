@@ -5,11 +5,12 @@ import {
 } from "@/components/admin/OrderInvoiceHeaderControls";
 import { adminOwnerDisplayName } from "@/lib/admin-owner";
 import {
+  invoiceLegalName,
+  invoiceTaxNit,
+  invoiceTradeName,
   storeBrand,
-  storeLegalName,
   storeSupportEmail,
   storeSupportPhone,
-  storeTaxNit,
   storeTaxRegime,
 } from "@/lib/brand";
 import { formatCop } from "@/lib/money";
@@ -32,7 +33,19 @@ type Line = {
   reference: string | null;
   quantity: number;
   unitPriceCents: number;
+  lineDiscountPercent: number | null;
+  lineDiscountAmountCents: number;
 };
+
+function lineDiscountHint(line: Line): string | null {
+  if (line.lineDiscountPercent != null && line.lineDiscountPercent > 0) {
+    return `Descuento ${line.lineDiscountPercent}% (neto de línea)`;
+  }
+  if (line.lineDiscountAmountCents > 0) {
+    return `Descuento ${formatCop(line.lineDiscountAmountCents)} (neto de línea)`;
+  }
+  return null;
+}
 
 export type OrderInvoiceDetailViewProps = {
   orderId: string;
@@ -49,6 +62,8 @@ export type OrderInvoiceDetailViewProps = {
   /** Motivo registrado al anular desde el panel. */
   cancellationReason: string | null;
   lines: Line[];
+  /** Enlace al listado Ventas (p. ej. misma página y filtros). */
+  ventasListHref?: string;
 };
 
 function IconClock({ className }: { className?: string }) {
@@ -162,6 +177,7 @@ export function OrderInvoiceDetailView(props: OrderInvoiceDetailViewProps) {
     shippingPhone,
     cancellationReason,
     lines,
+    ventasListHref = "/admin/ventas",
   } = props;
 
   const pagoBadge = ventaFormaPagoBadge(wompiReference);
@@ -183,10 +199,10 @@ export function OrderInvoiceDetailView(props: OrderInvoiceDetailViewProps) {
     "px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400 dark:text-zinc-500 md:px-5";
 
   return (
-    <div className="invoice-ticket-print mx-auto max-w-7xl space-y-6 print:mx-auto print:max-w-[72mm] print:space-y-3 print:bg-white print:text-zinc-900 print:text-[11px] print:leading-snug dark:print:bg-white">
+    <div className="invoice-ticket-print w-full min-w-0 max-w-none space-y-6 px-3 sm:px-4 md:px-5 print:mx-auto print:max-w-[72mm] print:space-y-3 print:bg-white print:px-0 print:text-zinc-900 print:leading-relaxed dark:print:bg-white">
       <nav className="text-sm text-zinc-500 print:hidden dark:text-zinc-400">
         <Link
-          href="/admin/ventas"
+          href={ventasListHref}
           className="font-medium hover:text-zinc-800 dark:hover:text-zinc-200"
         >
           Ventas
@@ -198,56 +214,63 @@ export function OrderInvoiceDetailView(props: OrderInvoiceDetailViewProps) {
       </nav>
 
       <div className="rounded-2xl border border-zinc-200/90 bg-white p-4 shadow-[0_1px_0_0_rgb(24_24_27/0.04)] dark:border-zinc-700/90 dark:bg-zinc-900 dark:shadow-none sm:p-6 md:p-7 print:rounded-none print:border-zinc-900 print:p-3 print:shadow-none dark:print:border-zinc-900 dark:print:bg-white">
-        <div className="hidden border-b border-zinc-900 pb-2 text-black print:block">
-          <p className="text-center text-xs font-bold leading-tight">{storeLegalName}</p>
-          {storeTaxNit ? (
-            <p className="mt-1 text-center text-[10px]">NIT: {storeTaxNit}</p>
-          ) : null}
-          {storeTaxRegime ? (
-            <p className="mt-0.5 text-center text-[9px] leading-tight">{storeTaxRegime}</p>
-          ) : null}
-          <p className="mt-2 text-center text-[10px] font-bold uppercase tracking-wide">
+        <div className="hidden print:mb-2.5 print:block print:border-2 print:border-black print:p-2.5 print:text-black">
+          <p className="text-center text-[14px] font-bold leading-tight tracking-tight">
+            {invoiceLegalName}
+          </p>
+          <p className="mt-2 text-center text-[11px] font-semibold leading-snug">
+            NIT: {invoiceTaxNit} — {storeTaxRegime}
+          </p>
+          <div className="my-2.5 border-t-2 border-black" />
+          <p className="text-center text-[11px] font-bold uppercase tracking-[0.14em]">
             Factura de venta
           </p>
-          <div className="mt-1 flex justify-between gap-2 text-[10px] font-semibold">
+          <div className="mt-2 flex justify-between gap-2 border-t border-dashed border-zinc-800 pt-2 text-[11px] font-bold">
             <span>No. #{invoiceRef}</span>
             <span className="shrink-0 tabular-nums">{formatInvoiceDateShort(createdAt)}</span>
           </div>
-          <p className="mt-2 text-center text-[9px]">Tel. {storeSupportPhone}</p>
+          <p className="mt-2 text-center text-[11px] font-semibold">Tel. {storeSupportPhone}</p>
           {storeSupportEmail ? (
-            <p className="text-center text-[9px] break-all">{storeSupportEmail}</p>
+            <p className="text-center text-[11px] font-semibold break-words">{storeSupportEmail}</p>
           ) : null}
-          <div className="mt-3 space-y-1 border-t border-dashed border-zinc-500 pt-2 text-left text-[9px]">
-            <p>
-              <span className="font-semibold">Cliente:</span> {customerName}
+        </div>
+
+        <div className="hidden print:mb-2.5 print:block print:border-2 print:border-black print:px-2.5 print:py-2 print:text-[11px] print:leading-snug print:text-black">
+          <p>
+            <span className="font-bold">Cliente:</span> {customerName}
+          </p>
+          {customerEmail && !customerEmail.includes("@local.invalid") ? (
+            <p className="mt-1 break-words">
+              <span className="font-bold">Correo:</span> {customerEmail}
             </p>
-            {customerEmail && !customerEmail.includes("@local.invalid") ? (
-              <p className="break-all">
-                <span className="font-semibold">Correo:</span> {customerEmail}
-              </p>
-            ) : null}
-            <p>
-              <span className="font-semibold">Entrega:</span> {ubicacionLine}
+          ) : null}
+          <p className="mt-1">
+            <span className="font-bold">Entrega:</span> {ubicacionLine}
+          </p>
+          <p className="mt-1">
+            <span className="font-bold">Tienda:</span> {invoiceTradeName}
+          </p>
+          <p className="mt-1">
+            <span className="font-bold">Vendedor:</span> {adminOwnerDisplayName}
+          </p>
+          {shippingPhone ? (
+            <p className="mt-1">
+              <span className="font-bold">Tel. pedido:</span> {shippingPhone}
             </p>
-            <p>
-              <span className="font-semibold">Tienda:</span> {storeBrand}
-            </p>
-            <p>
-              <span className="font-semibold">Vendedor:</span> {adminOwnerDisplayName}
-            </p>
-            {shippingPhone ? (
-              <p>
-                <span className="font-semibold">Tel. pedido:</span> {shippingPhone}
-              </p>
-            ) : null}
-            <p>
-              <span className="font-semibold">Estado factura:</span> {docEstado.label}
-            </p>
-            <p>
-              <span className="font-semibold">Pago:</span> {pagoRecibido.label} ·{" "}
-              {pagoBadge.label}
-            </p>
-          </div>
+          ) : null}
+          <p className="mt-1">
+            <span className="font-bold">Estado factura:</span> {docEstado.label}
+          </p>
+          <p className="mt-1">
+            <span className="font-bold">Pago:</span> {pagoRecibido.label} · {pagoBadge.label}
+          </p>
+        </div>
+
+        <div className="hidden print:mb-3 print:block print:border-2 print:border-black print:px-2 print:py-2.5 print:text-black">
+          <p className="text-center text-[10px] font-bold uppercase tracking-[0.16em]">Total</p>
+          <p className="mt-1 text-center text-xl font-bold tabular-nums leading-none tracking-tight">
+            {formatCop(totalCents)}
+          </p>
         </div>
 
         <div className="flex items-center justify-between gap-3 print:hidden">
@@ -255,7 +278,7 @@ export function OrderInvoiceDetailView(props: OrderInvoiceDetailViewProps) {
             Factura #{invoiceRef}
           </h1>
           <Link
-            href="/admin/ventas"
+            href={ventasListHref}
             className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300 dark:shadow-none dark:hover:border-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 print:hidden"
             aria-label="Volver a ventas"
           >
@@ -327,14 +350,6 @@ export function OrderInvoiceDetailView(props: OrderInvoiceDetailViewProps) {
               {formatCop(totalCents)}
             </p>
           </div>
-          <div className="hidden min-w-0 print:block">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-600">
-              Total
-            </p>
-            <p className="mt-1 text-base font-bold tabular-nums text-zinc-900">
-              {formatCop(totalCents)}
-            </p>
-          </div>
           <div className="min-w-0 print:hidden">
             <p className={labelClass}>Método de pago</p>
             <p className="mt-2">
@@ -375,33 +390,40 @@ export function OrderInvoiceDetailView(props: OrderInvoiceDetailViewProps) {
       </div>
 
       <div className="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-[0_1px_0_0_rgb(24_24_27/0.04)] dark:border-zinc-700/90 dark:bg-zinc-900 dark:shadow-none md:p-7 print:rounded-none print:border-zinc-900 print:p-3 print:shadow-none dark:print:border-zinc-900 dark:print:bg-white">
-        <p className={`${labelClass} print:text-center`}>Productos de la factura</p>
+        <p className={`${labelClass} print:text-center print:text-[11px] print:font-bold print:tracking-normal print:text-black`}>
+          Productos de la factura
+        </p>
 
         {lines.length === 0 ? (
           <p className="mt-6 text-sm text-zinc-500 dark:text-zinc-400">No hay ítems en este pedido.</p>
         ) : (
           <>
-            <div className="mt-5 hidden space-y-0 border-y border-zinc-900 print:block">
+            <div className="mt-5 hidden space-y-0 border-y-2 border-black print:block">
               {lines.map((line) => {
                 const sub = line.unitPriceCents * line.quantity;
                 const ref = line.reference?.trim();
                 return (
                   <div
                     key={`print-${line.id}`}
-                    className="border-b border-dashed border-zinc-400 py-2 text-[10px] last:border-b-0"
+                    className="border-b border-dashed border-zinc-800 py-2.5 text-[11px] last:border-b-0"
                   >
-                    <div className="flex justify-between gap-2 font-medium leading-snug">
+                    <div className="flex justify-between gap-2 font-bold leading-snug text-black">
                       <span className="min-w-0 flex-1 break-words">
                         {line.quantity} × {line.name}
                         {ref ? (
-                          <span className="mt-0.5 block font-mono text-[9px] font-normal text-zinc-600">
+                          <span className="mt-1 block font-mono text-[10px] font-semibold text-zinc-900">
                             ({ref})
                           </span>
                         ) : null}
+                        {lineDiscountHint(line) ? (
+                          <span className="mt-1 block text-[10px] font-semibold text-zinc-900">
+                            {lineDiscountHint(line)}
+                          </span>
+                        ) : null}
                       </span>
-                      <span className="shrink-0 tabular-nums">{formatCop(sub)}</span>
+                      <span className="shrink-0 tabular-nums text-black">{formatCop(sub)}</span>
                     </div>
-                    <div className="mt-0.5 flex justify-between text-[9px] text-zinc-600">
+                    <div className="mt-1 flex justify-between text-[10px] font-semibold text-zinc-900">
                       <span>P. unit. {formatCop(line.unitPriceCents)}</span>
                     </div>
                   </div>
@@ -436,6 +458,11 @@ export function OrderInvoiceDetailView(props: OrderInvoiceDetailViewProps) {
                               ({ref})
                             </span>
                           ) : null}
+                          {lineDiscountHint(line) ? (
+                            <span className="mt-0.5 block text-xs font-normal text-amber-800 dark:text-amber-500/90">
+                              {lineDiscountHint(line)}
+                            </span>
+                          ) : null}
                         </td>
                         <td className="px-4 py-4 tabular-nums text-zinc-700 dark:text-zinc-300 md:px-5">
                           {line.quantity}
@@ -456,17 +483,19 @@ export function OrderInvoiceDetailView(props: OrderInvoiceDetailViewProps) {
               </table>
             </div>
 
-            <div className="mt-6 flex justify-end print:break-inside-avoid print:mt-3">
-              <div className="w-full max-w-xs rounded-xl border border-zinc-200 bg-zinc-50/80 px-5 py-4 dark:border-zinc-700 dark:bg-zinc-950/80 print:max-w-none print:rounded-md print:border-zinc-400 print:bg-transparent print:px-0 print:py-2">
-                <div className="flex justify-between gap-4 text-sm">
-                  <span className="text-zinc-500 dark:text-zinc-400">Subtotal productos</span>
-                  <span className="font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
+            <div className="mt-6 flex justify-end print:break-inside-avoid print:mt-4">
+              <div className="w-full max-w-xs rounded-xl border border-zinc-200 bg-zinc-50/80 px-5 py-4 dark:border-zinc-700 dark:bg-zinc-950/80 print:max-w-none print:border-2 print:border-black print:bg-white print:px-2 print:py-3">
+                <div className="flex justify-between gap-4 text-sm print:text-[11px]">
+                  <span className="font-semibold text-zinc-700 print:text-black">Subtotal productos</span>
+                  <span className="font-bold tabular-nums text-zinc-900 print:text-black">
                     {formatCop(subtotalLines)}
                   </span>
                 </div>
-                <div className="mt-3 flex justify-between gap-4 border-t border-zinc-200/80 pt-3 dark:border-zinc-700/90">
-                  <span className="font-semibold text-zinc-800 dark:text-zinc-200">Total a despachar</span>
-                  <span className="text-lg font-bold tabular-nums text-zinc-900 dark:text-zinc-50">
+                <div className="mt-3 flex justify-between gap-4 border-t-2 border-black pt-3 print:border-zinc-800 dark:border-zinc-700/90">
+                  <span className="font-bold text-zinc-900 print:text-[11px] print:text-black dark:text-zinc-200">
+                    Total a despachar
+                  </span>
+                  <span className="text-lg font-bold tabular-nums text-zinc-900 print:text-base print:text-black dark:text-zinc-50">
                     {formatCop(totalCents)}
                   </span>
                 </div>
@@ -476,11 +505,11 @@ export function OrderInvoiceDetailView(props: OrderInvoiceDetailViewProps) {
         )}
       </div>
 
-      <p className="hidden border-t border-zinc-900 pt-3 text-center text-[10px] leading-relaxed text-zinc-800 print:block">
+      <p className="hidden border-t-2 border-black pt-3 text-center text-[11px] font-medium leading-relaxed text-black print:block">
         Productos: {lines.length} ítem{lines.length === 1 ? "" : "s"} · IVA incluido
         <br />
-        <span className="mt-1 block font-semibold">
-          ¡Gracias por su compra! · {storeBrand}
+        <span className="mt-2 block text-[12px] font-bold">
+          ¡Gracias por su compra! · {invoiceTradeName}
         </span>
       </p>
     </div>

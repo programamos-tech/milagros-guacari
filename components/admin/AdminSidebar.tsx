@@ -233,6 +233,7 @@ function SidebarLogo() {
   return (
     <Link
       href="/admin"
+      prefetch
       className="inline-block rounded-md outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-rose-400/80 focus-visible:ring-offset-0"
     >
       <Image
@@ -313,6 +314,7 @@ function AdminSidebarInner({
                   <li key={`${section.title}-${item.label}`}>
                     <Link
                       href={item.href}
+                      prefetch
                       className={linkClass(item.href, active)}
                       onClick={() => onNavigate()}
                     >

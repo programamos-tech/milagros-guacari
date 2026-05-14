@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { adminProductsNameReferenceOrIlikeFilter } from "@/lib/admin-product-search-filter";
 import { requireAdminApiSession } from "@/lib/admin-api";
 
 function sanitizeIlikeQuery(q: string) {
@@ -20,15 +21,15 @@ export async function GET(request: Request) {
     return NextResponse.json({ products: [] });
   }
 
-  const pattern = `%${q}%`;
   const { supabase } = gate;
+  const orFilter = adminProductsNameReferenceOrIlikeFilter(q);
 
   const { data, error } = await supabase
     .from("products")
     .select(
       "id,name,reference,price_cents,cost_cents,stock_quantity,stock_local,has_vat,vat_percent",
     )
-    .or(`name.ilike.${pattern},reference.ilike.${pattern}`)
+    .or(orFilter)
     .order("name")
     .limit(24);
 

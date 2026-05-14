@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { ExpenseRowActions } from "@/components/admin/ExpenseRowActions";
 import { ExpensesFiltersBar } from "@/components/admin/ExpensesFiltersBar";
-import { formatCop } from "@/lib/money";
+import { AnimatedCopCents, AnimatedInteger } from "@/components/admin/ReportsAnimatedFigures";
 import { todayYmdInReportStore } from "@/lib/admin-report-range";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -98,7 +98,7 @@ export default async function AdminEgresosPage({
     "mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400";
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-7xl space-y-8">
+    <div className="w-full min-w-0 space-y-8">
       <div className="mb-2 flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
@@ -116,12 +116,18 @@ export default async function AdminEgresosPage({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm shadow-[0_1px_0_0_rgb(24_24_27/0.04)] dark:border-zinc-700 dark:bg-zinc-900 dark:shadow-none">
+          <div
+            className="reports-metric-card rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm shadow-[0_1px_0_0_rgb(24_24_27/0.04)] dark:border-zinc-700 dark:bg-zinc-900 dark:shadow-none"
+            style={{ ["--reports-stagger" as string]: "40ms" }}
+          >
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
               <p className="text-zinc-500 dark:text-zinc-400">Hoy (vista)</p>
-              <p className="font-semibold text-zinc-900 dark:text-zinc-100">{formatCop(todayTotal)}</p>
+              <p className="font-semibold text-zinc-900 dark:text-zinc-100">
+                <AnimatedCopCents cents={todayTotal} duration={1000} delay={60} />
+              </p>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                Total filtrado: {formatCop(total)}
+                Total filtrado:{" "}
+                <AnimatedCopCents cents={total} duration={1050} delay={100} className="font-medium text-zinc-700 dark:text-zinc-200" />
               </p>
             </div>
           </div>
@@ -169,7 +175,7 @@ export default async function AdminEgresosPage({
             </h2>
             {hasFilters ? (
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                {rows.length}{" "}
+                <AnimatedInteger value={rows.length} duration={750} delay={80} className="font-semibold tabular-nums text-zinc-600 dark:text-zinc-300" />{" "}
                 {rows.length === 1 ? "resultado" : "resultados"}
               </p>
             ) : null}
@@ -238,7 +244,11 @@ export default async function AdminEgresosPage({
                         {dateStr}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3.5 text-right font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
-                        {formatCop(Number(e.amount_cents ?? 0))}
+                        <AnimatedCopCents
+                          cents={Number(e.amount_cents ?? 0)}
+                          duration={650}
+                          delay={Math.min(index * 22, 320)}
+                        />
                       </td>
                       <td className="px-4 py-3.5">
                         <ExpenseRowActions expenseId={String(e.id)} />

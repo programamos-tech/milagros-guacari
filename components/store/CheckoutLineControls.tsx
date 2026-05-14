@@ -28,7 +28,7 @@ export function CheckoutLineControls({
         <span className="font-medium text-stone-800">Cant.:</span>{" "}
         <span className="tabular-nums">{quantity}</span>
       </p>
-      <div className="inline-flex items-center gap-1 border border-stone-900/15 bg-white">
+      <div className="inline-flex items-center gap-1 border border-[var(--store-accent)]/20 bg-white">
         <button
           type="button"
           disabled={pending}

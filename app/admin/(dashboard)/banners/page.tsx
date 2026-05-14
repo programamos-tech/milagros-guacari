@@ -14,7 +14,7 @@ export default async function AdminBannersPage({ searchParams }: Props) {
   const banners = await fetchAllBannersAdmin(supabase);
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-7xl">
+    <div className="w-full min-w-0">
       <div className="border-b border-zinc-100 pb-6 dark:border-zinc-800">
         <h1 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 sm:text-2xl md:text-3xl">
           Banners

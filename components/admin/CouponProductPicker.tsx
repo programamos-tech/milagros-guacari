@@ -42,8 +42,11 @@ export function CouponProductPicker({
     }
     let cancelled = false;
     void fetch(`/api/admin/products-search?q=${encodeURIComponent(debouncedQ)}`)
-      .then((r) => r.json())
-      .then((j: { products?: CouponProductPickerHit[] }) => {
+      .then(async (r) => {
+        if (!r.ok) return { products: [] as CouponProductPickerHit[] };
+        return r.json() as Promise<{ products?: CouponProductPickerHit[] }>;
+      })
+      .then((j) => {
         if (!cancelled) setHits(j.products ?? []);
       });
     return () => {

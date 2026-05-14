@@ -11,7 +11,7 @@ import { storeBrand } from "@/lib/brand";
 const shellClass = "mx-auto max-w-7xl px-4 py-10 sm:py-12";
 
 const primaryCtaClass =
-  "inline-flex items-center justify-center border border-stone-900 bg-stone-900 px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white shadow-sm transition hover:bg-stone-800";
+  "inline-flex items-center justify-center border border-[var(--store-accent)] bg-[var(--store-accent)] px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white shadow-sm transition hover:bg-[var(--store-accent-hover)]";
 
 function FavoritosPageHeader({
   eyebrow,
@@ -27,7 +27,7 @@ function FavoritosPageHeader({
       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-500">
         {eyebrow}
       </p>
-      <h1 className="mt-2 text-xl font-semibold uppercase tracking-[0.08em] text-stone-900 sm:text-2xl">
+      <h1 className="mt-2 text-xl font-semibold uppercase tracking-[0.08em] text-[var(--store-brand)] sm:text-2xl">
         {title}
       </h1>
       <p className="mt-2 text-sm leading-relaxed text-stone-600">{description}</p>
