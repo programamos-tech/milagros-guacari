@@ -13,6 +13,7 @@ type OrderRow = {
   total_cents: number;
   created_at: string;
   wompi_reference: string | null;
+  checkout_payment_method?: string | null;
 };
 
 function orderMatchesQuery(o: OrderRow, qRaw: string, qCompact: string): boolean {
@@ -61,7 +62,7 @@ export async function GET(request: Request) {
     qDigits.length >= 2 || (qCompact.length >= 6 && /^[0-9a-f-]+$/i.test(q));
 
   const orderSelect =
-    "id,status,customer_name,total_cents,created_at,wompi_reference" as const;
+    "id,status,customer_name,total_cents,created_at,wompi_reference,checkout_payment_method" as const;
 
   const [productsRes, customersRes, ordersByTextRes, ordersRecentRes, orderByIdRes] =
     await Promise.all([

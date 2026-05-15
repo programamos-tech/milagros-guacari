@@ -62,6 +62,12 @@ export type OrderInvoiceDetailViewProps = {
   /** Motivo registrado al anular desde el panel. */
   cancellationReason: string | null;
   lines: Line[];
+  transferProofAttachments?: {
+    signedUrl: string;
+    createdAt: string;
+    filename: string | null;
+  }[];
+  checkoutPaymentMethod?: string | null;
   /** Enlace al listado Ventas (p. ej. misma página y filtros). */
   ventasListHref?: string;
 };
@@ -177,10 +183,14 @@ export function OrderInvoiceDetailView(props: OrderInvoiceDetailViewProps) {
     shippingPhone,
     cancellationReason,
     lines,
+    transferProofAttachments = [],
+    checkoutPaymentMethod = null,
     ventasListHref = "/admin/ventas",
   } = props;
 
-  const pagoBadge = ventaFormaPagoBadge(wompiReference);
+  const pagoBadge = ventaFormaPagoBadge(wompiReference, {
+    checkoutPaymentMethod: checkoutPaymentMethod ?? undefined,
+  });
   const pagoRecibido = ventaPagoRecibidoBadge(status);
   const docEstado = ventaEstadoBadge(status);
 
@@ -388,6 +398,64 @@ export function OrderInvoiceDetailView(props: OrderInvoiceDetailViewProps) {
           </div>
         </div>
       </div>
+
+      {status === "pending" &&
+      checkoutPaymentMethod === "transfer" &&
+      transferProofAttachments.length > 0 ? (
+        <div className="rounded-2xl border border-sky-200/90 bg-sky-50/40 p-5 shadow-[0_1px_0_0_rgb(24_24_27/0.04)] dark:border-sky-800/60 dark:bg-sky-950/25 dark:shadow-none md:p-7 print:hidden">
+          <p className={labelClass}>Comprobantes de transferencia</p>
+          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+            Archivos enviados por el cliente mientras el pedido está pendiente de pago.
+          </p>
+          <ul className="mt-5 grid gap-4 sm:grid-cols-2">
+            {transferProofAttachments.map((att, idx) => {
+              const isPdf =
+                (att.filename?.toLowerCase().endsWith(".pdf") ?? false) ||
+                att.signedUrl.toLowerCase().includes("application/pdf");
+              return (
+                <li
+                  key={`${att.createdAt}-${idx}`}
+                  className="overflow-hidden rounded-xl border border-zinc-200/90 bg-white dark:border-zinc-700/90 dark:bg-zinc-900"
+                >
+                  <a
+                    href={att.signedUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                  >
+                    {isPdf ? (
+                      <div className="flex min-h-[120px] flex-col items-center justify-center gap-2 bg-zinc-50 px-4 py-8 dark:bg-zinc-950/80">
+                        <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">
+                          PDF
+                        </span>
+                        <span className="text-xs text-sky-700 underline dark:text-sky-400">
+                          Abrir archivo
+                        </span>
+                      </div>
+                    ) : (
+                      /* URL firmada de Supabase Storage; `next/image` no aplica sin dominio fijo en remotePatterns. */
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={att.signedUrl}
+                        alt={att.filename ? `Comprobante ${att.filename}` : "Comprobante de pago"}
+                        className="max-h-56 w-full object-contain bg-zinc-50 dark:bg-zinc-950/50"
+                      />
+                    )}
+                  </a>
+                  <div className="border-t border-zinc-100 px-3 py-2 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+                    <span className="tabular-nums">{formatInvoiceDate(att.createdAt)}</span>
+                    {att.filename ? (
+                      <span className="mt-0.5 block truncate font-medium text-zinc-700 dark:text-zinc-300">
+                        {att.filename}
+                      </span>
+                    ) : null}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : null}
 
       <div className="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-[0_1px_0_0_rgb(24_24_27/0.04)] dark:border-zinc-700/90 dark:bg-zinc-900 dark:shadow-none md:p-7 print:rounded-none print:border-zinc-900 print:p-3 print:shadow-none dark:print:border-zinc-900 dark:print:bg-white">
         <p className={`${labelClass} print:text-center print:text-[11px] print:font-bold print:tracking-normal print:text-black`}>

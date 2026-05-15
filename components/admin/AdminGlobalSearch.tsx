@@ -36,6 +36,7 @@ type OrderHit = {
   created_at: string;
   status: string;
   wompi_reference: string | null;
+  checkout_payment_method?: string | null;
 };
 
 const sectionTitle =
@@ -343,7 +344,10 @@ export function AdminGlobalSearch() {
                                 {o.customer_name}
                               </p>
                               <p className="mt-0.5 text-xs text-stone-700 dark:text-zinc-400">
-                                {ventaFormaPagoLabel(o.wompi_reference)} ·{" "}
+                                {ventaFormaPagoLabel(o.wompi_reference, {
+                                  checkoutPaymentMethod: o.checkout_payment_method,
+                                })}{" "}
+                                ·{" "}
                                 {formatCop(Number(o.total_cents ?? 0))}
                               </p>
                             </div>

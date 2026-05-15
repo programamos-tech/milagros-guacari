@@ -95,7 +95,7 @@ export default async function AdminVentasPage({ searchParams }: Props) {
       supabase,
       lo,
       hi,
-      "id,status,customer_name,total_cents,created_at,wompi_reference,customer_email",
+      "id,status,customer_name,total_cents,created_at,wompi_reference,customer_email,checkout_payment_method",
     );
     if (rangeErr) {
       return (
@@ -109,7 +109,7 @@ export default async function AdminVentasPage({ searchParams }: Props) {
     const { data, error } = await supabase
       .from("orders")
       .select(
-        "id,status,customer_name,total_cents,created_at,wompi_reference,customer_email",
+        "id,status,customer_name,total_cents,created_at,wompi_reference,customer_email,checkout_payment_method",
       )
       .order("created_at", { ascending: false })
       .limit(500);
@@ -128,7 +128,11 @@ export default async function AdminVentasPage({ searchParams }: Props) {
     rows = rows.filter((r) => r.status === status);
   }
   if (payment !== "all") {
-    rows = rows.filter((r) => matchesVentaPagoFilter(r.wompi_reference, payment));
+    rows = rows.filter((r) =>
+      matchesVentaPagoFilter(r.wompi_reference, payment, {
+        checkoutPaymentMethod: r.checkout_payment_method,
+      }),
+    );
   }
   if (q.length > 0) {
     const qCompact = q.replace(/-/g, "");

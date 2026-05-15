@@ -11,11 +11,12 @@ import {
   shouldSkipWompiPayment,
 } from "@/lib/wompi";
 import {
-  unitPriceAfterWholesaleCents,
   wholesaleDiscountPercentFromRow,
 } from "@/lib/customer-wholesale-pricing";
+import { storefrontPayableUnitGrossCents } from "@/lib/storefront-gross-price";
 import { findActiveStoreCouponForCheckout } from "@/lib/store-coupons";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -36,6 +37,8 @@ export async function startCheckout(formData: FormData) {
   const shippingPostalCode = String(formData.get("zipCode") ?? "").trim();
   const shippingPhone = String(formData.get("mobile") ?? "").trim();
   const couponCode = String(formData.get("couponCode") ?? "").trim();
+  const paymentMethodRaw = String(formData.get("paymentMethod") ?? "wompi").trim();
+  const useTransfer = paymentMethodRaw === "transfer";
 
   if (!resolvedName) {
     redirect("/checkout?error=missing_name");
@@ -88,7 +91,7 @@ export async function startCheckout(formData: FormData) {
   const ids = [...new Set(cart.map((l) => l.productId))];
   const { data: products, error: pErr } = await supabase
     .from("products")
-    .select("id,name,price_cents,currency,stock_quantity,is_published")
+    .select("id,name,price_cents,currency,stock_quantity,is_published,has_vat,vat_percent")
     .in("id", ids);
 
   if (pErr) {
@@ -139,7 +142,11 @@ export async function startCheckout(formData: FormData) {
     if (!p) {
       redirect("/checkout?error=removed");
     }
-    const unit = unitPriceAfterWholesaleCents(p.price_cents, wholesalePct);
+    const unit = storefrontPayableUnitGrossCents(
+      p.price_cents,
+      p.has_vat,
+      wholesalePct,
+    );
     const sub = unit * line.quantity;
     total += sub;
     const frag = line.fragrance?.trim();
@@ -169,7 +176,11 @@ export async function startCheckout(formData: FormData) {
             }
             const p = byId.get(line.productId);
             if (!p) return sum;
-            const unit = unitPriceAfterWholesaleCents(p.price_cents, wholesalePct);
+            const unit = storefrontPayableUnitGrossCents(
+              p.price_cents,
+              p.has_vat,
+              wholesalePct,
+            );
             return sum + unit * line.quantity;
           }, 0);
     if (
@@ -224,6 +235,8 @@ export async function startCheckout(formData: FormData) {
     customerId = insertedCustomer.id as string;
   }
 
+  const transferSessionToken = useTransfer ? randomUUID() : null;
+
   const { data: orderRow, error: oErr } = await supabase
     .from("orders")
     .insert({
@@ -237,6 +250,8 @@ export async function startCheckout(formData: FormData) {
       shipping_city: shippingCity,
       shipping_postal_code: shippingPostalCode || null,
       shipping_phone: shippingPhone,
+      checkout_payment_method: useTransfer ? "transfer" : "wompi",
+      transfer_session_token: transferSessionToken,
     })
     .select("id")
     .single();
@@ -265,6 +280,13 @@ export async function startCheckout(formData: FormData) {
   revalidatePath("/admin/ventas");
   revalidatePath("/admin/orders");
   revalidatePath("/cuenta/pedidos");
+
+  if (useTransfer && transferSessionToken) {
+    await setCart([]);
+    redirect(
+      `/checkout/transferencia?order_id=${encodeURIComponent(orderId)}&t=${encodeURIComponent(transferSessionToken)}`,
+    );
+  }
 
   const returnUrl = `${getPublicSiteUrl()}/checkout/return?order_id=${orderId}`;
 

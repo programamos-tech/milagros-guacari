@@ -539,7 +539,9 @@ export default async function AdminCustomerDetailPage({ params, searchParams }: 
                         hour12: true,
                       })
                     : "—";
-                const pago = ventaFormaPagoBadge(o.wompi_reference);
+                const pago = ventaFormaPagoBadge(o.wompi_reference, {
+                  checkoutPaymentMethod: o.checkout_payment_method,
+                });
                 const pagoLabel = pago.label === "Transferencia" ? "Transfer." : pago.label;
                 const nProd = o.line_count ?? 0;
                 return (
@@ -618,7 +620,9 @@ export default async function AdminCustomerDetailPage({ params, searchParams }: 
                       })
                     : "—";
                 const st = orderStatusLabel[o.status] ?? o.status;
-                const pago = ventaFormaPagoBadge(o.wompi_reference);
+                const pago = ventaFormaPagoBadge(o.wompi_reference, {
+                  checkoutPaymentMethod: o.checkout_payment_method,
+                });
                 return (
                   <li
                     key={o.id}

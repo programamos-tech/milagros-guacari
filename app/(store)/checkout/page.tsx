@@ -9,6 +9,10 @@ import {
   unitPriceAfterWholesaleCents,
   wholesaleDiscountPercentFromRow,
 } from "@/lib/customer-wholesale-pricing";
+import {
+  storefrontListGrossUnitCents,
+  storefrontPayableUnitGrossCents,
+} from "@/lib/storefront-gross-price";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { imagePathForProductLine } from "@/lib/product-line-image";
@@ -342,7 +346,7 @@ export default async function CheckoutPage({
   const { data: products } = await supabase
     .from("products")
     .select(
-      "id,name,price_cents,image_path,fragrance_option_images,is_published,stock_quantity,colors",
+      "id,name,price_cents,has_vat,image_path,fragrance_option_images,is_published,stock_quantity,colors",
     )
     .in("id", ids);
 
@@ -356,15 +360,30 @@ export default async function CheckoutPage({
 
   const rows = displayCart.map((line) => {
     const p = byId.get(line.productId)!;
-    const unit = unitPriceAfterWholesaleCents(p.price_cents, wholesaleDisplayPct);
-    const sub = unit * line.quantity;
-    const catalogSub = p.price_cents * line.quantity;
-    return { line, p, sub, catalogSub };
+    const netUnit = unitPriceAfterWholesaleCents(
+      p.price_cents,
+      wholesaleDisplayPct,
+    );
+    const grossUnit = storefrontPayableUnitGrossCents(
+      p.price_cents,
+      p.has_vat,
+      wholesaleDisplayPct,
+    );
+    const listGrossUnit = storefrontListGrossUnitCents(p.price_cents, p.has_vat);
+    const sub = grossUnit * line.quantity;
+    const catalogListLineGross = listGrossUnit * line.quantity;
+    const netLine = netUnit * line.quantity;
+    return { line, p, sub, catalogListLineGross, netLine };
   });
 
-  const catalogTotal = rows.reduce((acc, r) => acc + r.catalogSub, 0);
-  const total = rows.reduce((acc, r) => acc + r.sub, 0);
-  const wholesaleSavingCents = Math.max(0, catalogTotal - total);
+  const catalogListTotalGross = rows.reduce(
+    (acc, r) => acc + r.catalogListLineGross,
+    0,
+  );
+  const totalGross = rows.reduce((acc, r) => acc + r.sub, 0);
+  const totalNet = rows.reduce((acc, r) => acc + r.netLine, 0);
+  const totalVat = Math.max(0, totalGross - totalNet);
+  const wholesaleSavingCents = Math.max(0, catalogListTotalGross - totalGross);
 
   return (
     <div className="min-h-[calc(100vh-8rem)] bg-white">
@@ -407,7 +426,7 @@ export default async function CheckoutPage({
             <div className="min-w-0 space-y-14">
               <section>
                 <ul className="divide-y divide-stone-200">
-                  {rows.map(({ line, p, sub, catalogSub }) => {
+                  {rows.map(({ line, p, sub, catalogListLineGross }) => {
                     const row = p as typeof p & {
                       colors?: unknown;
                       fragrance_option_images?: unknown;
@@ -425,7 +444,7 @@ export default async function CheckoutPage({
                     );
                     const color = firstColorLabel(row.colors);
                     const showWholesaleLine =
-                      wholesaleDisplayPct > 0 && catalogSub > sub;
+                      wholesaleDisplayPct > 0 && catalogListLineGross > sub;
 
                     return (
                       <li
@@ -493,7 +512,7 @@ export default async function CheckoutPage({
                           {showWholesaleLine ? (
                             <div className="space-y-1">
                               <p className="text-xs tabular-nums text-stone-400 line-through">
-                                {formatCop(catalogSub)}
+                                {formatCop(catalogListLineGross)}
                               </p>
                               <p className="text-[15px] font-medium tabular-nums text-stone-900">
                                 {formatCop(sub)}
@@ -609,10 +628,11 @@ export default async function CheckoutPage({
 
               <section className="border-t border-stone-200 pt-12">
                 <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-brand)]">
-                  Pago seguro (Wompi)
+                  Forma de pago
                 </h2>
                 <p className="mt-2 text-sm leading-relaxed text-stone-500">
-                  El cobro se completa en la pasarela de Wompi. Esta tienda no guarda datos de tu tarjeta.
+                  Pago en línea con Wompi o transferencia a la cuenta de la tienda. En transferencia verás la llave
+                  y podrás adjuntar el comprobante en los 2 minutos posteriores a cada vez que habilites la subida.
                 </p>
 
                 <fieldset className="mt-6 space-y-3">
@@ -626,7 +646,22 @@ export default async function CheckoutPage({
                       className="size-4 border-stone-400 text-[var(--store-accent)] focus:ring-[var(--store-accent)]"
                     />
                     <span className="text-sm font-medium text-stone-900">
-                      Pago en línea
+                      Pago en línea (Wompi)
+                    </span>
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-3 border border-stone-200 bg-white p-4 hover:border-stone-300">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="transfer"
+                      className="size-4 border-stone-400 text-[var(--store-accent)] focus:ring-[var(--store-accent)]"
+                    />
+                    <span className="text-sm text-stone-700">
+                      <span className="font-medium text-stone-900">Transferencia bancaria</span>
+                      <span className="mt-1 block text-xs text-stone-500">
+                        Verás la llave (por defecto una de ejemplo hasta que configures env) y el
+                        formulario para subir el comprobante.
+                      </span>
                     </span>
                   </label>
                   <label className="flex cursor-not-allowed items-center gap-3 border border-stone-200 bg-stone-50 p-4 opacity-60">
@@ -640,7 +675,7 @@ export default async function CheckoutPage({
 
                 <p className="mt-5 flex flex-wrap items-center gap-2 text-xs text-stone-500">
                   <span className="font-medium uppercase tracking-wide text-stone-700">
-                    Medios típicos
+                    Medios típicos (Wompi)
                   </span>
                   <span className="border border-stone-200 px-2 py-0.5 font-mono text-[10px] tracking-wide">
                     VISA
@@ -683,9 +718,9 @@ export default async function CheckoutPage({
                 {wholesaleSavingCents > 0 ? (
                   <>
                     <div className="flex justify-between gap-4">
-                      <dt className="text-stone-600">Precio catálogo</dt>
+                      <dt className="text-stone-600">Precio catálogo (con IVA)</dt>
                       <dd className="shrink-0 tabular-nums text-stone-500 line-through">
-                        {formatCop(catalogTotal)}
+                        {formatCop(catalogListTotalGross)}
                       </dd>
                     </div>
                     <div className="flex justify-between gap-4 text-emerald-800">
@@ -699,29 +734,34 @@ export default async function CheckoutPage({
                   </>
                 ) : null}
                 <div className="flex justify-between gap-4">
-                  <dt className="text-stone-600">
-                    Subtotal ({rows.length}{" "}
-                    {rows.length === 1 ? "ítem" : "ítems"})
-                  </dt>
-                  <dd className="shrink-0 font-medium tabular-nums text-stone-900">
-                    {formatCop(total)}
+                  <dt className="text-stone-600">Subtotal sin IVA</dt>
+                  <dd className="shrink-0 tabular-nums text-stone-700">
+                    {formatCop(totalNet)}
                   </dd>
                 </div>
+                {totalVat > 0 ? (
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-stone-600">IVA</dt>
+                    <dd className="shrink-0 tabular-nums text-stone-700">
+                      {formatCop(totalVat)}
+                    </dd>
+                  </div>
+                ) : null}
                 <div className="flex justify-between gap-4 border-b border-stone-300/70 pb-3">
+                  <dt className="text-stone-600">Subtotal (con IVA)</dt>
+                  <dd className="shrink-0 font-medium tabular-nums text-stone-900">
+                    {formatCop(totalGross)}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-4">
                   <dt className="text-stone-600">Envío</dt>
                   <dd className="shrink-0 text-xs font-medium uppercase tracking-wide text-stone-500">
                     Por confirmar
                   </dd>
                 </div>
-                <div className="flex justify-between gap-4">
-                  <dt className="text-stone-600">Impuestos</dt>
-                  <dd className="shrink-0 text-xs font-medium uppercase tracking-wide text-stone-500">
-                    Por confirmar
-                  </dd>
-                </div>
                 <div className="flex justify-between gap-4 border-t border-stone-400 pt-4 text-[15px] font-semibold text-stone-900">
-                  <dt>Total</dt>
-                  <dd className="tabular-nums">{formatCop(total)}</dd>
+                  <dt>Total a pagar</dt>
+                  <dd className="tabular-nums">{formatCop(totalGross)}</dd>
                 </div>
               </dl>
 

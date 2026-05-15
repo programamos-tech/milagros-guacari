@@ -16,6 +16,7 @@ export type VentaOrderRow = {
   created_at: string | null;
   wompi_reference: string | null;
   customer_email: string | null;
+  checkout_payment_method?: string | null;
 };
 
 function IconStorefront({ className }: { className?: string }) {
@@ -107,7 +108,9 @@ export function VentasSalesTable({
           const fisica = isVentaFisica(row.wompi_reference);
           const ref = ventaNumeroReferencia(row.id);
           const estado = ventaEstadoBadge(row.status);
-          const pago = ventaFormaPagoBadge(row.wompi_reference);
+          const pago = ventaFormaPagoBadge(row.wompi_reference, {
+            checkoutPaymentMethod: row.checkout_payment_method,
+          });
           return (
             <li key={row.id} className="min-w-0">
               <article className={cardClass}>
@@ -184,7 +187,9 @@ export function VentasSalesTable({
               const fisica = isVentaFisica(row.wompi_reference);
               const ref = ventaNumeroReferencia(row.id);
               const estado = ventaEstadoBadge(row.status);
-              const pago = ventaFormaPagoBadge(row.wompi_reference);
+              const pago = ventaFormaPagoBadge(row.wompi_reference, {
+            checkoutPaymentMethod: row.checkout_payment_method,
+          });
               return (
                 <tr
                   key={row.id}

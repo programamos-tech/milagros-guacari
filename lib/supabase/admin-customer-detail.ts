@@ -14,6 +14,7 @@ export type AdminCustomerOrderRow = {
   created_at: string | null;
   status: string;
   wompi_reference?: string | null;
+  checkout_payment_method?: string | null;
   shipping_address?: string | null;
   /** Cantidad de líneas en `order_items` (si se cargó). */
   line_count?: number;
@@ -57,9 +58,9 @@ function looksLikeMissingCustomerIdColumn(message: string): boolean {
 }
 
 const ORDER_SEL_WITH_CID =
-  "id,total_cents,created_at,status,customer_id,customer_email,wompi_reference,shipping_address";
+  "id,total_cents,created_at,status,customer_id,customer_email,wompi_reference,checkout_payment_method,shipping_address";
 const ORDER_SEL_NO_CID =
-  "id,total_cents,created_at,status,customer_email,wompi_reference,shipping_address";
+  "id,total_cents,created_at,status,customer_email,wompi_reference,checkout_payment_method,shipping_address";
 
 /**
  * Pedidos del cliente: por `customer_id` y/o por email (misma lógica que el listado).
@@ -114,6 +115,11 @@ async function fetchOrdersForCustomer(
           wompi_reference:
             "wompi_reference" in r
               ? (r as { wompi_reference?: string | null }).wompi_reference ?? null
+              : null,
+          checkout_payment_method:
+            "checkout_payment_method" in r
+              ? (r as { checkout_payment_method?: string | null }).checkout_payment_method ??
+                null
               : null,
           shipping_address:
             "shipping_address" in r

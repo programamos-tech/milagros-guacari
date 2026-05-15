@@ -67,6 +67,43 @@ export default async function AdminOrderDetailPage({ params, searchParams }: Pro
 
   const invoiceRef = ventaNumeroReferencia(id);
 
+  const checkoutPm =
+    "checkout_payment_method" in order && order.checkout_payment_method != null
+      ? String(order.checkout_payment_method)
+      : null;
+
+  let transferProofAttachments: {
+    signedUrl: string;
+    createdAt: string;
+    filename: string | null;
+  }[] = [];
+
+  if (String(order.status) === "pending" && checkoutPm === "transfer") {
+    const { data: proofsRaw } = await supabase
+      .from("order_transfer_proofs")
+      .select("storage_path, original_filename, created_at")
+      .eq("order_id", id)
+      .order("created_at", { ascending: true });
+
+    const bucket = supabase.storage.from("order-payment-proofs");
+    const rows = proofsRaw ?? [];
+    transferProofAttachments = (
+      await Promise.all(
+        rows.map(async (row) => {
+          const path = String(row.storage_path);
+          const signed = await bucket.createSignedUrl(path, 3600);
+          if (signed.error || !signed.data?.signedUrl) return null;
+          return {
+            signedUrl: signed.data.signedUrl,
+            createdAt: String(row.created_at),
+            filename:
+              row.original_filename != null ? String(row.original_filename) : null,
+          };
+        }),
+      )
+    ).filter((x): x is NonNullable<typeof x> => x != null);
+  }
+
   return (
     <div className="-mx-3 w-[calc(100%+1.5rem)] max-w-none bg-zinc-50/70 py-6 dark:bg-zinc-950/80 sm:-mx-4 sm:w-[calc(100%+2rem)] md:-mx-6 md:w-[calc(100%+3rem)] print:mx-0 print:w-auto print:bg-transparent print:py-0 print:p-0">
       <OrderInvoiceDetailView
@@ -95,6 +132,8 @@ export default async function AdminOrderDetailPage({ params, searchParams }: Pro
             : null
         }
         lines={lines}
+        transferProofAttachments={transferProofAttachments}
+        checkoutPaymentMethod={checkoutPm}
         ventasListHref={ventasListHref}
       />
     </div>

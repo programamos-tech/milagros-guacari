@@ -6,18 +6,27 @@ export function isVentaFisica(wompiReference: string | null | undefined): boolea
   return r.startsWith("POS:");
 }
 
-export function ventaFormaPagoLabel(wompiReference: string | null | undefined): string {
+export type VentaFormaPagoOpts = {
+  checkoutPaymentMethod?: string | null;
+};
+
+export function ventaFormaPagoLabel(
+  wompiReference: string | null | undefined,
+  opts?: VentaFormaPagoOpts,
+): string {
   const r = wompiReference?.trim() ?? "";
   if (r === "POS:cash") return "Efectivo";
   if (r === "POS:transfer") return "Transferencia";
   if (r === "POS:mixed") return "Mixto";
   if (r.startsWith("POS:")) return "Mostrador";
+  if (opts?.checkoutPaymentMethod === "transfer") return "Transferencia (web)";
   return "En línea";
 }
 
 /** Pill de forma de pago (colores para escanear la tabla). */
 export function ventaFormaPagoBadge(
   wompiReference: string | null | undefined,
+  opts?: VentaFormaPagoOpts,
 ): { label: string; className: string } {
   const r = wompiReference?.trim() ?? "";
   if (r === "POS:cash") {
@@ -48,6 +57,13 @@ export function ventaFormaPagoBadge(
         "bg-zinc-100 text-zinc-800 ring-1 ring-zinc-200/80 dark:bg-zinc-800/80 dark:text-zinc-100 dark:ring-zinc-600/70",
     };
   }
+  if (opts?.checkoutPaymentMethod === "transfer") {
+    return {
+      label: "Transferencia (web)",
+      className:
+        "bg-sky-50 text-sky-900 ring-1 ring-sky-200/90 dark:bg-sky-950/45 dark:text-sky-100 dark:ring-sky-700/50",
+    };
+  }
   return {
     label: "En línea",
     className:
@@ -60,13 +76,22 @@ export type VentaPagoFilter = "all" | "cash" | "transfer" | "mixed" | "online";
 export function matchesVentaPagoFilter(
   wompiReference: string | null | undefined,
   filter: VentaPagoFilter,
+  opts?: VentaFormaPagoOpts,
 ): boolean {
   if (filter === "all") return true;
   const r = wompiReference?.trim() ?? "";
   const fisica = r.startsWith("POS:");
-  if (filter === "online") return !fisica;
+  if (filter === "online") {
+    if (fisica) return false;
+    if (opts?.checkoutPaymentMethod === "transfer") return false;
+    return true;
+  }
   if (filter === "cash") return r === "POS:cash";
-  if (filter === "transfer") return r === "POS:transfer";
+  if (filter === "transfer") {
+    if (r === "POS:transfer") return true;
+    if (opts?.checkoutPaymentMethod === "transfer") return true;
+    return false;
+  }
   if (filter === "mixed") return r === "POS:mixed";
   return true;
 }
