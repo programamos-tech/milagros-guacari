@@ -98,7 +98,9 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
     fetchProductsForStockInvestment(supabase),
     supabase
       .from("store_expenses")
-      .select("id,concept,category,amount_cents,payment_method,notes,expense_date,created_at")
+      .select(
+        "id,concept,category,amount_cents,payment_method,notes,expense_date,created_at,is_cancelled",
+      )
       .gte("expense_date", fetchFrom)
       .lte("expense_date", fetchTo)
       .order("expense_date", { ascending: false })
@@ -208,6 +210,7 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
   );
 
   for (const e of expenses) {
+    if ((e as { is_cancelled?: boolean }).is_cancelled === true) continue;
     const raw =
       typeof e.expense_date === "string" && String(e.expense_date).length >= 10
         ? String(e.expense_date).slice(0, 10)

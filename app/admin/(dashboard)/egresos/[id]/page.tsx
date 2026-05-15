@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CustomerAvatar } from "@/components/admin/CustomerAvatar";
+import { ExpenseDateEditForm } from "@/components/admin/ExpenseDateEditForm";
 import { ExpenseDetailHeaderActions } from "@/components/admin/ExpenseDetailHeaderActions";
 import { customerAvatarSeed } from "@/lib/customer-avatar-seed";
-import { formatCop } from "@/lib/money";
+import { loadAdminPermissions } from "@/lib/load-admin-permissions";
 import { formatStoreDateTime } from "@/lib/store-datetime-format";
+import { formatCop } from "@/lib/money";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -67,13 +69,22 @@ export default async function AdminEgresoDetailPage({ params }: Props) {
   if (!UUID_RE.test(id)) notFound();
 
   const supabase = await createSupabaseServerClient();
-  const { data: row } = await supabase
-    .from("store_expenses")
-    .select("id,concept,category,amount_cents,payment_method,notes,expense_date,created_at")
-    .eq("id", id)
-    .maybeSingle();
+  const [perm, expenseRes] = await Promise.all([
+    loadAdminPermissions(),
+    supabase
+      .from("store_expenses")
+      .select(
+        "id,concept,category,amount_cents,payment_method,notes,expense_date,created_at,is_cancelled,cancelled_at,cancellation_reason",
+      )
+      .eq("id", id)
+      .maybeSingle(),
+  ]);
 
+  const row = expenseRes.data;
   if (!row) notFound();
+
+  const canEdit = Boolean(perm?.permissions.egresos_crear);
+  const isCancelled = row.is_cancelled === true;
 
   const concept = String(row.concept ?? "Egreso").trim() || "Egreso";
   const expenseDate =
@@ -119,22 +130,65 @@ export default async function AdminEgresoDetailPage({ params }: Props) {
               label={`Identidad visual del egreso: ${concept}`}
             />
             <div className="min-w-0">
-              <h1 className="text-2xl font-semibold uppercase tracking-tight text-zinc-900 dark:text-zinc-100 sm:text-3xl">
-                {concept}
-              </h1>
+              <div className="flex flex-wrap items-center gap-2">
+                <h1
+                  className={`text-2xl font-semibold uppercase tracking-tight text-zinc-900 dark:text-zinc-100 sm:text-3xl ${isCancelled ? "line-through decoration-zinc-400" : ""}`}
+                >
+                  {concept}
+                </h1>
+                {isCancelled ? (
+                  <span className="inline-flex rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-red-800 dark:bg-red-950/50 dark:text-red-200">
+                    Anulado
+                  </span>
+                ) : null}
+              </div>
               <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{metaLine}</p>
             </div>
           </div>
-          <ExpenseDetailHeaderActions />
+          <ExpenseDetailHeaderActions
+            expenseId={String(row.id)}
+            conceptLabel={concept}
+            isCancelled={isCancelled}
+            canCancel={canEdit}
+          />
         </div>
+
+        {isCancelled && row.cancellation_reason?.trim() ? (
+          <div className="border-t border-red-100 bg-red-50/80 px-6 py-4 dark:border-red-900/40 dark:bg-red-950/30 sm:px-8">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-red-700 dark:text-red-300">
+              Motivo de anulación
+            </p>
+            <p className="mt-1 whitespace-pre-wrap text-sm text-red-900 dark:text-red-100">
+              {String(row.cancellation_reason).trim()}
+            </p>
+            {row.cancelled_at ? (
+              <p className="mt-2 text-xs text-red-700/80 dark:text-red-300/80">
+                Anulado el {prettyDateTime(String(row.cancelled_at))}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="border-t border-zinc-100 dark:border-zinc-800">
           <div className="grid divide-y divide-zinc-100 dark:divide-zinc-800 sm:grid-cols-4 sm:divide-x sm:divide-y-0">
-            <StatCol label="Monto" sub="Valor contable del egreso">
-              {formatCop(Number(row.amount_cents ?? 0))}
+            <StatCol
+              label="Monto"
+              sub={isCancelled ? "No cuenta en reportes" : "Valor contable del egreso"}
+            >
+              <span className={isCancelled ? "line-through decoration-zinc-400" : ""}>
+                {formatCop(Number(row.amount_cents ?? 0))}
+              </span>
             </StatCol>
             <StatCol label="Fecha del egreso" sub="Día asignado al gasto">
-              {expenseDate}
+              {isCancelled || !canEdit ? (
+                expenseDate
+              ) : (
+                <ExpenseDateEditForm
+                  expenseId={String(row.id)}
+                  initialDate={expenseDate}
+                  canEdit
+                />
+              )}
             </StatCol>
             <StatCol label="Forma de pago" sub="Medio registrado">
               {paymentPretty}

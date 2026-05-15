@@ -1,13 +1,22 @@
 import Link from "next/link";
+import { ExpenseCancelButton } from "@/components/admin/ExpenseCancelButton";
 
 const iconBtnClass =
   "inline-flex size-9 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100";
 
 type Props = {
   expenseId: string;
+  conceptLabel: string;
+  isCancelled: boolean;
+  canCancel: boolean;
 };
 
-export function ExpenseRowActions({ expenseId }: Props) {
+export function ExpenseRowActions({
+  expenseId,
+  conceptLabel,
+  isCancelled,
+  canCancel,
+}: Props) {
   return (
     <div className="flex justify-end gap-0.5">
       <Link
@@ -32,6 +41,13 @@ export function ExpenseRowActions({ expenseId }: Props) {
           <circle cx="12" cy="12" r="3" />
         </svg>
       </Link>
+      <ExpenseCancelButton
+        expenseId={expenseId}
+        conceptLabel={conceptLabel}
+        isCancelled={isCancelled}
+        canCancel={canCancel}
+        variant="icon"
+      />
     </div>
   );
 }

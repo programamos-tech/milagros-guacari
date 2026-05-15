@@ -7,6 +7,7 @@ import {
   reportCalendarDayKeyFromIso,
   todayYmdInReportStore,
 } from "@/lib/admin-report-range";
+import { loadAdminPermissions } from "@/lib/load-admin-permissions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -71,10 +72,14 @@ export default async function AdminEgresosPage({
   );
 
   const supabase = await createSupabaseServerClient();
+  const perm = await loadAdminPermissions();
+  const canCancel = Boolean(perm?.permissions.egresos_crear);
 
   let query = supabase
     .from("store_expenses")
-    .select("id,concept,amount_cents,payment_method,notes,expense_date,created_at")
+    .select(
+      "id,concept,amount_cents,payment_method,notes,expense_date,created_at,is_cancelled,cancellation_reason",
+    )
     .order("expense_date", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(1500);
@@ -99,12 +104,14 @@ export default async function AdminEgresosPage({
   const { data: expenses, error: expensesError } = await query;
 
   const rows = expenses ?? [];
-  const total = rows.reduce((sum, e) => sum + Number(e.amount_cents ?? 0), 0);
+  const activeRows = rows.filter((e) => e.is_cancelled !== true);
+  const total = activeRows.reduce((sum, e) => sum + Number(e.amount_cents ?? 0), 0);
   const todayKey = todayYmdInReportStore();
-  const todayTotal = rows.reduce((sum, e) => {
+  const todayTotal = activeRows.reduce((sum, e) => {
     const key = expenseCalendarYmd(e);
     return key === todayKey ? sum + Number(e.amount_cents ?? 0) : sum;
   }, 0);
+  const cancelledCount = rows.length - activeRows.length;
 
   const hasFilters =
     qRaw.length > 0 || Boolean(dateFrom) || Boolean(dateTo);
@@ -141,8 +148,13 @@ export default async function AdminEgresosPage({
                 <AnimatedCopCents cents={todayTotal} duration={1000} delay={60} />
               </p>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                Total filtrado:{" "}
+                Total activo (vista):{" "}
                 <AnimatedCopCents cents={total} duration={1050} delay={100} className="font-medium text-zinc-700 dark:text-zinc-200" />
+                {cancelledCount > 0 ? (
+                  <span className="ml-1">
+                    · {cancelledCount} anulado{cancelledCount === 1 ? "" : "s"}
+                  </span>
+                ) : null}
               </p>
             </div>
           </div>
@@ -212,7 +224,7 @@ export default async function AdminEgresosPage({
               <thead>
                 <tr className="border-b border-zinc-100 bg-white dark:border-zinc-800 dark:bg-zinc-950/80">
                   <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
-                    Concepto
+                    Concepto / estado
                   </th>
                   <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
                     Pago
@@ -230,6 +242,7 @@ export default async function AdminEgresosPage({
               </thead>
               <tbody>
                 {rows.map((e, index) => {
+                  const isCancelled = e.is_cancelled === true;
                   const zebra =
                     index % 2 === 1
                       ? "bg-zinc-50/80 dark:bg-zinc-900/50"
@@ -238,12 +251,21 @@ export default async function AdminEgresosPage({
                   return (
                     <tr
                       key={String(e.id)}
-                      className={`border-b border-zinc-100/90 ${zebra} align-top transition hover:bg-zinc-100/60 dark:border-zinc-800 dark:hover:bg-zinc-800/50`}
+                      className={`border-b border-zinc-100/90 ${zebra} align-top transition hover:bg-zinc-100/60 dark:border-zinc-800 dark:hover:bg-zinc-800/50 ${isCancelled ? "opacity-70" : ""}`}
                     >
                       <td className="max-w-md px-4 py-3.5">
-                        <p className="font-semibold text-zinc-900 dark:text-zinc-100">
-                          {String(e.concept ?? "Egreso")}
-                        </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p
+                            className={`font-semibold text-zinc-900 dark:text-zinc-100 ${isCancelled ? "line-through decoration-zinc-400" : ""}`}
+                          >
+                            {String(e.concept ?? "Egreso")}
+                          </p>
+                          {isCancelled ? (
+                            <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-800 dark:bg-red-950/50 dark:text-red-200">
+                              Anulado
+                            </span>
+                          ) : null}
+                        </div>
                         {e.notes ? (
                           <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-zinc-500 dark:text-zinc-400">
                             {String(e.notes)}
@@ -257,14 +279,21 @@ export default async function AdminEgresosPage({
                         {dateStr}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3.5 text-right font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
-                        <AnimatedCopCents
-                          cents={Number(e.amount_cents ?? 0)}
-                          duration={650}
-                          delay={Math.min(index * 22, 320)}
-                        />
+                        <span className={isCancelled ? "line-through decoration-zinc-400" : ""}>
+                          <AnimatedCopCents
+                            cents={Number(e.amount_cents ?? 0)}
+                            duration={650}
+                            delay={Math.min(index * 22, 320)}
+                          />
+                        </span>
                       </td>
                       <td className="px-4 py-3.5">
-                        <ExpenseRowActions expenseId={String(e.id)} />
+                        <ExpenseRowActions
+                          expenseId={String(e.id)}
+                          conceptLabel={String(e.concept ?? "Egreso")}
+                          isCancelled={isCancelled}
+                          canCancel={canCancel}
+                        />
                       </td>
                     </tr>
                   );

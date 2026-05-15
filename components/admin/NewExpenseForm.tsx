@@ -213,13 +213,20 @@ export function NewExpenseForm({
             />
           </div>
           <div>
-            <label className={labelClass}>Fecha</label>
-            <AdminDateInput
-              name="expense_date"
-              required
-              value={expenseDate}
-              onChange={setExpenseDate}
-            />
+            <div>
+              <label className={labelClass}>Fecha del egreso</label>
+              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                Elegí el día del gasto con el calendario.
+              </p>
+              <div className="mt-1.5">
+                <AdminDateInput
+                  name="expense_date"
+                  required
+                  value={expenseDate}
+                  onChange={setExpenseDate}
+                />
+              </div>
+            </div>
           </div>
           <div>
             <label className={labelClass}>Categoría</label>
