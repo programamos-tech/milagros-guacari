@@ -48,8 +48,9 @@ export const storeLogoPath =
 export const adminSidebarLogoPath =
   process.env.NEXT_PUBLIC_ADMIN_SIDEBAR_LOGO?.trim() || "/logo-aleyahso.png";
 
-/** Firma Berea (“Experiencia por”) en `/public/berea.png`. */
-export const bereaSignaturePath = "/berea.png";
+/** Firma Berea (“Experiencia por”). Prioridad: `NEXT_PUBLIC_BEREA_LOGO`, luego `logo-berea12.png`. */
+export const bereaSignaturePath =
+  process.env.NEXT_PUBLIC_BEREA_LOGO?.trim() || "/logo-berea12.png";
 
 /**
  * Nombre en el pie © (independiente del nombre corto de marca si usás env de plantilla).

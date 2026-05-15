@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Milagros">
+  <rect width="32" height="32" rx="7" fill="#FF76A1"/>
+  <path
+    fill="#ffffff"
+    d="M7.4 25.6V7.5h2.3l6.35 12.35 6.35-12.35h2.3v18.1h-1.95v-13.95L15.97 21.92 10.03 11.92v13.68H7.4z"
+  />
+</svg>

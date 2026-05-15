@@ -5,6 +5,11 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Suspense, type SVGProps } from "react";
 import {
+  ADMIN_BEREA_MARK_IMG_CLASS,
+  ADMIN_BEREA_SIGNATURE_ON_SIDEBAR_CLASS,
+  ADMIN_BRAND_LOGO_ON_SIDEBAR_CLASS,
+} from "@/lib/admin-theme";
+import {
   adminSidebarLogoPath,
   bereaSignaturePath,
   storeBrand,
@@ -238,22 +243,22 @@ function navItemActive(
   return isActive(pathname, href);
 }
 
-const sidebarInk = "text-rose-950/80 dark:text-rose-950/75";
-const sidebarInkMuted = "text-rose-950/65 dark:text-rose-950/60";
+const sidebarInk = "text-rose-800/85 dark:text-zinc-200";
+const sidebarInkMuted = "text-rose-700/78 dark:text-zinc-500";
 
 function SidebarLogo() {
   return (
     <Link
       href="/admin"
       prefetch
-      className="inline-block rounded-md outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-rose-400/80 focus-visible:ring-offset-0"
+      className="inline-block rounded-md outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-[var(--store-brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar-bg)] dark:focus-visible:ring-offset-zinc-950"
     >
       <Image
         src={adminSidebarLogoPath}
         alt={storeBrand}
         width={320}
         height={320}
-        className="h-auto w-full max-w-[72px] object-contain object-center sm:max-w-[76px]"
+        className={`h-auto w-full max-w-[72px] object-contain object-center sm:max-w-[76px] ${ADMIN_BRAND_LOGO_ON_SIDEBAR_CLASS}`}
         priority
       />
     </Link>
@@ -281,10 +286,10 @@ function AdminSidebarInner({
 
   const linkClass = (href: string, active: boolean) =>
     [
-      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition duration-200",
+      "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition duration-200",
       active
-        ? "bg-rose-950 text-white shadow-[0_8px_22px_-12px_rgba(136,19,55,0.35)] dark:bg-rose-950 dark:text-rose-50 dark:shadow-[0_8px_22px_-12px_rgba(0,0,0,0.2)]"
-        : "text-rose-950/80 hover:bg-rose-950/10 hover:text-rose-950 dark:text-rose-950/75 dark:hover:bg-rose-950/15 dark:hover:text-rose-950",
+        ? "bg-[var(--store-brand)] text-white shadow-[0_4px_14px_-6px_rgba(220,53,126,0.55)] hover:bg-[var(--store-brand-hover)] dark:text-white"
+        : "text-zinc-800 hover:bg-white/95 hover:text-rose-950 dark:text-zinc-200 dark:hover:bg-zinc-800/75 dark:hover:text-white",
     ].join(" ");
 
   const drawerTranslate =
@@ -298,9 +303,9 @@ function AdminSidebarInner({
 
   return (
     <aside
-      className={`flex shrink-0 flex-col border-rose-300/35 bg-[var(--admin-sidebar-bg)] shadow-[2px_0_32px_-16px_rgba(190,24,93,0.12)] transition-transform duration-300 ease-out motion-reduce:transition-none print:hidden dark:border-rose-400/25 dark:shadow-[2px_0_32px_-16px_rgba(131,24,67,0.18)] fixed inset-y-0 left-0 z-[50] w-[min(88vw,288px)] max-w-[288px] border-r lg:w-64 lg:max-w-none lg:border-b-0 lg:shadow-[1px_0_0_rgba(244,114,182,0.35)] dark:lg:shadow-[1px_0_0_rgba(190,24,93,0.25)] ${drawerTranslate} ${drawerHiddenMobile}`}
+      className={`flex shrink-0 flex-col border-r border-rose-200/90 bg-[var(--admin-sidebar-bg)] shadow-[1px_0_0_rgba(255,255,255,0.9)_inset,2px_0_24px_-18px_rgba(190,24,93,0.12)] transition-transform duration-300 ease-out motion-reduce:transition-none print:hidden dark:border-zinc-800/90 dark:bg-zinc-950 dark:shadow-[1px_0_0_rgba(255,255,255,0.05)_inset] fixed inset-y-0 left-0 z-[50] w-[min(88vw,288px)] max-w-[288px] lg:w-64 lg:max-w-none lg:border-b-0 ${drawerTranslate} ${drawerHiddenMobile}`}
     >
-      <div className="flex flex-col items-center border-b border-rose-300/40 px-4 py-6 text-center dark:border-rose-400/30">
+      <div className="flex flex-col items-center border-b border-rose-200/70 px-4 py-6 text-center dark:border-zinc-800/80">
         <SidebarLogo />
         <p
           className={`mt-3 text-[9px] font-semibold uppercase tracking-[0.22em] ${sidebarInk}`}
@@ -340,13 +345,13 @@ function AdminSidebarInner({
           </div>
         ))}
       </nav>
-      <div className="shrink-0 border-t border-rose-300/40 px-3 pb-4 pt-3 dark:border-rose-400/30">
+      <div className="shrink-0 border-t border-rose-200/70 px-3 pb-4 pt-3 dark:border-zinc-800/80">
         {allowed.has(STOREFRONT_HREF) ? (
           <Link
             href={STOREFRONT_HREF}
             prefetch
             onClick={() => onNavigate()}
-            className="mb-3 flex w-full items-center justify-center gap-2.5 rounded-lg border border-rose-950/20 bg-white/70 px-3 py-2.5 text-sm font-semibold text-rose-950 shadow-sm transition hover:border-rose-950/35 hover:bg-white dark:border-rose-400/25 dark:bg-zinc-900/50 dark:text-rose-50 dark:hover:border-rose-400/40 dark:hover:bg-zinc-900/80"
+            className="mb-3 flex w-full items-center justify-center gap-2.5 rounded-xl border border-rose-200/90 bg-white px-3 py-2.5 text-sm font-semibold text-rose-950 shadow-sm transition hover:border-[var(--store-brand)] hover:bg-white dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:border-rose-400/50 dark:hover:bg-zinc-800"
           >
             <IconExternalStore />
             Ir a la tienda
@@ -363,7 +368,7 @@ function AdminSidebarInner({
             alt="Berea — diseño y desarrollo"
             width={320}
             height={82}
-            className="h-10 w-auto max-w-[min(100%,8.75rem)] object-contain object-center mix-blend-multiply invert sm:h-11 sm:max-w-[10rem]"
+            className={`${ADMIN_BEREA_MARK_IMG_CLASS} ${ADMIN_BEREA_SIGNATURE_ON_SIDEBAR_CLASS}`}
           />
         </div>
       </div>
@@ -373,8 +378,8 @@ function AdminSidebarInner({
 
 function AdminSidebarFallback() {
   return (
-    <aside className="fixed inset-y-0 left-0 z-[45] hidden w-64 flex-col border-r border-rose-300/35 bg-[var(--admin-sidebar-bg)] print:hidden dark:border-rose-400/25 lg:flex lg:flex-col">
-      <div className="flex flex-col items-center border-b border-rose-300/40 px-4 py-6 text-center dark:border-rose-400/30">
+    <aside className="fixed inset-y-0 left-0 z-[45] hidden w-64 flex-col border-r border-rose-200/90 bg-[var(--admin-sidebar-bg)] print:hidden dark:border-zinc-800/90 dark:bg-zinc-950 lg:flex lg:flex-col">
+      <div className="flex flex-col items-center border-b border-rose-200/70 px-4 py-6 text-center dark:border-zinc-800/80">
         <SidebarLogo />
         <p
           className={`mt-3 text-[9px] font-semibold uppercase tracking-[0.22em] ${sidebarInk}`}
@@ -383,10 +388,10 @@ function AdminSidebarFallback() {
         </p>
       </div>
       <div className="flex-1 px-3 py-5" aria-busy aria-label="Cargando menú" />
-      <div className="shrink-0 border-t border-rose-300/40 px-3 pb-4 pt-3 dark:border-rose-400/30">
+      <div className="shrink-0 border-t border-rose-200/70 px-3 pb-4 pt-3 dark:border-zinc-800/80">
         <div className="flex flex-col items-center gap-1">
-          <div className="h-2.5 w-16 rounded bg-rose-200/70 dark:bg-rose-300/40" aria-hidden />
-          <div className="h-10 w-[8.75rem] max-w-full rounded bg-rose-200/60 dark:bg-rose-300/35 sm:h-11" aria-hidden />
+          <div className="h-2.5 w-16 rounded bg-rose-200/80 dark:bg-zinc-700/80" aria-hidden />
+          <div className="h-10 w-[8.75rem] max-w-full rounded bg-rose-100/90 dark:bg-zinc-800/80 sm:h-11" aria-hidden />
         </div>
       </div>
     </aside>

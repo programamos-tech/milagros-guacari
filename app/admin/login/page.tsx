@@ -3,6 +3,11 @@ import Link from "next/link";
 import { AdminThemeToggle } from "@/components/admin/AdminThemeToggle";
 import { AdminLoginForm } from "@/components/admin/LoginForm";
 import {
+  ADMIN_BEREA_MARK_IMG_CLASS,
+  ADMIN_BEREA_SIGNATURE_ON_SIDEBAR_CLASS,
+  ADMIN_BRAND_LOGO_ON_SIDEBAR_CLASS,
+} from "@/lib/admin-theme";
+import {
   adminSidebarLogoPath,
   bereaSignaturePath,
   storeBrand,
@@ -20,50 +25,52 @@ export default function AdminLoginPage() {
       </div>
       <div className="flex min-h-screen flex-col lg:flex-row">
         {/* Marca — mismo fondo que el sidebar del panel */}
-        <aside className="relative flex min-h-0 flex-1 flex-col border-b border-rose-300/40 bg-[var(--admin-sidebar-bg)] dark:border-rose-400/25 lg:min-h-screen lg:w-[44%] lg:max-w-xl lg:flex-none lg:border-b-0 lg:border-r">
+        <aside className="relative flex min-h-0 flex-1 flex-col border-b border-rose-200/80 bg-[var(--admin-sidebar-bg)] dark:border-zinc-800 lg:min-h-screen lg:w-[44%] lg:max-w-xl lg:flex-none lg:border-b-0 lg:border-r lg:border-r-rose-200/70 dark:bg-zinc-950 dark:lg:border-r-zinc-800">
           <div className="relative flex flex-1 flex-col justify-center px-8 py-12 sm:px-12 lg:py-20 lg:pl-14 lg:pr-10 xl:pl-20">
             <div className="mx-auto w-full max-w-sm lg:mx-0">
               <Link
                 href="/"
-                className="inline-block outline-none focus-visible:ring-2 focus-visible:ring-rose-400/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar-bg)] dark:focus-visible:ring-offset-rose-950/50"
+                className="inline-block outline-none focus-visible:ring-2 focus-visible:ring-[var(--store-brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar-bg)] dark:focus-visible:ring-offset-zinc-950"
               >
                 <Image
                   src={adminSidebarLogoPath}
                   alt={storeBrand}
                   width={320}
                   height={320}
-                  className="h-auto w-full max-w-[11rem] object-contain object-left sm:max-w-[13rem] lg:max-w-[15.5rem]"
+                  className={`h-auto w-full max-w-[11rem] object-contain object-left sm:max-w-[13rem] lg:max-w-[15.5rem] ${ADMIN_BRAND_LOGO_ON_SIDEBAR_CLASS}`}
                   priority
                 />
               </Link>
-              <p className="mt-10 text-[10px] font-semibold uppercase tracking-[0.38em] text-rose-950/55 dark:text-rose-950/70">
+              <p className="mt-10 text-[10px] font-semibold uppercase tracking-[0.38em] text-rose-700/80 dark:text-rose-200/85">
                 Backoffice
               </p>
               <p
-                className={`mt-4 max-w-[19rem] text-[17px] leading-[1.55] text-rose-950/85 dark:text-rose-950/80 ${serif}`}
+                className={`mt-4 max-w-[19rem] text-[17px] leading-[1.55] text-rose-950/90 dark:text-zinc-200 ${serif}`}
               >
                 Gestioná inventario, ventas y clientes desde un solo lugar.
               </p>
               <div className="mt-10 flex items-center gap-3" aria-hidden>
-                <span className="h-px w-12 bg-rose-950/25 dark:bg-rose-950/35" />
-                <span className="text-[9px] font-semibold uppercase tracking-[0.32em] text-rose-950/40 dark:text-rose-950/50">
+                <span className="h-px w-12 bg-rose-300/80 dark:bg-zinc-600" />
+                <span className="text-[9px] font-semibold uppercase tracking-[0.32em] text-rose-600/85 dark:text-zinc-500">
                   Milagros Guacarí
                 </span>
               </div>
             </div>
           </div>
-          <div className="relative shrink-0 border-t border-rose-300/40 px-8 py-6 dark:border-rose-400/25 sm:px-12 lg:px-14 xl:px-20">
+          <div className="relative shrink-0 border-t border-rose-200/80 px-8 py-6 dark:border-zinc-800 sm:px-12 lg:px-14 xl:px-20">
             <div className="mx-auto flex max-w-sm flex-col items-center gap-1.5 text-center lg:mx-0 lg:items-start lg:text-left">
-              <span className="text-[8px] font-medium uppercase tracking-[0.2em] text-rose-950/70 dark:text-rose-950/75">
+              <span className="text-[8px] font-medium uppercase tracking-[0.2em] text-rose-800/75 dark:text-zinc-400">
                 Experiencia por
               </span>
-              <Image
-                src={bereaSignaturePath}
-                alt="Berea — diseño y desarrollo de software a la medida"
-                width={320}
-                height={82}
-                className="h-9 w-auto max-w-[min(100%,9rem)] object-contain object-center mix-blend-multiply invert opacity-95 sm:h-10 dark:opacity-90 lg:object-left"
-              />
+              <div className="flex justify-center lg:justify-start">
+                <Image
+                  src={bereaSignaturePath}
+                  alt="Berea — diseño y desarrollo de software a la medida"
+                  width={320}
+                  height={82}
+                  className={`${ADMIN_BEREA_MARK_IMG_CLASS} lg:object-left ${ADMIN_BEREA_SIGNATURE_ON_SIDEBAR_CLASS}`}
+                />
+              </div>
             </div>
           </div>
         </aside>
