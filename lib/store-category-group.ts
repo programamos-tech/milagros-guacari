@@ -36,10 +36,27 @@ const CATEGORY_SYNONYM_CANONICAL: Record<string, string> = {
   "make up": "maquillaje",
 };
 
+/**
+ * Normaliza solo para agrupar: quita artículos sueltos (el/la/los/las) para unir
+ * p. ej. "Cuidado de la piel" y "Cuidado de piel" en una sola entrada del menú.
+ */
+function categoryNameForGroupingKey(name: string): string {
+  const n = normalizeCategoryLabel(name);
+  return n
+    .replace(/\b(el|la|los|las)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 /** Clave de agrupación para menú, filtros y seed. */
 export function categoryGroupKey(name: string): string {
   const n = normalizeCategoryLabel(name);
-  return CATEGORY_SYNONYM_CANONICAL[n] ?? n;
+  const stripped = categoryNameForGroupingKey(name);
+  return (
+    CATEGORY_SYNONYM_CANONICAL[n] ??
+    CATEGORY_SYNONYM_CANONICAL[stripped] ??
+    stripped
+  );
 }
 
 export function expandCategoryIdsFromRows(

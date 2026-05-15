@@ -7,6 +7,7 @@ import { Search } from "lucide-react";
 import type { FormEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatCop } from "@/lib/money";
+import { storefrontListGrossUnitCents } from "@/lib/storefront-gross-price";
 import { pseudoReviewCount } from "@/lib/pseudo-review";
 import {
   shouldUnoptimizeStorageImageUrl,
@@ -21,6 +22,7 @@ type ProductRow = {
   id: string;
   name: string;
   price_cents: number;
+  has_vat?: boolean | null;
   image_path: string | null;
 };
 
@@ -107,7 +109,12 @@ function SearchResultsPanel({
                     </p>
                   </div>
                   <p className="shrink-0 text-sm font-semibold text-stone-900">
-                    {formatCop(p.price_cents)}
+                    {formatCop(
+                      storefrontListGrossUnitCents(
+                        p.price_cents,
+                        p.has_vat,
+                      ),
+                    )}
                   </p>
                 </Link>
               </li>

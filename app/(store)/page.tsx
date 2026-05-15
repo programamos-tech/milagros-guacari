@@ -32,7 +32,7 @@ export default async function HomePage() {
   const { data: homeProducts } = await supabase
     .from("products")
     .select(
-      "id,name,brand,description,price_cents,image_path,stock_quantity,fragrance_options,created_at",
+      "id,name,brand,description,price_cents,has_vat,image_path,stock_quantity,fragrance_options,created_at",
     )
     .eq("is_published", true)
     .order("created_at", { ascending: false })
@@ -133,6 +133,7 @@ export default async function HomePage() {
                             brand: p.brand,
                             description: p.description,
                             price_cents: p.price_cents,
+                            has_vat: p.has_vat,
                             image_path: p.image_path,
                             stock_quantity: p.stock_quantity,
                             fragrance_options: p.fragrance_options,

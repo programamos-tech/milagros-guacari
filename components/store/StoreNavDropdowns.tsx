@@ -1,30 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, Menu, UserRound, X } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { ChevronRight, Menu, X } from "lucide-react";
 import { useCallback, useEffect, useId, useState } from "react";
 import {
   STORE_HEADER_ICON_LG,
   STORE_HEADER_ICON_STROKE,
 } from "@/lib/store-header-icons";
 import type { StoreCategoryMenuItem } from "@/lib/fetch-store-categories";
-import { useStoreAuthModals } from "@/components/store/StoreAuthModals";
+import { storeBrand } from "@/lib/brand";
 
 export function StoreNavDropdowns({
   menuCategories,
-  accountHref,
-  accountLabel,
-  guestOpensAuthDrawer = false,
 }: {
   menuCategories: StoreCategoryMenuItem[];
-  accountHref: string;
-  accountLabel: string;
-  /** Si es true, “Mi cuenta” / login abre el panel lateral en lugar de navegar. */
-  guestOpensAuthDrawer?: boolean;
 }) {
-  const { openLogin } = useStoreAuthModals();
-  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const baseId = useId();
 
@@ -57,8 +47,8 @@ export function StoreNavDropdowns({
         type="button"
         className={shopBtnClass}
         aria-expanded={open}
-        aria-controls={`${baseId}-shop-drawer`}
-        id={`${baseId}-shop-trigger`}
+        aria-controls={`${baseId}-tienda-drawer`}
+        id={`${baseId}-tienda-trigger`}
         onClick={() => setOpen((v) => !v)}
       >
         <Menu
@@ -66,63 +56,68 @@ export function StoreNavDropdowns({
           strokeWidth={STORE_HEADER_ICON_STROKE}
           aria-hidden
         />
-        <span className="text-[13px]">Shop</span>
+        <span className="text-[13px]">Tienda</span>
       </button>
 
       {/* Overlay */}
       <div
-        className={`fixed inset-0 z-[60] bg-black/40 transition-opacity duration-300 ease-out ${
+        className={`fixed inset-0 z-[60] bg-stone-900/25 transition-opacity duration-200 ease-out ${
           open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
         }`}
         aria-hidden={!open}
         onClick={close}
       />
 
-      {/* Drawer */}
       <div
-        id={`${baseId}-shop-drawer`}
+        id={`${baseId}-tienda-drawer`}
         role="dialog"
         aria-modal="true"
-        aria-labelledby={`${baseId}-shop-drawer-title`}
-        className={`fixed inset-y-0 left-0 z-[70] flex w-[min(100vw-2rem,22rem)] flex-col bg-white shadow-[4px_0_24px_-4px_rgba(0,0,0,0.15)] transition-transform duration-300 ease-out sm:w-[min(100vw-3rem,24rem)] ${
+        aria-labelledby={`${baseId}-tienda-drawer-title`}
+        className={`fixed inset-y-0 left-0 z-[70] flex w-[min(100vw-2rem,20.5rem)] flex-col bg-[var(--store-announcement-bg)] shadow-[2px_0_24px_rgba(0,0,0,0.08)] transition-transform duration-200 ease-out sm:w-[min(100vw-3rem,22rem)] ${
           open ? "translate-x-0" : "-translate-x-full pointer-events-none"
         }`}
       >
-        <div className="flex shrink-0 justify-end px-4 pb-2 pt-4">
+        <div className="flex shrink-0 items-center justify-between gap-3 bg-[var(--store-header-bg)] px-4 py-3.5 text-[var(--store-header-fg)]">
+          <div className="min-w-0">
+            <p className="truncate text-[10px] font-medium uppercase tracking-[0.18em] text-white/70">
+              {storeBrand}
+            </p>
+            <h2
+              id={`${baseId}-tienda-drawer-title`}
+              className="truncate text-base font-semibold tracking-tight text-white"
+            >
+              Tienda
+            </h2>
+          </div>
           <button
             type="button"
             onClick={close}
-            className="inline-flex size-10 items-center justify-center border border-dashed border-stone-400 text-stone-700 transition hover:bg-stone-50 hover:text-stone-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400/50"
+            className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-white transition hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45"
             aria-label="Cerrar menú"
           >
-            <X className="size-5" strokeWidth={1.25} aria-hidden />
+            <X className="size-[1.125rem]" strokeWidth={1.5} aria-hidden />
           </button>
         </div>
 
-        <h2 id={`${baseId}-shop-drawer-title`} className="sr-only">
-          Categorías y tienda
-        </h2>
-
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6 pt-2">
+        <div className="min-h-0 flex-1 overflow-y-auto px-0 pb-5 pt-1">
           {menuCategories.length === 0 ? (
-            <p className="py-6 text-sm text-stone-500">
-              Todavía no hay categorías. Creálas en Administración → Catálogo.
+            <p className="px-4 py-8 text-sm leading-relaxed text-stone-500">
+              Todavía no hay categorías en el catálogo. Podés crearlas desde Administración →
+              Catálogo.
             </p>
           ) : (
-            <ul className="border-t border-stone-200">
+            <ul className="divide-y divide-rose-200/35">
               {menuCategories.map((c) => (
-                <li key={c.id} className="border-b border-stone-200">
+                <li key={c.id}>
                   <Link
                     href={`/products?category=${c.id}`}
                     onClick={close}
-                    className="flex items-center justify-between gap-4 py-4 text-left transition hover:bg-stone-50"
+                    className="group flex items-center justify-between gap-3 px-4 py-3.5 text-left text-[15px] font-medium text-stone-800 transition hover:bg-white/50 active:bg-white/65"
                   >
-                    <span className="text-[13px] font-semibold uppercase tracking-[0.06em] text-stone-900">
-                      {c.name}
-                    </span>
+                    <span className="min-w-0 leading-snug">{c.name}</span>
                     <ChevronRight
-                      className="size-4 shrink-0 text-stone-400"
-                      strokeWidth={1.75}
+                      className="size-4 shrink-0 text-stone-400 transition group-hover:text-[var(--store-brand)]"
+                      strokeWidth={1.5}
                       aria-hidden
                     />
                   </Link>
@@ -131,96 +126,20 @@ export function StoreNavDropdowns({
             </ul>
           )}
 
+          <div className="mx-4 my-2 h-px bg-rose-200/40" aria-hidden />
+
           <Link
             href="/products"
             onClick={close}
-            className="mt-2 flex items-center justify-between gap-4 border-b border-stone-200 py-4 text-left transition hover:bg-stone-50"
+            className="flex items-center justify-between gap-3 px-4 py-3.5 text-left text-[15px] font-semibold text-stone-900 transition hover:bg-white/50 active:bg-white/65"
           >
-            <span className="text-[13px] font-semibold uppercase tracking-[0.06em] text-stone-900">
-              Todo el catálogo
-            </span>
+            <span>Todo el catálogo</span>
             <ChevronRight
-              className="size-4 shrink-0 text-stone-400"
-              strokeWidth={1.75}
+              className="size-4 shrink-0 text-[var(--store-brand)]"
+              strokeWidth={1.5}
               aria-hidden
             />
           </Link>
-        </div>
-
-        <div className="shrink-0 border-t border-stone-200 px-4 py-5">
-          {guestOpensAuthDrawer ? (
-            <button
-              type="button"
-              onClick={() => {
-                close();
-                openLogin();
-              }}
-              className="flex w-full items-center justify-between gap-4 py-1 text-left transition hover:opacity-80"
-            >
-              <span className="flex items-center gap-3">
-                <UserRound
-                  className="size-5 shrink-0 text-stone-900"
-                  strokeWidth={STORE_HEADER_ICON_STROKE}
-                  aria-hidden
-                />
-                <span className="text-sm font-normal text-stone-900">
-                  {accountLabel}
-                </span>
-              </span>
-              <ChevronRight
-                className="size-4 shrink-0 text-stone-400"
-                strokeWidth={1.75}
-                aria-hidden
-              />
-            </button>
-          ) : (
-            <Link
-              href={accountHref}
-              onClick={close}
-              className="flex items-center justify-between gap-4 py-1 text-left transition hover:opacity-80"
-            >
-              <span className="flex items-center gap-3">
-                <UserRound
-                  className="size-5 shrink-0 text-stone-900"
-                  strokeWidth={STORE_HEADER_ICON_STROKE}
-                  aria-hidden
-                />
-                <span className="text-sm font-normal text-stone-900">
-                  {accountLabel}
-                </span>
-              </span>
-              <ChevronRight
-                className="size-4 shrink-0 text-stone-400"
-                strokeWidth={1.75}
-                aria-hidden
-              />
-            </Link>
-          )}
-
-          <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 border-t border-stone-100 pt-5 text-[13px] text-stone-600">
-            <Link
-              href="/"
-              onClick={close}
-              className={
-                pathname === "/"
-                  ? "font-semibold text-stone-900"
-                  : "transition hover:text-stone-900"
-              }
-            >
-              Inicio
-            </Link>
-            <Link
-              href="/quien-soy"
-              onClick={close}
-              className={
-                pathname === "/quien-soy"
-                  ? "font-semibold text-stone-900"
-                  : "transition hover:text-stone-900"
-              }
-            >
-              Quién soy
-            </Link>
-          </div>
         </div>
       </div>
     </nav>

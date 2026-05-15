@@ -18,8 +18,9 @@ export type StoreCategoryMenuItem = {
 } & StoreCategoryVisual;
 
 /**
- * Categorías del catálogo para el menú Shop (fusiona duplicados / sinónimos).
- * Siguen apareciendo aunque no tengan productos publicados.
+ * Categorías del catálogo para el menú Tienda (fusiona duplicados y variantes con/sin artículo).
+ * Origen: tabla `categories` + conteos por productos publicados.
+ * Solo entran filas con al menos un producto publicado en esa categoría (o en un id fusionado del mismo grupo).
  */
 export async function fetchStoreCategoriesWithCounts(
   supabase: SupabaseClient,
@@ -85,5 +86,5 @@ export async function fetchStoreCategoriesWithCounts(
       a.name.localeCompare(b.name, "es"),
   );
 
-  return merged;
+  return merged.filter((item) => item.productCount > 0);
 }

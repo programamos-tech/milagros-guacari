@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { todayYmdInReportStore } from "@/lib/admin-report-range";
 import { assertActionPermission } from "@/lib/require-admin-permission";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -40,7 +41,10 @@ export async function createStoreExpense(formData: FormData) {
   const notesRaw = String(formData.get("notes") ?? "").trim();
   const notes = notesRaw.length > 0 ? notesRaw : null;
   const expenseDateRaw = String(formData.get("expense_date") ?? "").trim();
-  const expenseDate = expenseDateRaw.length > 0 ? expenseDateRaw : null;
+  const expenseDate =
+    expenseDateRaw.length > 0 && /^\d{4}-\d{2}-\d{2}$/.test(expenseDateRaw)
+      ? expenseDateRaw
+      : todayYmdInReportStore();
 
   const { error } = await supabase.from("store_expenses").insert({
     concept,
@@ -48,7 +52,7 @@ export async function createStoreExpense(formData: FormData) {
     category,
     payment_method: paymentMethod,
     notes,
-    expense_date: expenseDate ?? undefined,
+    expense_date: expenseDate,
   });
 
   if (error) redirect("/admin/egresos/nuevo?expense_error=db");

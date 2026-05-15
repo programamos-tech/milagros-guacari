@@ -30,7 +30,7 @@ export async function GET(request: Request) {
   const supabase = createClient(url, key);
   const { data, error } = await supabase
     .from("products")
-    .select("id,name,price_cents,image_path")
+    .select("id,name,price_cents,has_vat,image_path")
     .eq("is_published", true)
     .ilike("name", `%${q}%`)
     .order("name")

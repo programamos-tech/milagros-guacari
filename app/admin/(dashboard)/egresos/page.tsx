@@ -3,7 +3,10 @@ import { Suspense } from "react";
 import { ExpenseRowActions } from "@/components/admin/ExpenseRowActions";
 import { ExpensesFiltersBar } from "@/components/admin/ExpensesFiltersBar";
 import { AnimatedCopCents, AnimatedInteger } from "@/components/admin/ReportsAnimatedFigures";
-import { todayYmdInReportStore } from "@/lib/admin-report-range";
+import {
+  reportCalendarDayKeyFromIso,
+  todayYmdInReportStore,
+} from "@/lib/admin-report-range";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +41,21 @@ function normalizeDateRange(
 
 function sanitizeIlikeQuery(q: string) {
   return q.replace(/[%_\\,]/g, "").slice(0, 80);
+}
+
+function expenseCalendarYmd(e: {
+  expense_date?: unknown;
+  created_at?: unknown;
+}): string {
+  const ed = e.expense_date;
+  if (typeof ed === "string" && /^\d{4}-\d{2}-\d{2}/.test(ed.trim())) {
+    return ed.trim().slice(0, 10);
+  }
+  const ca = e.created_at;
+  if (typeof ca === "string" && ca.length > 0) {
+    return reportCalendarDayKeyFromIso(ca);
+  }
+  return "";
 }
 
 export default async function AdminEgresosPage({
@@ -84,10 +102,7 @@ export default async function AdminEgresosPage({
   const total = rows.reduce((sum, e) => sum + Number(e.amount_cents ?? 0), 0);
   const todayKey = todayYmdInReportStore();
   const todayTotal = rows.reduce((sum, e) => {
-    const key =
-      typeof e.expense_date === "string"
-        ? e.expense_date
-        : String(e.created_at ?? "").slice(0, 10);
+    const key = expenseCalendarYmd(e);
     return key === todayKey ? sum + Number(e.amount_cents ?? 0) : sum;
   }, 0);
 
@@ -219,9 +234,7 @@ export default async function AdminEgresosPage({
                     index % 2 === 1
                       ? "bg-zinc-50/80 dark:bg-zinc-900/50"
                       : "bg-white dark:bg-zinc-900";
-                  const dateStr = String(
-                    e.expense_date ?? String(e.created_at ?? "").slice(0, 10),
-                  );
+                  const dateStr = expenseCalendarYmd(e);
                   return (
                     <tr
                       key={String(e.id)}

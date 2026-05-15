@@ -41,6 +41,7 @@ type Product = {
   brand?: string | null;
   description: string | null;
   price_cents: number;
+  has_vat?: boolean | null;
   image_path: string | null;
   stock_quantity: number;
   size_value?: number | null;

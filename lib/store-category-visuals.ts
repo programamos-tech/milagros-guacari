@@ -1,16 +1,30 @@
+import { normalizeCategoryLabel } from "@/lib/store-category-group";
+
 export type StoreCategoryVisual = {
   tint: string;
   sub: string;
 };
 
 const VISUAL_BY_NAME: Record<string, StoreCategoryVisual> = {
+  "Cuidado del cabello": {
+    tint: "bg-[#fceef3]",
+    sub: "Tratamientos y styling",
+  },
   "Cuidado corporal": {
     tint: "bg-[#eef4ec]",
     sub: "Cuidado del cuerpo",
   },
+  Perfumes: {
+    tint: "bg-[#f8eef5]",
+    sub: "Fragancias",
+  },
   "Vitaminas y suplementos": {
     tint: "bg-[#f0f4e8]",
-    sub: "Bienestar y energia",
+    sub: "Bienestar y energía",
+  },
+  Accesorios: {
+    tint: "bg-[#faf3ee]",
+    sub: "Detalles y complementos",
   },
   "Cuidado de la piel": {
     tint: "bg-[#fceef3]",
@@ -22,7 +36,11 @@ const VISUAL_BY_NAME: Record<string, StoreCategoryVisual> = {
   },
   Termos: {
     tint: "bg-[#e8f0f4]",
-    sub: "Bebidas y mas",
+    sub: "Bebidas y más",
+  },
+  Joyería: {
+    tint: "bg-[#fdf6f0]",
+    sub: "Brillo y estilo",
   },
   Ropa: {
     tint: "bg-[#f0ecf8]",
@@ -30,7 +48,7 @@ const VISUAL_BY_NAME: Record<string, StoreCategoryVisual> = {
   },
   Bolsos: {
     tint: "bg-[#faf3ee]",
-    sub: "Accesorios",
+    sub: "Carteras y más",
   },
   Zapatos: {
     tint: "bg-[#eef2f6]",
@@ -39,16 +57,22 @@ const VISUAL_BY_NAME: Record<string, StoreCategoryVisual> = {
 };
 
 const FALLBACK_ACCENTS: StoreCategoryVisual[] = [
-  { tint: "bg-[#faf8f5]", sub: "Catalogo" },
-  { tint: "bg-[#f3eff6]", sub: "Catalogo" },
-  { tint: "bg-[#ecf4f6]", sub: "Catalogo" },
+  { tint: "bg-[#fff0f5]", sub: "" },
+  { tint: "bg-[#fce8ef]", sub: "" },
+  { tint: "bg-[#fceef3]", sub: "" },
 ];
+
+const VISUAL_BY_NORMALIZED: Record<string, StoreCategoryVisual> = {};
+for (const [label, visual] of Object.entries(VISUAL_BY_NAME)) {
+  VISUAL_BY_NORMALIZED[normalizeCategoryLabel(label)] = visual;
+}
 
 export function getStoreCategoryVisual(
   name: string,
   fallbackIndex = 0,
 ): StoreCategoryVisual {
-  const v = VISUAL_BY_NAME[name.trim()];
+  const key = normalizeCategoryLabel(name.trim());
+  const v = VISUAL_BY_NORMALIZED[key];
   if (v) return v;
   return FALLBACK_ACCENTS[fallbackIndex % FALLBACK_ACCENTS.length]!;
 }

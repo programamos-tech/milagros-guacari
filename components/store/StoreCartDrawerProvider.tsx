@@ -326,6 +326,8 @@ export function StoreCartDrawerProvider({
   const [items, setItems] = useState<StoreCartDrawerItem[]>([]);
   const [suggestions, setSuggestions] = useState<StoreCartSuggestion[]>([]);
   const [subtotalCents, setSubtotalCents] = useState(0);
+  const [subtotalNetCents, setSubtotalNetCents] = useState(0);
+  const [subtotalVatCents, setSubtotalVatCents] = useState(0);
   const [loading, setLoading] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
 
@@ -339,15 +341,21 @@ export function StoreCartDrawerProvider({
         setItems([]);
         setSuggestions([]);
         setSubtotalCents(0);
+        setSubtotalNetCents(0);
+        setSubtotalVatCents(0);
         return;
       }
       const body = (await res.json()) as {
         items?: StoreCartDrawerItem[];
         subtotalCents?: number;
+        subtotalNetCents?: number;
+        subtotalVatCents?: number;
         suggestions?: StoreCartSuggestion[];
       };
       setItems(body.items ?? []);
       setSubtotalCents(Number(body.subtotalCents ?? 0));
+      setSubtotalNetCents(Number(body.subtotalNetCents ?? 0));
+      setSubtotalVatCents(Number(body.subtotalVatCents ?? 0));
       setSuggestions(body.suggestions ?? []);
     } finally {
       if (mode === "full") setLoading(false);
@@ -493,14 +501,32 @@ export function StoreCartDrawerProvider({
 
             {items.length > 0 ? (
               <footer className="border-t border-stone-200/80 bg-white px-6 pb-8 pt-6 sm:px-8">
-                <div className="flex items-baseline justify-between gap-4 text-[13px] text-stone-800">
-                  <span className="font-medium uppercase tracking-[0.12em] text-stone-600">
-                    Subtotal
-                  </span>
-                  <span className="text-[15px] font-semibold tabular-nums text-stone-900">
-                    {formatCop(subtotalCents)}
-                  </span>
-                </div>
+                <dl className="space-y-2 text-[12px] text-stone-700">
+                  {subtotalVatCents > 0 ? (
+                    <>
+                      <div className="flex items-baseline justify-between gap-4">
+                        <dt className="text-stone-600">Subtotal sin IVA</dt>
+                        <dd className="tabular-nums text-stone-800">
+                          {formatCop(subtotalNetCents)}
+                        </dd>
+                      </div>
+                      <div className="flex items-baseline justify-between gap-4">
+                        <dt className="text-stone-600">IVA</dt>
+                        <dd className="tabular-nums text-stone-800">
+                          {formatCop(subtotalVatCents)}
+                        </dd>
+                      </div>
+                    </>
+                  ) : null}
+                  <div className="flex items-baseline justify-between gap-4 border-t border-stone-200/90 pt-3 text-[13px] text-stone-800">
+                    <dt className="font-medium uppercase tracking-[0.12em] text-stone-600">
+                      Subtotal (con IVA)
+                    </dt>
+                    <dd className="text-[15px] font-semibold tabular-nums text-stone-900">
+                      {formatCop(subtotalCents)}
+                    </dd>
+                  </div>
+                </dl>
                 <Link
                   href="/checkout"
                   onClick={closeCart}

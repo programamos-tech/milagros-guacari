@@ -3,7 +3,7 @@ import { mergeCategoryRowsForFilterMenu } from "@/lib/product-listing-facets";
 import { expandCategoryIdsFromRows } from "@/lib/store-category-group";
 
 const PRODUCT_SELECT =
-  "id,name,brand,description,price_cents,image_path,stock_quantity,size_options,size_value,size_unit,fragrance_options,created_at";
+  "id,name,brand,description,price_cents,has_vat,image_path,stock_quantity,size_options,size_value,size_unit,fragrance_options,created_at";
 
 export const CATALOG_ROW_PREVIEW_LIMIT = 12;
 
@@ -13,6 +13,7 @@ export type CatalogBrowseProductRow = {
   brand: string;
   description: string | null;
   price_cents: number;
+  has_vat?: boolean | null;
   image_path: string | null;
   stock_quantity: number;
   size_options?: unknown;

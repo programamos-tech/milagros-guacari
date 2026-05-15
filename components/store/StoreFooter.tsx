@@ -13,10 +13,13 @@ import {
 } from "@/lib/brand";
 
 const footerColumnTitle =
-  "text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-brand)]";
+  "text-[11px] font-semibold uppercase tracking-[0.14em] text-white/90";
 
 const footerLink =
-  "block text-sm leading-relaxed text-stone-700 transition hover:text-[var(--store-brand)] hover:underline underline-offset-4";
+  "block text-sm leading-relaxed text-white/85 transition hover:text-white hover:underline underline-offset-4";
+
+const footerLinkMuted =
+  "text-[11px] text-white/75 transition hover:text-white hover:underline underline-offset-4 sm:text-xs";
 
 const telHref = `tel:${storeSupportPhone.replace(/[^\d+]/g, "")}`;
 
@@ -24,26 +27,26 @@ export function StoreFooter() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-[#ffd6e8]/80">
+    <footer className="border-t border-white/20 bg-[var(--store-header-bg)] text-[var(--store-header-fg)]">
       {/* 1 · Columnas de navegación */}
-      <div className="bg-white">
+      <div>
         <div className="mx-auto max-w-7xl px-4 py-10 sm:py-12 lg:py-14">
-          <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:gap-12 xl:gap-16">
-            <div className="shrink-0 lg:max-w-[13rem] lg:pt-0.5">
-                <Link
+          <div className="flex flex-col gap-10 lg:gap-12">
+            <div className="flex justify-center px-2">
+              <Link
                 href="/"
-                className="inline-block outline-none transition-opacity hover:opacity-85 focus-visible:ring-2 focus-visible:ring-[var(--store-accent)]/35 focus-visible:ring-offset-2"
+                className="inline-block outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-white/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--store-header-bg)]"
               >
                 <Image
                   src={storeLogoPath}
                   alt={storeBrand}
-                  width={400}
-                  height={220}
-                  className="h-11 w-auto object-contain object-left sm:h-12 lg:h-[3.35rem]"
+                  width={560}
+                  height={308}
+                  className="h-[4.5rem] w-auto max-w-[min(88vw,20rem)] object-contain object-center sm:h-20 sm:max-w-[min(85vw,24rem)] md:h-[5.25rem] lg:h-24 lg:max-w-[min(80vw,28rem)] xl:h-28 xl:max-w-[32rem]"
                 />
               </Link>
             </div>
-            <div className="min-w-0 flex-1 grid gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
+            <div className="min-w-0 grid gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
               <div>
                 <p className={footerColumnTitle}>Ayuda</p>
                 <ul className="mt-5 space-y-3">
@@ -71,7 +74,7 @@ export function StoreFooter() {
                     </a>
                   </li>
                   <li>
-                    <span className="text-sm leading-relaxed text-stone-600">
+                    <span className="text-sm leading-relaxed text-white/80">
                       {storeSupportHours}
                     </span>
                   </li>
@@ -141,26 +144,29 @@ export function StoreFooter() {
       </div>
 
       {/* 2 · Legal */}
-      <div className="border-t border-[#ffd6e8]/60 bg-white">
+      <div className="border-t border-white/15">
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-          <p className="text-[11px] text-stone-500 sm:text-xs">
+          <p className="text-[11px] text-white/70 sm:text-xs">
             © {year} {storeCopyrightHolder}. Todos los derechos reservados.
           </p>
           <div className="flex w-full flex-col items-end gap-4 sm:w-auto sm:flex-row sm:items-center sm:justify-end sm:gap-8">
             <nav
               aria-label="Legal y equipo"
-              className="flex flex-wrap justify-end gap-x-6 gap-y-2 text-[11px] text-stone-500 sm:text-xs"
+              className="flex flex-wrap justify-end gap-x-6 gap-y-2 text-[11px] sm:text-xs"
             >
-              <Link href="/privacidad" className={`${footerLink} text-stone-500`}>
+              <Link href="/privacidad" className={footerLinkMuted}>
                 Privacidad
               </Link>
-              <Link href="/terminos" className={`${footerLink} text-stone-500`}>
+              <Link href="/terminos" className={footerLinkMuted}>
                 Términos de uso
               </Link>
-              <Link href="/cookies" className={`${footerLink} text-stone-500`}>
+              <Link href="/cookies" className={footerLinkMuted}>
                 Cookies
               </Link>
-              <Link href="/admin" className={`${footerLink} font-medium text-stone-600 hover:text-[var(--store-brand)]`}>
+              <Link
+                href="/admin"
+                className={`${footerLinkMuted} font-semibold text-white/90`}
+              >
                 Backoffice
               </Link>
             </nav>
@@ -170,7 +176,7 @@ export function StoreFooter() {
                 alt="Berea — diseño y desarrollo de software a la medida"
                 width={320}
                 height={82}
-                className="h-10 w-auto max-w-[15rem] origin-right object-contain object-right opacity-[0.82] transition-[opacity,filter] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:opacity-100 group-hover:[filter:brightness(1.06)_contrast(1.03)_drop-shadow(0_12px_28px_rgba(61,82,64,0.14))] sm:h-12 sm:max-w-[18rem]"
+                className="h-10 w-auto max-w-[15rem] origin-right object-contain object-right opacity-[0.88] transition-[opacity,filter] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:opacity-100 group-hover:[filter:brightness(1.06)_contrast(1.03)_drop-shadow(0_12px_28px_rgba(0,0,0,0.18))] sm:h-12 sm:max-w-[18rem]"
               />
             </div>
           </div>

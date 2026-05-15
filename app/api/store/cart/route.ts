@@ -4,6 +4,10 @@ import {
   unitPriceAfterWholesaleCents,
   wholesaleDiscountPercentFromRow,
 } from "@/lib/customer-wholesale-pricing";
+import {
+  storefrontListGrossUnitCents,
+  storefrontPayableUnitGrossCents,
+} from "@/lib/storefront-gross-price";
 import { getStorefrontCartLines } from "@/lib/storefront-cart";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -46,7 +50,7 @@ async function loadCartDrawerSuggestions(
   const exclude = new Set(excludeIds);
   const { data } = await supabase
     .from("products")
-    .select("id,name,price_cents,image_path,colors,stock_quantity,created_at")
+    .select("id,name,price_cents,has_vat,image_path,colors,stock_quantity,created_at")
     .eq("is_published", true)
     .gt("stock_quantity", 0)
     .order("created_at", { ascending: false })
@@ -58,7 +62,10 @@ async function loadCartDrawerSuggestions(
     .map((p) => ({
       id: p.id,
       name: p.name,
-      priceCents: p.price_cents,
+      priceCents: storefrontListGrossUnitCents(
+        p.price_cents,
+        (p as { has_vat?: boolean | null }).has_vat,
+      ),
       imagePath: p.image_path,
       colors: normalizedColorList(p.colors),
     }));
@@ -108,6 +115,8 @@ export async function GET() {
       lines: [],
       items: empty,
       subtotalCents: 0,
+      subtotalNetCents: 0,
+      subtotalVatCents: 0,
       wholesaleDiscountPercent: wholesalePct,
       suggestions,
     });
@@ -117,7 +126,7 @@ export async function GET() {
   const { data: products } = await supabase
     .from("products")
     .select(
-      "id,name,price_cents,image_path,fragrance_option_images,colors,stock_quantity",
+      "id,name,price_cents,has_vat,image_path,fragrance_option_images,colors,stock_quantity",
     )
     .in("id", ids)
     .eq("is_published", true);
@@ -129,6 +138,7 @@ export async function GET() {
         id: string;
         name: string;
         price_cents: number;
+        has_vat?: boolean | null;
         image_path: string | null;
         fragrance_option_images: unknown;
         colors: unknown;
@@ -139,24 +149,37 @@ export async function GET() {
 
   const items: CartDrawerItem[] = [];
   let subtotalCents = 0;
+  let subtotalNetCents = 0;
+  let subtotalVatCents = 0;
 
   for (const line of lines) {
     const p = byId.get(line.productId);
     if (!p) continue;
-    const listUnit = p.price_cents;
-    const unit = unitPriceAfterWholesaleCents(listUnit, wholesalePct);
-    const lineTotalCents = unit * line.quantity;
-    const listLineTotalCents = listUnit * line.quantity;
+    const listUnitNet = p.price_cents;
+    const netUnit = unitPriceAfterWholesaleCents(listUnitNet, wholesalePct);
+    const payableGrossUnit = storefrontPayableUnitGrossCents(
+      listUnitNet,
+      p.has_vat,
+      wholesalePct,
+    );
+    const listGrossUnit = storefrontListGrossUnitCents(listUnitNet, p.has_vat);
+    const lineNetCents = netUnit * line.quantity;
+    const lineTotalCents = payableGrossUnit * line.quantity;
+    const listLineTotalCents = listGrossUnit * line.quantity;
     subtotalCents += lineTotalCents;
+    subtotalNetCents += lineNetCents;
+    subtotalVatCents += Math.max(0, lineTotalCents - lineNetCents);
     const frag = line.fragrance?.trim() || null;
     items.push({
       productId: line.productId,
       quantity: line.quantity,
       fragrance: frag,
       name: p.name,
-      priceCents: unit,
+      priceCents: payableGrossUnit,
       listPriceCents:
-        wholesalePct > 0 && unit < listUnit ? listUnit : null,
+        wholesalePct > 0 && payableGrossUnit < listGrossUnit
+          ? listGrossUnit
+          : null,
       imagePath: imagePathForProductLine(
         p.image_path,
         p.fragrance_option_images,
@@ -181,6 +204,8 @@ export async function GET() {
     lines,
     items,
     subtotalCents,
+    subtotalNetCents,
+    subtotalVatCents,
     wholesaleDiscountPercent: wholesalePct,
     suggestions,
   });

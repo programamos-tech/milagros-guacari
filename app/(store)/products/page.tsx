@@ -197,6 +197,7 @@ export default async function ProductsPage({ searchParams }: Props) {
     brand: string;
     description: string | null;
     price_cents: number;
+    has_vat?: boolean | null;
     image_path: string | null;
     stock_quantity: number;
     size_options?: unknown;
@@ -215,7 +216,7 @@ export default async function ProductsPage({ searchParams }: Props) {
     let query = supabase
       .from("products")
       .select(
-        "id,name,brand,description,price_cents,image_path,stock_quantity,size_options,size_value,size_unit,fragrance_options,created_at",
+        "id,name,brand,description,price_cents,has_vat,image_path,stock_quantity,size_options,size_value,size_unit,fragrance_options,created_at",
       )
       .eq("is_published", true);
 
@@ -301,7 +302,7 @@ export default async function ProductsPage({ searchParams }: Props) {
   const catalogHeroBanner = productsBanners[0];
 
   return (
-    <div className="bg-white">
+    <div className="min-w-0 bg-white">
       {catalogBrowseMode ? (
         <RevealOnScroll className="w-full">
           <CatalogListingHero
@@ -342,7 +343,7 @@ export default async function ProductsPage({ searchParams }: Props) {
       ) : null}
 
       <div className="w-full bg-white">
-        <div className="mx-auto max-w-7xl">
+        <div className="mx-auto min-w-0 max-w-7xl">
           <RevealOnScroll className="w-full">
             <ProductsListingControls
               key={controlsKey}
@@ -371,7 +372,7 @@ export default async function ProductsPage({ searchParams }: Props) {
       </div>
 
       <div
-        className={`mx-auto max-w-7xl space-y-10 px-4 sm:space-y-12 lg:py-14 ${
+        className={`mx-auto min-w-0 max-w-7xl space-y-10 px-4 sm:space-y-12 lg:py-14 ${
           categoryView
             ? "py-8 sm:py-10"
             : "py-10 sm:py-12 lg:py-14"
@@ -431,6 +432,7 @@ export default async function ProductsPage({ searchParams }: Props) {
                       brand: p.brand,
                       description: p.description,
                       price_cents: p.price_cents,
+                      has_vat: p.has_vat,
                       image_path: p.image_path,
                       stock_quantity: p.stock_quantity,
                       size_options: p.size_options,

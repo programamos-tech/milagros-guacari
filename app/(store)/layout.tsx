@@ -30,7 +30,7 @@ export default async function StoreLayout({
       <StoreCartDrawerProvider>
         <StoreAuthModalProvider>
           <div
-            className="flex min-h-full flex-col bg-white text-stone-800"
+            className="flex min-h-full flex-col overflow-x-hidden bg-white text-stone-800"
             style={
               {
                 "--store-header-bg": STORE_HEADER_BG,

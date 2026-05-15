@@ -71,17 +71,29 @@ export function lineNetGrossCents(
     const line = unit * qty;
     return { net: line, gross: line };
   }
-  const lineNet = unit * qty;
-  const lineGross = p
-    ? unitPriceGrossCents(unit, p.has_vat, p.vat_percent) * qty
-    : lineNet;
+  /** Web tienda: el unitario guardado es con IVA (precio al público). Pedidos antiguos pueden tener neto = catálogo. */
+  if (p?.has_vat) {
+    const catalogNet = unitPriceNetCents(p.price_cents);
+    const tol = Math.max(4, Math.round(catalogNet * 0.02));
+    if (Math.abs(unit - catalogNet) <= tol) {
+      return {
+        net: unit * qty,
+        gross: unitPriceGrossCents(unit, true, p.vat_percent) * qty,
+      };
+    }
+  }
+  const lineGross = unit * qty;
+  const lineNet = p?.has_vat
+    ? unitNetFromPosChargedUnitCents(unit, true, p.vat_percent) * qty
+    : lineGross;
   return { net: lineNet, gross: lineGross };
 }
 
 /**
  * NET = base imponible sin IVA (suma por línea).
  * GROSS = total cobrado con IVA.
- * - **Web**: `unit_price_cents` en ítems = catálogo sin IVA; el bruto sale de `has_vat`/`vat_percent`.
+ * - **Web**: `unit_price_cents` = unitario al público **con IVA** cuando el producto tiene IVA;
+ *   el neto se obtiene con {@link unitNetFromPosChargedUnitCents}.
  * - **POS**: el unitario en ítems suele ser el **cobrado con IVA** en ticket; si coincide con el
  *   catálogo **sin** IVA, se asume que el POS guardó base y el bruto se recalcula con IVA.
  */

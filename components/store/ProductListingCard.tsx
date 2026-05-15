@@ -17,8 +17,9 @@ import { useStoreFavorites } from "@/components/store/StoreFavoritesProvider";
 import { storeBrand } from "@/lib/brand";
 import { formatCop } from "@/lib/money";
 import {
-  storefrontPriceAfterCouponCents,
-} from "@/lib/store-coupons";
+  storefrontListGrossUnitCents,
+  storefrontUnitGrossAfterCouponCents,
+} from "@/lib/storefront-gross-price";
 import { expandFragranceLabels } from "@/lib/fragrance-options";
 import { catalogSizeSummaryLine } from "@/lib/product-size-options";
 import {
@@ -31,6 +32,8 @@ type Product = {
   name: string;
   description: string | null;
   price_cents: number;
+  /** Catálogo en BD: neto; si es true, la vitrina muestra bruto con IVA. */
+  has_vat?: boolean | null;
   image_path: string | null;
   stock_quantity: number;
   /** Columna opcional en DB; si falta se infiere para la línea de marca. */
@@ -76,9 +79,17 @@ function ShowcaseProductCard({
     Math.min(100, Math.floor(Number(couponDiscountPercent) || 0)),
   );
   const hasCouponPrice = pct > 0;
-  const priceAfterCoupon = hasCouponPrice
-    ? storefrontPriceAfterCouponCents(product.price_cents, pct)
-    : product.price_cents;
+  const listGross = storefrontListGrossUnitCents(
+    product.price_cents,
+    product.has_vat,
+  );
+  const displayGross = hasCouponPrice
+    ? storefrontUnitGrossAfterCouponCents(
+        product.price_cents,
+        product.has_vat,
+        pct,
+      )
+    : listGross;
 
   const imageBgClass = accentImageBg
     ? "bg-[var(--store-image-well-tint)]"
@@ -121,15 +132,15 @@ function ShowcaseProductCard({
             {hasCouponPrice ? (
               <>
                 <p className="text-[11px] tabular-nums text-stone-400 line-through decoration-stone-300">
-                  {formatCop(product.price_cents)}
+                  {formatCop(listGross)}
                 </p>
                 <p className="text-[13px] font-medium tabular-nums text-stone-900">
-                  {formatCop(priceAfterCoupon)}
+                  {formatCop(displayGross)}
                 </p>
               </>
             ) : (
               <p className="text-[13px] font-medium tabular-nums text-stone-900">
-                {formatCop(product.price_cents)}
+                {formatCop(listGross)}
               </p>
             )}
           </div>
@@ -178,9 +189,17 @@ function CatalogProductCard({
     Math.min(100, Math.floor(Number(couponDiscountPercent) || 0)),
   );
   const hasCouponPrice = pct > 0;
-  const priceAfterCoupon = hasCouponPrice
-    ? storefrontPriceAfterCouponCents(product.price_cents, pct)
-    : product.price_cents;
+  const listGross = storefrontListGrossUnitCents(
+    product.price_cents,
+    product.has_vat,
+  );
+  const displayGross = hasCouponPrice
+    ? storefrontUnitGrossAfterCouponCents(
+        product.price_cents,
+        product.has_vat,
+        pct,
+      )
+    : listGross;
 
   const titleWithSize = sizeLine ? `${product.name} · ${sizeLine}` : product.name;
   const needsFragranceOnPdp = productRequiresFragranceChoice(product);
@@ -254,10 +273,10 @@ function CatalogProductCard({
           {hasCouponPrice ? (
             <>
               <p className="text-[11px] tabular-nums text-stone-400 line-through decoration-stone-300">
-                {formatCop(product.price_cents)}
+                {formatCop(listGross)}
               </p>
               <p className="text-[13px] font-medium tabular-nums text-stone-900">
-                {formatCop(priceAfterCoupon)}
+                {formatCop(displayGross)}
               </p>
               <p className="text-[9px] font-medium uppercase leading-tight tracking-[0.08em] text-stone-500">
                 Con cupón en el pago
@@ -265,7 +284,7 @@ function CatalogProductCard({
             </>
           ) : (
             <p className="text-[13px] font-medium tabular-nums text-stone-900">
-              {formatCop(product.price_cents)}
+              {formatCop(listGross)}
             </p>
           )}
         </div>

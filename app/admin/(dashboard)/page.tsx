@@ -209,10 +209,10 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
 
   for (const e of expenses) {
     const raw =
-      typeof e.expense_date === "string"
-        ? e.expense_date.slice(0, 10)
-        : typeof e.created_at === "string"
-          ? e.created_at.slice(0, 10)
+      typeof e.expense_date === "string" && String(e.expense_date).length >= 10
+        ? String(e.expense_date).slice(0, 10)
+        : typeof e.created_at === "string" && e.created_at
+          ? reportCalendarDayKeyFromIso(e.created_at)
           : null;
     if (!raw) continue;
     const amount = Number(e.amount_cents ?? 0);

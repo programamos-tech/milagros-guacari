@@ -14,16 +14,26 @@ import {
 } from "@/lib/brand";
 
 const STORAGE_KEY = "tiendas_whatsapp_fab_pos_v1";
-const FAB_PX = 52;
+/** Tamaño táctil cómodo en móvil (arrastrable). */
+const FAB_PX_MOBILE = 56;
+const FAB_PX_DESKTOP = 52;
 const EDGE = 8;
 const DRAG_THRESHOLD_PX = 10;
 
+function fabSizePx(): number {
+  if (typeof window === "undefined") return FAB_PX_DESKTOP;
+  return window.matchMedia("(max-width: 639px)").matches
+    ? FAB_PX_MOBILE
+    : FAB_PX_DESKTOP;
+}
+
 function clampPosition(x: number, y: number): { x: number; y: number } {
   if (typeof window === "undefined") return { x, y };
+  const size = fabSizePx();
   const vw = window.innerWidth;
   const vh = window.innerHeight;
-  const maxX = Math.max(EDGE, vw - FAB_PX - EDGE);
-  const maxY = Math.max(EDGE, vh - FAB_PX - EDGE);
+  const maxX = Math.max(EDGE, vw - size - EDGE);
+  const maxY = Math.max(EDGE, vh - size - EDGE);
   return {
     x: Math.min(maxX, Math.max(EDGE, x)),
     y: Math.min(maxY, Math.max(EDGE, y)),
@@ -32,9 +42,15 @@ function clampPosition(x: number, y: number): { x: number; y: number } {
 
 function defaultPosition(): { x: number; y: number } {
   const margin = 16;
+  const size = fabSizePx();
   const vw = window.innerWidth;
   const vh = window.innerHeight;
-  return clampPosition(vw - FAB_PX - margin, vh - FAB_PX - margin - 56);
+  const bottomInset =
+    typeof window !== "undefined" &&
+    window.matchMedia("(max-width: 639px)").matches
+      ? 72
+      : 56;
+  return clampPosition(vw - size - margin, vh - size - margin - bottomInset);
 }
 
 function loadStoredPosition(): { x: number; y: number } {
@@ -51,7 +67,7 @@ function loadStoredPosition(): { x: number; y: number } {
   return defaultPosition();
 }
 
-/** Logo WhatsApp monocromo (relleno), para fondo oscuro. */
+/** Ícono WhatsApp (blanco sobre círculo verde). */
 function WhatsAppGlyph({ className }: { className?: string }) {
   return (
     <svg
@@ -72,6 +88,7 @@ export function StoreWhatsAppFloatingButton() {
       : `${storeWhatsAppUrl}?text=${encodeURIComponent(storeWhatsAppPrefilledText)}`;
 
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const [fabPx, setFabPx] = useState(FAB_PX_DESKTOP);
   const dragRef = useRef({
     active: false,
     pointerId: -1,
@@ -83,6 +100,7 @@ export function StoreWhatsAppFloatingButton() {
   });
 
   useLayoutEffect(() => {
+    setFabPx(fabSizePx());
     setPos(loadStoredPosition());
   }, []);
 
@@ -96,6 +114,7 @@ export function StoreWhatsAppFloatingButton() {
 
   useEffect(() => {
     function onResize() {
+      setFabPx(fabSizePx());
       setPos((p) => (p ? clampPosition(p.x, p.y) : p));
     }
     window.addEventListener("resize", onResize);
@@ -174,12 +193,14 @@ export function StoreWhatsAppFloatingButton() {
         position: "fixed",
         left: pos.x,
         top: pos.y,
-        width: FAB_PX,
-        height: FAB_PX,
+        width: fabPx,
+        height: fabPx,
         zIndex: 60,
         touchAction: "none",
+        boxShadow:
+          "0 14px 36px -10px rgba(37, 211, 102, 0.55), 0 4px 12px -4px rgba(0, 0, 0, 0.12)",
       }}
-      className="flex cursor-grab items-center justify-center rounded-full border border-[#e85a8e] bg-[var(--store-accent)] text-white shadow-[0_14px_36px_-12px_rgba(255,118,161,0.55)] transition-colors hover:bg-[var(--store-accent-hover)] hover:shadow-[0_18px_40px_-12px_rgba(255,118,161,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--store-accent)] active:cursor-grabbing"
+      className="flex select-none cursor-grab items-center justify-center rounded-full border border-[#1da851]/90 bg-[#25D366] text-white transition-[background-color,box-shadow,transform] hover:bg-[#20BD5A] hover:shadow-[0_18px_40px_-10px_rgba(37,211,102,0.5)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#25D366] active:scale-[0.97] active:cursor-grabbing"
       aria-label={`Escribir por WhatsApp a ${storeSupportPhone}`}
       title="Arrastrá para mover · Clic para abrir WhatsApp"
       onPointerDown={onPointerDown}
@@ -193,7 +214,7 @@ export function StoreWhatsAppFloatingButton() {
         }
       }}
     >
-      <WhatsAppGlyph className="pointer-events-none size-[1.45rem] text-white opacity-[0.97]" />
+      <WhatsAppGlyph className="pointer-events-none size-7 text-white sm:size-[1.45rem]" />
     </button>
   );
 }

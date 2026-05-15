@@ -9,6 +9,7 @@ import type { SizeRowState } from "@/components/admin/ProductSizeRows";
 import { normalizeSizeOptionsFromRow, SIZE_UNITS } from "@/lib/product-size-options";
 import { storagePublicObjectUrl } from "@/lib/storage-public-url";
 import { requireAdminPermission } from "@/lib/require-admin-permission";
+import { SALE_VAT_PERCENT } from "@/lib/product-vat-price";
 
 export const dynamic = "force-dynamic";
 
@@ -190,8 +191,9 @@ export default async function EditProductPage({ params, searchParams }: Props) {
           sizeRows: sizeRowsForEditForm(p),
           hasExpiration: p.has_expiration === true,
           expirationDate: p.expiration_date ?? "",
-          hasVat: p.has_vat === true,
-          vatPercent: p.vat_percent ?? null,
+          hasVat: p.has_vat ?? true,
+          vatPercent:
+            p.has_vat === false ? null : (p.vat_percent ?? SALE_VAT_PERCENT),
           colors: Array.isArray(p.colors) ? p.colors : [],
           fragranceRows: fragranceRowsForEditForm(p),
         }}

@@ -309,6 +309,7 @@ export function EditProductForm({
                   <input
                     type="checkbox"
                     name="has_vat"
+                    value="on"
                     checked={hasVat}
                     onChange={(e) => {
                       setHasVat(e.target.checked);

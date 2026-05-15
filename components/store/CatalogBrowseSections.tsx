@@ -22,7 +22,7 @@ export function CatalogBrowseSections({
         <section
           key={section.categoryId ?? "sin-categoria"}
           aria-labelledby={`cat-row-${section.categoryId ?? "sin-categoria"}`}
-          className="w-full"
+          className="w-full min-w-0 max-w-full"
         >
           <div className="mb-4 flex flex-wrap items-end justify-between gap-3 px-0 sm:mb-5">
             <h2
@@ -41,7 +41,8 @@ export function CatalogBrowseSections({
             ) : null}
           </div>
 
-          <CatalogRowScroller className="-mx-4 sm:-mx-6 lg:-mx-10">
+          {/* Solo -mx-4: el padre usa px-4; márgenes mayores rompen el ancho y generan scroll horizontal */}
+          <CatalogRowScroller className="-mx-4">
             {section.products.map((p, index) => (
               <CatalogRowProductSlot
                 key={p.id}
@@ -77,7 +78,7 @@ function CatalogRowProductSlot({
 }) {
   return (
     <RevealOnScroll
-      className="w-[44vw] shrink-0 snap-start snap-always sm:w-[min(46vw,240px)] md:w-[220px] lg:w-[240px]"
+      className="w-[min(42vw,220px)] shrink-0 snap-start snap-always sm:w-[min(46vw,240px)] md:w-[220px] lg:w-[240px]"
       delayMs={staggerDelayMs}
     >
       <ProductListingCard

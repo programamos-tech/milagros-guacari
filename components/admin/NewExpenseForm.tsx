@@ -10,6 +10,7 @@ import {
   productLabelClass as labelClass,
   productSectionTitle as sectionTitle,
 } from "@/components/admin/product-form-primitives";
+import { todayYmdInReportStore } from "@/lib/admin-report-range";
 
 const cardSectionClass =
   "rounded-xl border border-zinc-200/90 bg-white p-4 shadow-sm ring-1 ring-zinc-950/5 sm:p-6 dark:border-zinc-700/90 dark:bg-zinc-900 dark:shadow-none dark:ring-white/[0.06]";
@@ -109,9 +110,7 @@ export function NewExpenseForm({
   >(() => conceptOptionsForSelect[0]?.paymentMethod ?? "transferencia");
   const [notes, setNotes] = useState("");
   const [amountCents, setAmountCents] = useState(0);
-  const [expenseDate, setExpenseDate] = useState(() =>
-    new Date().toISOString().slice(0, 10),
-  );
+  const [expenseDate, setExpenseDate] = useState(() => todayYmdInReportStore());
 
   useEffect(() => {
     if (conceptOptionsForSelect.some((o) => o.concept === conceptSelection)) return;

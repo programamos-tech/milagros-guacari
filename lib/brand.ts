@@ -38,12 +38,15 @@ export const storeTaxRegime =
   "Responsables de IVA";
 
 /**
- * Logo en `/public`. El nombre incluye un espacio → la URL se codifica para el navegador.
+ * Logo de la tienda en cabecera y pie (`/public`).
+ * Por defecto el mismo asset que el admin; `NEXT_PUBLIC_STORE_LOGO` para otro archivo.
  */
-export const storeLogoPath = encodeURI("/logobackoficce (1).png");
+export const storeLogoPath =
+  process.env.NEXT_PUBLIC_STORE_LOGO?.trim() || "/logo-aleyahso.png";
 
 /** Logo del sidebar del backoffice (`/public/logo-aleyahso.png`). */
-export const adminSidebarLogoPath = "/logo-aleyahso.png";
+export const adminSidebarLogoPath =
+  process.env.NEXT_PUBLIC_ADMIN_SIDEBAR_LOGO?.trim() || "/logo-aleyahso.png";
 
 /** Firma Berea (“Experiencia por”) en `/public/berea.png`. */
 export const bereaSignaturePath = "/berea.png";

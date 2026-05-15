@@ -64,7 +64,7 @@ export function CatalogRowScroller({
   };
 
   return (
-    <div className={`relative ${className}`.trim()}>
+    <div className={`relative min-w-0 max-w-full ${className}`.trim()}>
       <button
         type="button"
         aria-label="Anteriores"
@@ -102,7 +102,7 @@ export function CatalogRowScroller({
 
       <div
         ref={ref}
-        className="store-cart-suggestions-scroll flex snap-x snap-mandatory gap-4 overscroll-x-contain pb-1 pt-0.5 sm:gap-4 lg:gap-5 px-11 sm:px-12"
+        className="store-cart-suggestions-scroll flex max-w-full snap-x snap-mandatory gap-3 overscroll-x-contain px-10 pb-2 pt-1 sm:gap-4 sm:px-11 lg:gap-5"
       >
         {children}
       </div>

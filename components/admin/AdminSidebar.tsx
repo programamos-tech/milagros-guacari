@@ -29,6 +29,18 @@ function Icon(props: SVGProps<SVGSVGElement> & { children: React.ReactNode }) {
   );
 }
 
+const STOREFRONT_HREF = "/";
+
+function IconExternalStore({ className }: { className?: string }) {
+  return (
+    <Icon className={className}>
+      <path d="M15 3h6v6" />
+      <path d="M10 14 21 3" />
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+    </Icon>
+  );
+}
+
 const navSections: {
   title: string;
   items: { href: string; label: string; icon: React.ReactNode }[];
@@ -329,6 +341,17 @@ function AdminSidebarInner({
         ))}
       </nav>
       <div className="shrink-0 border-t border-rose-300/40 px-3 pb-4 pt-3 dark:border-rose-400/30">
+        {allowed.has(STOREFRONT_HREF) ? (
+          <Link
+            href={STOREFRONT_HREF}
+            prefetch
+            onClick={() => onNavigate()}
+            className="mb-3 flex w-full items-center justify-center gap-2.5 rounded-lg border border-rose-950/20 bg-white/70 px-3 py-2.5 text-sm font-semibold text-rose-950 shadow-sm transition hover:border-rose-950/35 hover:bg-white dark:border-rose-400/25 dark:bg-zinc-900/50 dark:text-rose-50 dark:hover:border-rose-400/40 dark:hover:bg-zinc-900/80"
+          >
+            <IconExternalStore />
+            Ir a la tienda
+          </Link>
+        ) : null}
         <div className="flex flex-col items-center gap-1 px-1 text-center">
           <span
             className={`text-[8px] font-medium uppercase tracking-[0.2em] ${sidebarInk}`}

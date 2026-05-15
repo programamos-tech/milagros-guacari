@@ -11,13 +11,9 @@ import { useStoreCartDrawer } from "@/components/store/StoreCartDrawerProvider";
 import { useStoreFavorites } from "@/components/store/StoreFavoritesProvider";
 import { formatCop } from "@/lib/money";
 import {
-  saleVatPercentLabel,
-  unitPriceGrossCents,
-  unitPriceNetCents,
-} from "@/lib/product-vat-price";
-import {
-  storefrontPriceAfterCouponCents,
-} from "@/lib/store-coupons";
+  storefrontListGrossUnitCents,
+  storefrontUnitGrossAfterCouponCents,
+} from "@/lib/storefront-gross-price";
 import { pseudoReviewCount } from "@/lib/pseudo-review";
 import { shouldUnoptimizeStorageImageUrl } from "@/lib/storage-public-url";
 import { productColorSwatchClass } from "@/lib/product-colors";
@@ -112,16 +108,13 @@ export function ProductDetailView({
     Math.min(100, Math.floor(Number(couponDiscountPercent) || 0)),
   );
   const hasCouponPrice = pct > 0;
+  const listGross = storefrontListGrossUnitCents(priceCents, hasVat);
   const displayPriceCents = hasCouponPrice
-    ? storefrontPriceAfterCouponCents(priceCents, pct)
-    : priceCents;
+    ? storefrontUnitGrossAfterCouponCents(priceCents, hasVat, pct)
+    : listGross;
 
   const sizeLabel =
     sizeLabels.length > 0 ? sizeLabels.join(" · ") : null;
-
-  const netCents = unitPriceNetCents(priceCents);
-  const grossCents = unitPriceGrossCents(priceCents, hasVat, null);
-  const vatPctLabel = String(saleVatPercentLabel(hasVat) ?? "").replace(/\.0+$/, "");
 
   const colorOptions = colors.filter((c) => c.trim().length > 0);
   const fragranceLabels = fragranceOptions.filter((c) => c.trim().length > 0);
@@ -208,25 +201,14 @@ export function ProductDetailView({
             {hasCouponPrice ? (
               <>
                 <span className="mr-2 text-base text-stone-400 line-through decoration-stone-300">
-                  {formatCop(priceCents)}
+                  {formatCop(listGross)}
                 </span>
                 <span>{formatCop(displayPriceCents)}</span>
               </>
             ) : (
-              formatCop(priceCents)
+              formatCop(listGross)
             )}
           </p>
-          {hasVat ? (
-            <p className="mt-2 text-[13px] leading-relaxed text-stone-600">
-              <span className="text-stone-500">Sin IVA:</span>{" "}
-              {formatCop(netCents)}
-              <span className="mx-2 text-stone-300" aria-hidden>
-                ·
-              </span>
-              <span className="text-stone-500">Con IVA ({vatPctLabel}%):</span>{" "}
-              {formatCop(grossCents)}
-            </p>
-          ) : null}
         </div>
 
         <div className="mt-5 flex items-center gap-2">
@@ -416,12 +398,6 @@ export function ProductDetailView({
                 <li>
                   <span className="text-stone-800">Vencimiento:</span>{" "}
                   {expirationDate ?? "—"}
-                </li>
-              ) : null}
-              {hasVat ? (
-                <li>
-                  <span className="text-stone-800">IVA:</span>{" "}
-                  {vatPctLabel}% (precio de lista sin IVA; el total con IVA está arriba)
                 </li>
               ) : null}
               {fragranceLabels.length > 0 ? (

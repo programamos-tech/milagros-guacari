@@ -48,7 +48,7 @@ export function NewProductForm({
   const [priceCents, setPriceCents] = useState(0);
   const [hasExpiration, setHasExpiration] = useState(false);
   const [expirationDate, setExpirationDate] = useState("");
-  const [hasVat, setHasVat] = useState(false);
+  const [hasVat, setHasVat] = useState(true);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [fileLabel, setFileLabel] = useState("Ningún archivo seleccionado");
 
@@ -265,6 +265,7 @@ export function NewProductForm({
                   <input
                     type="checkbox"
                     name="has_vat"
+                    value="on"
                     checked={hasVat}
                     onChange={(e) => {
                       setHasVat(e.target.checked);

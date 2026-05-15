@@ -49,12 +49,7 @@ export async function StoreHeader() {
 
       <div className="relative flex items-center justify-between gap-3 border-b border-white/20 bg-[var(--store-header-bg)] px-4 py-4 text-[var(--store-header-fg)] lg:gap-6 lg:px-10 lg:py-5">
         <div className="z-10 flex min-w-0 flex-1 items-center justify-start">
-          <StoreNavDropdowns
-            menuCategories={menuCategories}
-            accountHref={userIconHref}
-            accountLabel={userIconLabel}
-            guestOpensAuthDrawer={!user}
-          />
+          <StoreNavDropdowns menuCategories={menuCategories} />
         </div>
 
         <div className="pointer-events-none absolute inset-x-0 flex items-center justify-center px-16 sm:px-44 md:px-48 lg:px-[13.5rem]">
@@ -67,7 +62,7 @@ export async function StoreHeader() {
               alt={storeBrand}
               width={420}
               height={230}
-              className="h-11 w-auto max-w-[min(58vw,300px)] object-contain object-center sm:h-[3.25rem] md:h-[3.65rem] lg:h-16"
+              className="h-12 w-auto max-w-[min(62vw,340px)] object-contain object-center sm:h-[3.5rem] md:h-16 lg:h-[4.5rem] lg:max-w-[min(42vw,400px)]"
               priority
             />
           </Link>
