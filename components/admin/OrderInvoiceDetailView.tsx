@@ -198,6 +198,7 @@ export function OrderInvoiceDetailView(props: OrderInvoiceDetailViewProps) {
     (s, l) => s + l.unitPriceCents * l.quantity,
     0,
   );
+  const totalsMatch = subtotalLines === totalCents;
 
   const hasShipping =
     Boolean(shippingAddress?.trim()) || Boolean(shippingCity?.trim());
@@ -276,13 +277,6 @@ export function OrderInvoiceDetailView(props: OrderInvoiceDetailViewProps) {
           </p>
         </div>
 
-        <div className="hidden print:mb-3 print:block print:border-2 print:border-black print:px-2 print:py-2.5 print:text-black">
-          <p className="text-center text-[10px] font-bold uppercase tracking-[0.16em]">Total</p>
-          <p className="mt-1 text-center text-xl font-bold tabular-nums leading-none tracking-tight">
-            {formatCop(totalCents)}
-          </p>
-        </div>
-
         <div className="flex items-center justify-between gap-3 print:hidden">
           <h1 className="min-w-0 flex-1 text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 sm:text-2xl md:text-3xl">
             Factura #{invoiceRef}
@@ -354,12 +348,14 @@ export function OrderInvoiceDetailView(props: OrderInvoiceDetailViewProps) {
         ) : null}
 
         <div className="mt-6 grid grid-cols-1 gap-5 border-t border-zinc-100 pt-6 dark:border-zinc-800 sm:grid-cols-2 sm:gap-6 xl:grid-cols-5 xl:gap-6 print:mt-4 print:grid-cols-1 print:gap-3 print:border-t print:border-zinc-300 print:pt-3">
+          {!(totalsMatch && lines.length > 0) ? (
           <div className="min-w-0 print:hidden">
             <p className={labelClass}>Total</p>
             <p className="mt-1 text-xl font-bold tabular-nums text-zinc-900 dark:text-zinc-50 sm:text-2xl">
               {formatCop(totalCents)}
             </p>
           </div>
+          ) : null}
           <div className="min-w-0 print:hidden">
             <p className={labelClass}>Método de pago</p>
             <p className="mt-2">
@@ -553,20 +549,35 @@ export function OrderInvoiceDetailView(props: OrderInvoiceDetailViewProps) {
 
             <div className="mt-6 flex justify-end print:break-inside-avoid print:mt-4">
               <div className="w-full max-w-xs rounded-xl border border-zinc-200 bg-zinc-50/80 px-5 py-4 dark:border-zinc-700 dark:bg-zinc-950/80 print:max-w-none print:border-2 print:border-black print:bg-white print:px-2 print:py-3">
-                <div className="flex justify-between gap-4 text-sm print:text-[11px]">
-                  <span className="font-semibold text-zinc-700 print:text-black">Subtotal productos</span>
-                  <span className="font-bold tabular-nums text-zinc-900 print:text-black">
-                    {formatCop(subtotalLines)}
-                  </span>
-                </div>
-                <div className="mt-3 flex justify-between gap-4 border-t-2 border-black pt-3 print:border-zinc-800 dark:border-zinc-700/90">
-                  <span className="font-bold text-zinc-900 print:text-[11px] print:text-black dark:text-zinc-200">
-                    Total a despachar
-                  </span>
-                  <span className="text-lg font-bold tabular-nums text-zinc-900 print:text-base print:text-black dark:text-zinc-50">
-                    {formatCop(totalCents)}
-                  </span>
-                </div>
+                {totalsMatch ? (
+                  <div className="flex justify-between gap-4 print:border-t-2 print:border-black print:pt-3 dark:border-zinc-700/90">
+                    <span className="font-bold text-zinc-900 print:text-[11px] print:text-black dark:text-zinc-200">
+                      Total
+                    </span>
+                    <span className="text-lg font-bold tabular-nums text-zinc-900 print:text-base print:text-black dark:text-zinc-50">
+                      {formatCop(totalCents)}
+                    </span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex justify-between gap-4 text-sm print:text-[11px]">
+                      <span className="font-semibold text-zinc-700 print:text-black">
+                        Subtotal productos
+                      </span>
+                      <span className="font-bold tabular-nums text-zinc-900 print:text-black">
+                        {formatCop(subtotalLines)}
+                      </span>
+                    </div>
+                    <div className="mt-3 flex justify-between gap-4 border-t-2 border-black pt-3 print:border-zinc-800 dark:border-zinc-700/90">
+                      <span className="font-bold text-zinc-900 print:text-[11px] print:text-black dark:text-zinc-200">
+                        Total a pagar
+                      </span>
+                      <span className="text-lg font-bold tabular-nums text-zinc-900 print:text-base print:text-black dark:text-zinc-50">
+                        {formatCop(totalCents)}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </>

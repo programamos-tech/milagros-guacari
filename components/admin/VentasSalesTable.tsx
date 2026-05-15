@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   formatVentaFecha,
   isVentaFisica,
@@ -81,6 +84,8 @@ export function VentasSalesTable({
   /** Si se pasa, el detalle del pedido vuelve a este listado (misma página y filtros). */
   orderListReturnHref?: string;
 }) {
+  const router = useRouter();
+
   const orderDetailHref = (orderId: string) =>
     orderListReturnHref
       ? `/admin/orders/${orderId}?returnTo=${encodeURIComponent(orderListReturnHref)}`
@@ -111,58 +116,65 @@ export function VentasSalesTable({
           const pago = ventaFormaPagoBadge(row.wompi_reference, {
             checkoutPaymentMethod: row.checkout_payment_method,
           });
+          const href = orderDetailHref(row.id);
+
           return (
             <li key={row.id} className="min-w-0">
-              <article className={cardClass}>
-                <div className="flex items-start justify-between gap-2.5">
-                  <div className="flex min-w-0 flex-1 items-start gap-2.5">
-                    {fisica ? (
-                      <IconStorefront className="mt-0.5 size-[22px] shrink-0 text-zinc-400 dark:text-zinc-500" />
-                    ) : (
-                      <IconPackage className="mt-0.5 size-[22px] shrink-0 text-amber-600" />
-                    )}
-                    <div className="min-w-0">
-                      <p className="font-mono text-base font-bold tabular-nums leading-none text-zinc-900 dark:text-zinc-100 sm:text-[17px]">
-                        {ref}
-                      </p>
-                      <p className="mt-1 line-clamp-2 text-sm leading-snug text-zinc-900 dark:text-zinc-100">
-                        {row.customer_name}
-                      </p>
+              <Link
+                href={href}
+                className={`${cardClass} block cursor-pointer no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-500`}
+                aria-label={`Ver factura ${ref}, ${row.customer_name}`}
+              >
+                <article>
+                  <div className="flex items-start justify-between gap-2.5">
+                    <div className="flex min-w-0 flex-1 items-start gap-2.5">
+                      {fisica ? (
+                        <IconStorefront className="mt-0.5 size-[22px] shrink-0 text-zinc-400 dark:text-zinc-500" />
+                      ) : (
+                        <IconPackage className="mt-0.5 size-[22px] shrink-0 text-amber-600" />
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-mono text-base font-bold tabular-nums leading-none text-zinc-900 dark:text-zinc-100 sm:text-[17px]">
+                          {ref}
+                        </p>
+                        <p className="mt-1 line-clamp-2 text-sm leading-snug text-zinc-900 dark:text-zinc-100">
+                          {row.customer_name}
+                        </p>
+                      </div>
+                    </div>
+                    <span
+                      className="pointer-events-none inline-flex size-10 shrink-0 items-center justify-center rounded-lg border border-zinc-200/90 bg-white text-zinc-500 shadow-[0_1px_0_0_rgb(24_24_27/0.04)] dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400 dark:shadow-none"
+                      aria-hidden
+                    >
+                      <IconEye />
+                    </span>
+                  </div>
+                  <div className="mt-3 flex min-w-0 items-center justify-between gap-2">
+                    <span className="min-w-0 text-[11px] leading-snug text-zinc-500 dark:text-zinc-400 sm:text-xs">
+                      {formatVentaFecha(row.created_at)}
+                    </span>
+                    <div className="flex max-w-[58%] shrink-0 flex-wrap items-center justify-end gap-1.5 sm:max-w-[65%]">
+                      <span
+                        className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold sm:px-2.5 sm:py-1 sm:text-xs ${pago.className}`}
+                      >
+                        {pago.label}
+                      </span>
+                      <span
+                        className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold sm:px-2.5 sm:py-1 sm:text-xs ${estado.className}`}
+                      >
+                        {estado.label}
+                      </span>
                     </div>
                   </div>
-                  <Link
-                    href={orderDetailHref(row.id)}
-                    className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg border border-zinc-200/90 bg-white text-zinc-500 shadow-[0_1px_0_0_rgb(24_24_27/0.04)] transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-800 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400 dark:shadow-none dark:hover:border-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-                    aria-label={`Ver detalle del pedido ${ref}`}
-                  >
-                    <IconEye />
-                  </Link>
-                </div>
-                <div className="mt-3 flex min-w-0 items-center justify-between gap-2">
-                  <span className="min-w-0 text-[11px] leading-snug text-zinc-500 dark:text-zinc-400 sm:text-xs">
-                    {formatVentaFecha(row.created_at)}
-                  </span>
-                  <div className="flex max-w-[58%] shrink-0 flex-wrap items-center justify-end gap-1.5 sm:max-w-[65%]">
-                    <span
-                      className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold sm:px-2.5 sm:py-1 sm:text-xs ${pago.className}`}
-                    >
-                      {pago.label}
-                    </span>
-                    <span
-                      className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold sm:px-2.5 sm:py-1 sm:text-xs ${estado.className}`}
-                    >
-                      {estado.label}
-                    </span>
-                  </div>
-                </div>
-                <p className="mt-3 text-xl tabular-nums tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-2xl">
-                  <AnimatedCopCents
-                    cents={Number(row.total_cents ?? 0)}
-                    duration={780}
-                    delay={Math.min(i * 18, 320)}
-                  />
-                </p>
-              </article>
+                  <p className="mt-3 text-xl tabular-nums tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-2xl">
+                    <AnimatedCopCents
+                      cents={Number(row.total_cents ?? 0)}
+                      duration={780}
+                      delay={Math.min(i * 18, 320)}
+                    />
+                  </p>
+                </article>
+              </Link>
             </li>
           );
         })}
@@ -184,16 +196,28 @@ export function VentasSalesTable({
           </thead>
           <tbody>
             {rows.map((row, i) => {
+              const href = orderDetailHref(row.id);
               const fisica = isVentaFisica(row.wompi_reference);
               const ref = ventaNumeroReferencia(row.id);
               const estado = ventaEstadoBadge(row.status);
               const pago = ventaFormaPagoBadge(row.wompi_reference, {
-            checkoutPaymentMethod: row.checkout_payment_method,
-          });
+                checkoutPaymentMethod: row.checkout_payment_method,
+              });
               return (
                 <tr
                   key={row.id}
-                  className="border-b border-zinc-100 bg-white transition hover:bg-zinc-50/80 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800/80"
+                  tabIndex={0}
+                  aria-label={`Ver factura ${ref}, pedido ${row.customer_name}`}
+                  className="cursor-pointer border-b border-zinc-100 bg-white transition hover:bg-zinc-50/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800/80 dark:focus-visible:ring-offset-zinc-900"
+                  onClick={() => {
+                    router.push(href);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      router.push(href);
+                    }
+                  }}
                 >
                   <td className="px-3 py-3.5 sm:px-4 md:px-5">
                     <div className="flex items-center gap-2.5">
@@ -236,7 +260,9 @@ export function VentasSalesTable({
                   </td>
                   <td className="px-3 py-3.5 text-center sm:px-4 md:px-5">
                     <Link
-                      href={orderDetailHref(row.id)}
+                      href={href}
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
                       className="inline-flex size-9 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-500 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-800 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400 dark:shadow-none dark:hover:border-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
                       aria-label={`Ver detalle del pedido ${ref}`}
                     >
