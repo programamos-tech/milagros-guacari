@@ -5,7 +5,7 @@ import { ChevronDown, Heart, Star } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { addToCartFromForm, buyNowFromDetail } from "@/app/actions/cart";
 import { useStoreCartDrawer } from "@/components/store/StoreCartDrawerProvider";
 import { useStoreFavorites } from "@/components/store/StoreFavoritesProvider";
@@ -71,6 +71,24 @@ function AccordionSection({
   );
 }
 
+function subscribePrefersReducedMotion(cb: () => void) {
+  const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+  mq.addEventListener("change", cb);
+  return () => mq.removeEventListener("change", cb);
+}
+
+function getPrefersReducedMotionSnapshot() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function usePrefersReducedMotion() {
+  return useSyncExternalStore(
+    subscribePrefersReducedMotion,
+    getPrefersReducedMotionSnapshot,
+    () => false,
+  );
+}
+
 export function ProductDetailView({
   productId,
   name,
@@ -96,6 +114,14 @@ export function ProductDetailView({
   const [fragranceIdx, setFragranceIdx] = useState(0);
   const [qty, setQty] = useState(1);
   const [descExpanded, setDescExpanded] = useState(false);
+  const [heroLayout, setHeroLayout] = useState<{
+    url: string;
+    width: number;
+    height: number;
+  } | null>(null);
+  const [heroZoom, setHeroZoom] = useState(false);
+  const [heroZoomOrigin, setHeroZoomOrigin] = useState({ x: 50, y: 50 });
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   const reviews = pseudoReviewCount(productId);
   const outOfStock = stockQuantity <= 0;
@@ -147,22 +173,85 @@ export function ProductDetailView({
 
   const unopt = shouldUnoptimizeStorageImageUrl(heroImageUrl);
 
+  const heroFrameStyle = useMemo(() => {
+    const natural =
+      heroImageUrl &&
+      heroLayout &&
+      heroLayout.url === heroImageUrl &&
+      heroLayout.width > 0 &&
+      heroLayout.height > 0
+        ? heroLayout
+        : null;
+    if (natural) {
+      return {
+        aspectRatio: `${natural.width} / ${natural.height}`,
+      } as const;
+    }
+    return { minHeight: "clamp(280px, 62vw, 78vh)" } as const;
+  }, [heroImageUrl, heroLayout]);
+
+  const heroZoomScale =
+    prefersReducedMotion || !heroZoom ? 1 : 1.9;
+
   return (
     <div className="grid gap-10 lg:grid-cols-2 lg:gap-16 lg:items-start">
-      {/* Imagen */}
-      <div className="relative aspect-square w-full bg-[var(--store-image-well)]">
+      {/* Imagen — proporción natural (sin cuadrado fijo) + zoom al mover el cursor */}
+      <div
+        className="relative w-full overflow-hidden bg-[var(--store-image-well)] motion-safe:cursor-crosshair"
+        style={heroFrameStyle}
+        onMouseEnter={() => {
+          if (!prefersReducedMotion) setHeroZoom(true);
+        }}
+        onMouseLeave={() => {
+          setHeroZoom(false);
+        }}
+        onMouseMove={(e) => {
+          if (prefersReducedMotion) return;
+          const el = e.currentTarget;
+          const rect = el.getBoundingClientRect();
+          const x = ((e.clientX - rect.left) / Math.max(rect.width, 1)) * 100;
+          const y = ((e.clientY - rect.top) / Math.max(rect.height, 1)) * 100;
+          setHeroZoomOrigin({ x, y });
+        }}
+      >
         {heroImageUrl ? (
-          <Image
-            src={heroImageUrl}
-            alt={name}
-            fill
-            className="object-contain p-8 sm:p-12"
-            sizes="(max-width: 1024px) 100vw, 50vw"
-            priority
-            unoptimized={unopt}
-          />
+          <div
+            className="absolute inset-0 will-change-transform"
+            style={{
+              transform: `scale(${heroZoomScale})`,
+              transformOrigin: `${heroZoomOrigin.x}% ${heroZoomOrigin.y}%`,
+              transition: prefersReducedMotion
+                ? undefined
+                : "transform 120ms ease-out",
+            }}
+          >
+            <Image
+              src={heroImageUrl}
+              alt={name}
+              fill
+              className="object-contain object-center"
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              priority
+              unoptimized={unopt}
+              onLoad={(e) => {
+                const img = e.currentTarget;
+                const url = heroImageUrl;
+                if (
+                  url &&
+                  img.naturalWidth > 0 &&
+                  img.naturalHeight > 0
+                ) {
+                  setHeroLayout({
+                    url,
+                    width: img.naturalWidth,
+                    height: img.naturalHeight,
+                  });
+                }
+              }}
+            />
+          </div>
         ) : (
-          <div className="flex h-full items-center justify-center text-6xl text-stone-300">
+          <div className="flex min-h-[280px] items-center justify-center text-6xl text-stone-300">
             ◆
           </div>
         )}
