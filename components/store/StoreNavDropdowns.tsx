@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, Menu, X } from "lucide-react";
+import { ChevronRight, Heart, Menu, Search, UserRound, X } from "lucide-react";
 import { useCallback, useEffect, useId, useState } from "react";
 import {
   STORE_HEADER_ICON_LG,
@@ -10,10 +10,17 @@ import {
 import type { StoreCategoryMenuItem } from "@/lib/fetch-store-categories";
 import { storeBrand } from "@/lib/brand";
 
+const drawerLinkClass =
+  "flex items-center justify-between gap-3 px-4 py-3.5 text-left text-[15px] font-medium text-stone-800 transition hover:bg-white/50 active:bg-white/65";
+
 export function StoreNavDropdowns({
   menuCategories,
+  accountHref = "/cuenta/entrar",
+  accountLabel = "Mi cuenta",
 }: {
   menuCategories: StoreCategoryMenuItem[];
+  accountHref?: string;
+  accountLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
   const baseId = useId();
@@ -56,7 +63,7 @@ export function StoreNavDropdowns({
           strokeWidth={STORE_HEADER_ICON_STROKE}
           aria-hidden
         />
-        <span className="text-[13px]">Tienda</span>
+        <span className="hidden text-[13px] lg:inline">Tienda</span>
       </button>
 
       {/* Overlay */}
@@ -100,6 +107,36 @@ export function StoreNavDropdowns({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-0 pb-5 pt-1">
+          <ul className="border-b border-rose-200/35 md:hidden">
+            <li>
+              <Link href="/products" onClick={close} className={drawerLinkClass}>
+                <span className="inline-flex items-center gap-3">
+                  <Search className="size-[18px] text-stone-500" strokeWidth={1.5} aria-hidden />
+                  Buscar productos
+                </span>
+                <ChevronRight className="size-4 shrink-0 text-stone-400" strokeWidth={1.5} aria-hidden />
+              </Link>
+            </li>
+            <li>
+              <Link href="/favoritos" onClick={close} className={drawerLinkClass}>
+                <span className="inline-flex items-center gap-3">
+                  <Heart className="size-[18px] text-stone-500" strokeWidth={1.5} aria-hidden />
+                  Favoritos
+                </span>
+                <ChevronRight className="size-4 shrink-0 text-stone-400" strokeWidth={1.5} aria-hidden />
+              </Link>
+            </li>
+            <li>
+              <Link href={accountHref} onClick={close} className={drawerLinkClass}>
+                <span className="inline-flex items-center gap-3">
+                  <UserRound className="size-[18px] text-stone-500" strokeWidth={1.5} aria-hidden />
+                  {accountLabel}
+                </span>
+                <ChevronRight className="size-4 shrink-0 text-stone-400" strokeWidth={1.5} aria-hidden />
+              </Link>
+            </li>
+          </ul>
+
           {menuCategories.length === 0 ? (
             <p className="px-4 py-8 text-sm leading-relaxed text-stone-500">
               Todavía no hay categorías en el catálogo. Podés crearlas desde Administración →

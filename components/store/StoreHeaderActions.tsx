@@ -32,13 +32,13 @@ export function StoreHeaderActions({
   const { openLogin } = useStoreAuthModals();
 
   return (
-    <div className="flex shrink-0 items-center gap-1 sm:gap-2 md:gap-4">
+    <div className="flex shrink-0 items-center gap-1 sm:gap-2 lg:gap-3">
       {guestOpensAuthDrawer ? (
         <button
           type="button"
           onClick={() => openLogin()}
           aria-label={userIconLabel}
-          className={`${iconBtn} gap-2`}
+          className={`${iconBtn} hidden gap-2 md:inline-flex`}
         >
           <UserRound
             className={STORE_HEADER_ICON_LG}
@@ -50,7 +50,7 @@ export function StoreHeaderActions({
         <Link
           href={userIconHref}
           aria-label={userIconLabel}
-          className={`${iconBtn} gap-2`}
+          className={`${iconBtn} hidden gap-2 md:inline-flex`}
         >
           <UserRound
             className={STORE_HEADER_ICON_LG}
@@ -58,13 +58,13 @@ export function StoreHeaderActions({
             aria-hidden
           />
           {isLoggedIn && accountFirstName ? (
-            <span className="hidden text-[13px] font-normal tracking-wide text-white/85 md:inline">
+            <span className="hidden max-w-[7.5rem] truncate text-[13px] font-normal tracking-wide text-white/85 xl:inline">
               Hola, {accountFirstName}
             </span>
           ) : null}
         </Link>
       )}
-      <StoreFavoritesNavLink />
+      <StoreFavoritesNavLink className="hidden md:flex" />
       <button
         type="button"
         onClick={() => openCart()}

@@ -235,7 +235,7 @@ export function StoreSearch({
     return (
       <div
         ref={wrapRef}
-        className="relative hidden min-w-0 sm:block sm:max-w-[11rem] md:max-w-[14rem] lg:max-w-[16rem]"
+        className="relative hidden min-w-0 lg:block lg:max-w-[12rem] xl:max-w-[16rem]"
       >
         <form
           onSubmit={onSubmit}

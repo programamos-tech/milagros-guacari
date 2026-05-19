@@ -2,96 +2,129 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 
-import { bereaSignaturePath } from "@/lib/brand";
+import { bereaSignaturePath, storeBrand } from "@/lib/brand";
+import {
+  STORE_POLICY_LINKS,
+  acceptAllStorePolicies,
+  acceptEssentialStoreCookies,
+  hasStoreCookieConsent,
+} from "@/lib/store-cookie-consent";
 
-const CONSENT_KEY = "tiendas_cookie_consent_v1";
-
-type Consent = "accepted" | "rejected";
+const policyLinkClass =
+  "font-medium text-[var(--store-brand)] underline decoration-[var(--store-brand)]/35 underline-offset-[3px] transition hover:text-[var(--store-brand-hover)] hover:decoration-[var(--store-brand)]/70";
 
 export function StoreCookiesBanner() {
-  const [ready, setReady] = useState(false);
-  const [visible, setVisible] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  const [policiesChecked, setPoliciesChecked] = useState(false);
 
-  useEffect(() => {
-    const saved = window.localStorage.getItem(CONSENT_KEY) as Consent | null;
-    setVisible(saved !== "accepted" && saved !== "rejected");
-    setReady(true);
-  }, []);
+  const storedConsent = useSyncExternalStore(
+    () => () => {},
+    () => hasStoreCookieConsent(),
+    () => true,
+  );
 
-  const save = (value: Consent) => {
-    window.localStorage.setItem(CONSENT_KEY, value);
-    setVisible(false);
+  const dismiss = () => setDismissed(true);
+
+  const onAcceptAll = () => {
+    if (!policiesChecked) return;
+    acceptAllStorePolicies();
+    dismiss();
   };
 
-  if (!ready || !visible) return null;
+  const onEssentialOnly = () => {
+    acceptEssentialStoreCookies();
+    dismiss();
+  };
+
+  if (storedConsent || dismissed) return null;
 
   return (
-    <>
+    <aside
+      className="store-cookies-banner-panel fixed inset-x-0 bottom-0 z-[70] border-t border-rose-200/90 bg-[var(--store-chrome-bg)] shadow-[0_-12px_40px_-16px_rgba(255,118,161,0.35)]"
+      role="dialog"
+      aria-labelledby="store-cookies-title"
+      aria-describedby="store-cookies-desc"
+      aria-modal="false"
+    >
       <div
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-[69] h-48 bg-gradient-to-t from-stone-900/[0.07] to-transparent motion-safe:animate-[store-cart-drawer-backdrop_0.35s_ease-out_forwards]"
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--store-brand)]/55 to-transparent"
         aria-hidden="true"
       />
-      <aside
-        className="store-cookies-banner-panel fixed inset-x-3 bottom-3 z-[70] overflow-hidden rounded-2xl border border-stone-200/90 bg-white/95 shadow-[0_22px_56px_-14px_rgba(41,37,36,0.22),0_0_0_1px_rgba(255,255,255,0.65)_inset] backdrop-blur-md sm:inset-x-auto sm:bottom-6 sm:right-6 sm:max-w-xl"
-        role="dialog"
-        aria-label="Preferencias de cookies"
-      >
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#3d5240]/35 to-transparent" />
-        <div className="relative flex flex-col gap-5 p-5 sm:flex-row sm:items-stretch sm:gap-6 sm:p-6">
-          <div className="absolute left-0 top-5 bottom-5 w-[3px] rounded-full bg-gradient-to-b from-[#3d5240]/90 via-[#5c6e5b]/70 to-[#3d5240]/40 sm:top-6 sm:bottom-6" />
-
-          <div className="min-w-0 flex-1 pl-4">
-            <p className="font-berea-nova text-[15px] font-semibold tracking-tight text-stone-900 sm:text-base">
-              Cookies en la tienda
-            </p>
-            <p className="mt-2 text-[13px] leading-relaxed text-stone-600 sm:text-sm">
-              Usamos cookies para guardar tu bolsa de compras y preferencias de
-              navegación. Podés aceptar o continuar solo con las esenciales.{" "}
-              <Link
-                href="/cookies"
-                className="font-medium text-[#3d5240] underline decoration-[#3d5240]/35 underline-offset-[3px] transition-colors hover:text-[#2d3f30] hover:decoration-[#3d5240]/70"
-              >
-                Más sobre cookies
-              </Link>
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2.5">
-              <button
-                type="button"
-                onClick={() => save("accepted")}
-                className="rounded-full bg-gradient-to-b from-[#4d5f4c] to-[#3d5240] px-5 py-2.5 text-[12px] font-semibold tracking-wide text-white shadow-[0_8px_22px_-10px_rgba(61,82,64,0.85)] ring-1 ring-white/15 transition-[transform,box-shadow] duration-200 hover:-translate-y-px hover:shadow-[0_12px_28px_-10px_rgba(61,82,64,0.65)] active:translate-y-0"
-              >
-                Aceptar
-              </button>
-              <button
-                type="button"
-                onClick={() => save("rejected")}
-                className="rounded-full border border-stone-300/90 bg-white/90 px-5 py-2.5 text-[12px] font-semibold tracking-wide text-stone-800 shadow-[0_2px_12px_-6px_rgba(41,37,36,0.12)] transition-[transform,background-color,border-color] duration-200 hover:-translate-y-px hover:border-stone-400 hover:bg-stone-50 active:translate-y-0"
-              >
-                Solo esenciales
-              </button>
-            </div>
-          </div>
-
-          <div className="group/logo flex shrink-0 flex-col items-center justify-center gap-2 border-t border-stone-200/70 pt-5 sm:w-[min(42%,12.5rem)] sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0">
-            <span className="font-berea-nova text-[9px] font-medium uppercase tracking-[0.22em] text-stone-400">
-              Experiencia por
-            </span>
-            <div className="relative w-full max-w-[13rem] rounded-2xl bg-gradient-to-br from-stone-50 via-white to-stone-100/90 px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_10px_28px_-14px_rgba(41,37,36,0.14)] ring-1 ring-stone-200/80 transition-[box-shadow,ring-color] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/logo:shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_18px_46px_-18px_rgba(61,82,64,0.22),0_10px_28px_-14px_rgba(41,37,36,0.12)] group-hover/logo:ring-[#3d5240]/20">
-              <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[radial-gradient(ellipse_at_30%_0%,rgba(61,82,64,0.06),transparent_55%)]" />
-              <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[radial-gradient(ellipse_at_35%_20%,rgba(61,82,64,0.12),transparent_60%)] opacity-0 transition-opacity duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/logo:opacity-100" />
-              <Image
-                src={bereaSignaturePath}
-                alt="Berea — diseño y desarrollo de software a la medida"
-                width={340}
-                height={92}
-                className="relative mx-auto h-[4.5rem] w-auto max-w-full object-contain opacity-[0.9] transition-[opacity,filter] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/logo:opacity-100 group-hover/logo:[filter:brightness(1.06)_contrast(1.03)_drop-shadow(0_12px_32px_rgba(61,82,64,0.16))] sm:h-[5.25rem]"
-              />
-            </div>
-          </div>
+      <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:gap-5 sm:py-3.5 lg:gap-6 lg:px-6">
+        <div className="min-w-0 flex-1 sm:max-w-[min(100%,22rem)] lg:max-w-sm">
+          <p
+            id="store-cookies-title"
+            className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--store-brand)]"
+          >
+            Cookies y privacidad
+          </p>
+          <p
+            id="store-cookies-desc"
+            className="mt-1 text-xs leading-snug text-stone-600 sm:text-[13px]"
+          >
+            En <strong className="font-medium text-stone-800">{storeBrand}</strong>{" "}
+            usamos cookies para tu bolsa y preferencias. Aceptá las políticas o
+            continuá solo con lo esencial.
+          </p>
         </div>
-      </aside>
-    </>
+
+        <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2.5 rounded-lg border border-rose-200/80 bg-white/80 px-3 py-2.5 transition hover:border-[var(--store-brand)]/35 hover:bg-white sm:max-w-md lg:max-w-lg">
+          <input
+            type="checkbox"
+            checked={policiesChecked}
+            onChange={(e) => setPoliciesChecked(e.target.checked)}
+            className="mt-0.5 size-4 shrink-0 rounded border-rose-300 accent-[var(--store-brand)] focus:ring-[var(--store-brand)]/30"
+          />
+          <span className="text-[11px] leading-snug text-stone-600 sm:text-xs">
+            Acepto la{" "}
+            <Link href={STORE_POLICY_LINKS.cookies} className={policyLinkClass}>
+              política de cookies
+            </Link>
+            ,{" "}
+            <Link href={STORE_POLICY_LINKS.privacidad} className={policyLinkClass}>
+              privacidad
+            </Link>{" "}
+            y los{" "}
+            <Link href={STORE_POLICY_LINKS.terminos} className={policyLinkClass}>
+              términos
+            </Link>
+            .
+          </span>
+        </label>
+
+        <div className="flex shrink-0 flex-wrap items-center gap-2 sm:gap-2.5">
+          <button
+            type="button"
+            onClick={onAcceptAll}
+            disabled={!policiesChecked}
+            className="min-w-[9.5rem] flex-1 bg-[var(--store-accent)] px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-white transition hover:bg-[var(--store-accent-hover)] disabled:cursor-not-allowed disabled:opacity-45 sm:flex-none sm:px-5 sm:text-[11px]"
+          >
+            Aceptar y continuar
+          </button>
+          <button
+            type="button"
+            onClick={onEssentialOnly}
+            className="min-w-[9.5rem] flex-1 border border-rose-200/90 bg-white px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-stone-800 transition hover:border-[var(--store-brand)]/50 hover:text-[var(--store-brand)] sm:flex-none sm:px-5 sm:text-[11px]"
+          >
+            Solo esenciales
+          </button>
+        </div>
+
+        <div className="hidden shrink-0 items-center gap-2 border-l border-rose-200/70 pl-5 xl:flex">
+          <span className="text-[8px] font-medium uppercase tracking-[0.2em] text-rose-700/65">
+            Experiencia por
+          </span>
+          <Image
+            src={bereaSignaturePath}
+            alt="Berea"
+            width={320}
+            height={82}
+            className="h-7 w-auto max-w-[5.5rem] object-contain invert mix-blend-multiply opacity-85"
+          />
+        </div>
+      </div>
+    </aside>
   );
 }

@@ -72,9 +72,24 @@ export default function CookiesPage() {
 
       <LegalSection title="Consentimiento">
         <p>
-          Mostramos un aviso en tu primera visita para aceptar o limitar el uso
-          no esencial conforme a nuestra configuración actual. Podés modificar tu
-          decisión borrando el almacenamiento del sitio o contactándonos.
+          En tu primera visita mostramos un aviso donde podés:
+        </p>
+        <ul className="list-disc space-y-2 pl-5">
+          <li>
+            <strong>Aceptar y continuar:</strong> confirmás la política de
+            cookies, el aviso de privacidad y los términos de uso.
+          </li>
+          <li>
+            <strong>Solo esenciales:</strong> limitás el uso a cookies necesarias
+            para el funcionamiento de la tienda (bolsa, sesión, etc.).
+          </li>
+        </ul>
+        <p>
+          Tu elección se guarda en el navegador (clave{" "}
+          <code className="rounded bg-rose-50 px-1 py-0.5 text-xs text-rose-900">
+            milagros_store_consent_v2
+          </code>
+          ). Podés cambiarla borrando los datos del sitio o contactándonos.
         </p>
       </LegalSection>
 
@@ -82,7 +97,7 @@ export default function CookiesPage() {
         <p>
           Consultas sobre esta política:{" "}
           <a
-            className="font-medium text-stone-900 underline underline-offset-2 hover:no-underline"
+            className="font-medium text-[var(--store-brand)] underline underline-offset-2 hover:text-[var(--store-brand-hover)]"
             href={`mailto:${storeSupportEmail}`}
           >
             {storeSupportEmail}
@@ -94,14 +109,14 @@ export default function CookiesPage() {
       <p className="text-sm">
         <Link
           href="/privacidad"
-          className="font-medium text-stone-900 underline underline-offset-2 hover:no-underline"
+          className="font-medium text-[var(--store-brand)] underline underline-offset-2 hover:text-[var(--store-brand-hover)]"
         >
           Política de privacidad
         </Link>
         {" · "}
         <Link
           href="/terminos"
-          className="font-medium text-stone-900 underline underline-offset-2 hover:no-underline"
+          className="font-medium text-[var(--store-brand)] underline underline-offset-2 hover:text-[var(--store-brand-hover)]"
         >
           Términos de uso
         </Link>

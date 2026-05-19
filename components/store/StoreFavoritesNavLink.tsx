@@ -8,7 +8,7 @@ import {
 } from "@/lib/store-header-icons";
 import { useStoreFavorites } from "@/components/store/StoreFavoritesProvider";
 
-export function StoreFavoritesNavLink() {
+export function StoreFavoritesNavLink({ className = "" }: { className?: string }) {
   const { count, ready } = useStoreFavorites();
   const filled = ready && count > 0;
 
@@ -18,7 +18,7 @@ export function StoreFavoritesNavLink() {
       aria-label={
         count > 0 ? `Favoritos, ${count} producto${count === 1 ? "" : "s"}` : "Favoritos"
       }
-      className="flex items-center justify-center rounded-none p-1.5 text-white/90 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--store-header-bg)]"
+      className={`flex items-center justify-center rounded-none p-1.5 text-white/90 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--store-header-bg)] ${className}`}
     >
       <Heart
         className={STORE_HEADER_ICON_LG}

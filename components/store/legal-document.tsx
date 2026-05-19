@@ -11,7 +11,7 @@ export function LegalDocument({
 }) {
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 sm:py-16">
-      <h1 className="text-2xl font-semibold tracking-tight text-stone-900 sm:text-3xl">
+      <h1 className="text-2xl font-semibold uppercase tracking-[0.06em] text-[var(--store-brand)] sm:text-3xl">
         {title}
       </h1>
       <p className="mt-2 text-xs text-stone-500">{updatedLabel}</p>
@@ -31,7 +31,9 @@ export function LegalSection({
 }) {
   return (
     <section className="scroll-mt-8">
-      <h2 className="text-base font-semibold text-stone-900">{title}</h2>
+      <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-brand)]">
+        {title}
+      </h2>
       <div className="mt-3 space-y-3">{children}</div>
     </section>
   );

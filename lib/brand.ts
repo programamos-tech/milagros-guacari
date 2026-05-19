@@ -42,11 +42,11 @@ export const storeTaxRegime =
  * Por defecto el mismo asset que el admin; `NEXT_PUBLIC_STORE_LOGO` para otro archivo.
  */
 export const storeLogoPath =
-  process.env.NEXT_PUBLIC_STORE_LOGO?.trim() || "/logo-aleyahso.png";
+  process.env.NEXT_PUBLIC_STORE_LOGO?.trim() || "/logo-finala.png";
 
-/** Logo del sidebar del backoffice (`/public/logo-aleyahso.png`). */
+/** Logo del sidebar del backoffice (`/public/logo-finala.png`). */
 export const adminSidebarLogoPath =
-  process.env.NEXT_PUBLIC_ADMIN_SIDEBAR_LOGO?.trim() || "/logo-aleyahso.png";
+  process.env.NEXT_PUBLIC_ADMIN_SIDEBAR_LOGO?.trim() || "/logo-finala.png";
 
 /** Firma Berea (“Experiencia por”). Prioridad: `NEXT_PUBLIC_BEREA_LOGO`, luego `logo-berea12.png`. */
 export const bereaSignaturePath =
@@ -88,7 +88,7 @@ export const storeWhatsAppUrl: string = whatsappDigits
 /** Texto del anuncio superior (marquee). */
 export const storeAnnouncementMessage =
   process.env.NEXT_PUBLIC_STORE_ANNOUNCEMENT ??
-  "Productos 100% originales — envíos nacionales";
+  "Aleya Shop · distribuidor autorizado Milagros · belleza 100% original · envíos a toda Colombia";
 
 /** Mensaje corto del banner de bienvenida de la tienda. */
 export const storeWelcomeDiscountMessage =

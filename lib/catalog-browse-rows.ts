@@ -5,6 +5,7 @@ import { expandCategoryIdsFromRows } from "@/lib/store-category-group";
 const PRODUCT_SELECT =
   "id,name,brand,description,price_cents,has_vat,image_path,stock_quantity,size_options,size_value,size_unit,fragrance_options,created_at";
 
+/** Vista previa por categoría en carrusel horizontal. */
 export const CATALOG_ROW_PREVIEW_LIMIT = 12;
 
 export type CatalogBrowseProductRow = {
@@ -27,6 +28,8 @@ export type CatalogBrowseSection = {
   categoryName: string;
   products: CatalogBrowseProductRow[];
   showSeeAll: boolean;
+  /** `grid` = grilla vertical; `row` = carrusel por categoría. */
+  layout?: "row" | "grid";
 };
 
 export async function fetchCatalogBrowseSections(
@@ -55,6 +58,7 @@ export async function fetchCatalogBrowseSections(
         categoryName: cat.name,
         products: data as CatalogBrowseProductRow[],
         showSeeAll: true,
+        layout: "row",
       };
       return section;
     }),
@@ -70,15 +74,15 @@ export async function fetchCatalogBrowseSections(
     .select(PRODUCT_SELECT)
     .eq("is_published", true)
     .is("category_id", null)
-    .order("created_at", { ascending: false })
-    .limit(CATALOG_ROW_PREVIEW_LIMIT);
+    .order("created_at", { ascending: false });
 
   if (!orphanErr && uncategorized?.length) {
     sections.push({
       categoryId: null,
-      categoryName: "Sin categoría",
+      categoryName: "Otros productos",
       products: uncategorized as CatalogBrowseProductRow[],
       showSeeAll: false,
+      layout: "grid",
     });
   }
 
