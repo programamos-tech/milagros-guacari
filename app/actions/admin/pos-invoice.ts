@@ -241,23 +241,22 @@ export async function createPosInvoiceAction(formData: FormData) {
     redirectError("db");
   }
 
-  const stockRollback: { id: string; prev: number }[] = [];
-  for (const [pid, qty] of qtyByProduct) {
-    const p = productById.get(pid)!;
-    const prev = Number(p.stock_local ?? 0);
-    const next = Math.max(0, prev - qty);
-    const { error: uErr } = await supabase
-      .from("products")
-      .update({ stock_local: next })
-      .eq("id", pid);
-    if (uErr) {
-      for (const r of stockRollback) {
-        await supabase.from("products").update({ stock_local: r.prev }).eq("id", r.id);
-      }
-      await supabase.from("orders").delete().eq("id", orderId);
-      redirectError("db");
+  const stockItems = [...qtyByProduct.entries()].map(([productId, quantity]) => ({
+    product_id: productId,
+    quantity,
+  }));
+
+  const { error: stockErr } = await supabase.rpc("decrement_products_stock_local", {
+    p_items: stockItems,
+  });
+
+  if (stockErr) {
+    await supabase.from("orders").delete().eq("id", orderId);
+    const stockMsg = `${stockErr.message ?? ""} ${stockErr.details ?? ""}`.toLowerCase();
+    if (stockMsg.includes("insufficient_stock")) {
+      redirectError("stock");
     }
-    stockRollback.push({ id: pid, prev });
+    redirectError("db");
   }
 
   const totalFormatted = new Intl.NumberFormat("es-CO", {
