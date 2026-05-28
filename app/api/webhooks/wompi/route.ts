@@ -112,12 +112,13 @@ export async function POST(request: Request) {
   if (nextStatus === "paid") {
     const { data: items } = await supabase
       .from("order_items")
-      .select("product_id,quantity")
+      .select("id,product_id,quantity")
       .eq("order_id", orderId);
 
     for (const it of items ?? []) {
       const pid = it.product_id as string | null;
-      if (!pid) continue;
+      const itemId = it.id as string | null;
+      if (!pid || !itemId) continue;
       const { data: prod } = await supabase
         .from("products")
         .select("stock_warehouse,stock_local")
@@ -135,6 +136,13 @@ export async function POST(request: Request) {
         .from("products")
         .update({ stock_warehouse: Math.max(0, w), stock_local: Math.max(0, l) })
         .eq("id", pid);
+      await supabase
+        .from("order_items")
+        .update({
+          stock_deducted_local: takeL,
+          stock_deducted_warehouse: takeW,
+        })
+        .eq("id", itemId);
     }
   }
 

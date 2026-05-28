@@ -67,6 +67,46 @@ export default async function AdminOrderDetailPage({ params, searchParams }: Pro
 
   const invoiceRef = ventaNumeroReferencia(id);
 
+  const customerId =
+    order.customer_id != null && String(order.customer_id).trim().length > 0
+      ? String(order.customer_id)
+      : null;
+  let customerDocumentId: string | null = null;
+  let customerPhoneFromProfile: string | null = null;
+  let customerAddressFromProfile: string | null = null;
+
+  if (customerId) {
+    const { data: cust } = await supabase
+      .from("customers")
+      .select("phone,document_id,shipping_address,shipping_city")
+      .eq("id", customerId)
+      .maybeSingle();
+    if (cust) {
+      const doc = cust.document_id != null ? String(cust.document_id).trim() : "";
+      if (doc.length > 0) customerDocumentId = doc;
+      const phone = cust.phone != null ? String(cust.phone).trim() : "";
+      if (phone.length > 0) customerPhoneFromProfile = phone;
+      const addrParts = [cust.shipping_city, cust.shipping_address]
+        .map((v) => (v != null ? String(v).trim() : ""))
+        .filter((v) => v.length > 0);
+      if (addrParts.length > 0) customerAddressFromProfile = addrParts.join(" · ");
+    }
+  }
+
+  const orderShippingPhone =
+    order.shipping_phone != null ? String(order.shipping_phone).trim() : "";
+  const orderShippingAddress =
+    order.shipping_address != null ? String(order.shipping_address).trim() : "";
+  const orderShippingCity =
+    order.shipping_city != null ? String(order.shipping_city).trim() : "";
+  const orderAddressLine = [orderShippingCity, orderShippingAddress]
+    .filter((v) => v.length > 0)
+    .join(" · ");
+  const customerAddress =
+    orderAddressLine.length > 0 ? orderAddressLine : customerAddressFromProfile;
+  const customerPhone =
+    orderShippingPhone.length > 0 ? orderShippingPhone : customerPhoneFromProfile;
+
   const checkoutPm =
     "checkout_payment_method" in order && order.checkout_payment_method != null
       ? String(order.checkout_payment_method)
@@ -123,6 +163,9 @@ export default async function AdminOrderDetailPage({ params, searchParams }: Pro
         shippingCity={
           order.shipping_city != null ? String(order.shipping_city) : null
         }
+        customerDocumentId={customerDocumentId}
+        customerPhone={customerPhone}
+        customerAddress={customerAddress}
         shippingPhone={
           order.shipping_phone != null ? String(order.shipping_phone) : null
         }

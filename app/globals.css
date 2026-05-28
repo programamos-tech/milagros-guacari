@@ -202,7 +202,7 @@ body {
 @media print {
   @page ticket {
     size: 80mm auto;
-    margin: 4mm;
+    margin: 3mm;
   }
 
   .invoice-ticket-print {
@@ -218,10 +218,19 @@ body {
       Arial,
       "Noto Sans",
       sans-serif !important;
-    font-size: 12px !important;
-    line-height: 1.4 !important;
+    font-size: 11px !important;
+    line-height: 1.35 !important;
     color: #0a0a0a !important;
     font-weight: 500;
+  }
+
+  .invoice-ticket-print table {
+    page-break-inside: auto;
+  }
+
+  .invoice-ticket-print tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
   }
 
   .invoice-ticket-print * {

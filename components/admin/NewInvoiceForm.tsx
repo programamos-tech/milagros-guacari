@@ -219,7 +219,7 @@ function errorMessage(code: string | undefined): string | null {
     case "stock":
       return "Stock insuficiente en tienda para uno o más productos.";
     case "db":
-      return "No se pudo guardar. Aplica en Supabase las migraciones POS (escritura admin y columnas de descuento en order_items) e intenta de nuevo.";
+      return "No se pudo guardar en la base de datos. En Supabase aplica las migraciones pendientes (POS, descuentos en order_items y 20260619120000_pos_decrement_stock_local) e intenta de nuevo.";
     default:
       return "Ocurrió un error al confirmar la factura.";
   }

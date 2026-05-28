@@ -175,6 +175,10 @@ function CancelInvoiceModal({
                   setLocalError("Sesión expirada. Vuelve a iniciar sesión.");
                 } else if (res.error === "forbidden") {
                   setLocalError("No tenés permiso para cambiar el estado de la factura.");
+                } else if (res.error === "stock_restore") {
+                  setLocalError(
+                    "No se pudo devolver el inventario. Aplica la migración 20260620120000_order_cancel_stock_restore en Supabase e intenta de nuevo.",
+                  );
                 } else {
                   setLocalError("No se pudo guardar. Intenta de nuevo.");
                 }

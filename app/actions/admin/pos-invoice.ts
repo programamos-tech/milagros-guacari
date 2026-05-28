@@ -36,6 +36,62 @@ function redirectError(code: string): never {
   redirect(`/admin/ventas/nueva?error=${encodeURIComponent(code)}`);
 }
 
+function isStockRpcMissingError(err: {
+  message?: string;
+  code?: string;
+  details?: string;
+}): boolean {
+  const m = `${err.message ?? ""} ${err.details ?? ""}`.toLowerCase();
+  return (
+    err.code === "42883" ||
+    err.code === "PGRST202" ||
+    m.includes("decrement_products_stock_local") ||
+    m.includes("could not find the function") ||
+    m.includes("schema cache")
+  );
+}
+
+/** Descuenta stock_local; usa RPC si existe, si no el update secuencial (compatibilidad). */
+async function decrementPosStockLocal(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  qtyByProduct: Map<string, number>,
+  productById: Map<string, { stock_local?: number | null }>,
+): Promise<"ok" | "stock" | "db"> {
+  const stockItems = [...qtyByProduct.entries()].map(([product_id, quantity]) => ({
+    product_id,
+    quantity,
+  }));
+
+  const { error: stockErr } = await supabase.rpc("decrement_products_stock_local", {
+    p_items: stockItems,
+  });
+
+  if (!stockErr) return "ok";
+
+  const stockMsg = `${stockErr.message ?? ""} ${stockErr.details ?? ""}`.toLowerCase();
+  if (stockMsg.includes("insufficient_stock")) return "stock";
+  if (!isStockRpcMissingError(stockErr)) return "db";
+
+  const stockRollback: { id: string; prev: number }[] = [];
+  for (const [pid, qty] of qtyByProduct) {
+    const p = productById.get(pid)!;
+    const prev = Number(p.stock_local ?? 0);
+    const next = Math.max(0, prev - qty);
+    const { error: uErr } = await supabase
+      .from("products")
+      .update({ stock_local: next })
+      .eq("id", pid);
+    if (uErr) {
+      for (const r of stockRollback) {
+        await supabase.from("products").update({ stock_local: r.prev }).eq("id", r.id);
+      }
+      return "db";
+    }
+    stockRollback.push({ id: pid, prev });
+  }
+  return "ok";
+}
+
 export async function createPosInvoiceAction(formData: FormData) {
   const supabase = await createSupabaseServerClient();
   const {
@@ -231,6 +287,8 @@ export async function createPosInvoiceAction(formData: FormData) {
       product_name_snapshot: String(p.name ?? "Producto"),
       line_discount_percent: pctForCalc,
       line_discount_amount_cents: pctForCalc != null ? 0 : amtForCalc,
+      stock_deducted_local: l.quantity,
+      stock_deducted_warehouse: 0,
     };
   });
 
@@ -241,22 +299,10 @@ export async function createPosInvoiceAction(formData: FormData) {
     redirectError("db");
   }
 
-  const stockItems = [...qtyByProduct.entries()].map(([productId, quantity]) => ({
-    product_id: productId,
-    quantity,
-  }));
-
-  const { error: stockErr } = await supabase.rpc("decrement_products_stock_local", {
-    p_items: stockItems,
-  });
-
-  if (stockErr) {
+  const stockResult = await decrementPosStockLocal(supabase, qtyByProduct, productById);
+  if (stockResult !== "ok") {
     await supabase.from("orders").delete().eq("id", orderId);
-    const stockMsg = `${stockErr.message ?? ""} ${stockErr.details ?? ""}`.toLowerCase();
-    if (stockMsg.includes("insufficient_stock")) {
-      redirectError("stock");
-    }
-    redirectError("db");
+    redirectError(stockResult === "stock" ? "stock" : "db");
   }
 
   const totalFormatted = new Intl.NumberFormat("es-CO", {

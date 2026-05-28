@@ -6,6 +6,9 @@ import {
 import { adminOwnerDisplayName } from "@/lib/admin-owner";
 import {
   invoiceLegalName,
+  invoiceLogoPath,
+  invoiceStoreAddress,
+  invoiceStoreCity,
   invoiceTaxNit,
   invoiceTradeName,
   storeBrand,
@@ -53,6 +56,12 @@ export type OrderInvoiceDetailViewProps = {
   status: string;
   customerName: string;
   customerEmail: string;
+  /** Cédula / documento del cliente (perfil), si existe. */
+  customerDocumentId?: string | null;
+  /** Teléfono: pedido o perfil del cliente. */
+  customerPhone?: string | null;
+  /** Dirección: envío del pedido o perfil del cliente. */
+  customerAddress?: string | null;
   totalCents: number;
   createdAt: string;
   wompiReference: string | null;
@@ -175,6 +184,9 @@ export function OrderInvoiceDetailView(props: OrderInvoiceDetailViewProps) {
     status,
     customerName,
     customerEmail,
+    customerDocumentId = null,
+    customerPhone = null,
+    customerAddress = null,
     totalCents,
     createdAt,
     wompiReference,
@@ -206,11 +218,15 @@ export function OrderInvoiceDetailView(props: OrderInvoiceDetailViewProps) {
     ? [shippingCity, shippingAddress].filter(Boolean).join(" · ")
     : "Retiro en tienda";
 
+  const printDocumentId = customerDocumentId?.trim() || null;
+  const printPhone = (customerPhone ?? shippingPhone)?.trim() || null;
+  const printAddress = customerAddress?.trim() || null;
+
   const th =
     "px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400 dark:text-zinc-500 md:px-5";
 
   return (
-    <div className="invoice-ticket-print w-full min-w-0 max-w-none space-y-6 px-3 sm:px-4 md:px-5 print:mx-auto print:max-w-[72mm] print:space-y-3 print:bg-white print:px-0 print:text-zinc-900 print:leading-relaxed dark:print:bg-white">
+    <div className="invoice-ticket-print w-full min-w-0 max-w-none space-y-6 px-3 sm:px-4 md:px-5 print:mx-auto print:max-w-[72mm] print:space-y-2 print:bg-white print:px-0 print:py-0 print:text-zinc-900 print:leading-snug dark:print:bg-white">
       <nav className="text-sm text-zinc-500 print:hidden dark:text-zinc-400">
         <Link
           href={ventasListHref}
@@ -224,57 +240,62 @@ export function OrderInvoiceDetailView(props: OrderInvoiceDetailViewProps) {
         </span>
       </nav>
 
-      <div className="rounded-2xl border border-zinc-200/90 bg-white p-4 shadow-[0_1px_0_0_rgb(24_24_27/0.04)] dark:border-zinc-700/90 dark:bg-zinc-900 dark:shadow-none sm:p-6 md:p-7 print:rounded-none print:border-zinc-900 print:p-3 print:shadow-none dark:print:border-zinc-900 dark:print:bg-white">
-        <div className="hidden print:mb-2.5 print:block print:border-2 print:border-black print:p-2.5 print:text-black">
-          <p className="text-center text-[14px] font-bold leading-tight tracking-tight">
-            {invoiceLegalName}
-          </p>
-          <p className="mt-2 text-center text-[11px] font-semibold leading-snug">
-            NIT: {invoiceTaxNit} — {storeTaxRegime}
-          </p>
-          <div className="my-2.5 border-t-2 border-black" />
-          <p className="text-center text-[11px] font-bold uppercase tracking-[0.14em]">
-            Factura de venta
-          </p>
-          <div className="mt-2 flex justify-between gap-2 border-t border-dashed border-zinc-800 pt-2 text-[11px] font-bold">
-            <span>No. #{invoiceRef}</span>
-            <span className="shrink-0 tabular-nums">{formatInvoiceDateShort(createdAt)}</span>
+      <div className="rounded-2xl border border-zinc-200/90 bg-white p-4 shadow-[0_1px_0_0_rgb(24_24_27/0.04)] dark:border-zinc-700/90 dark:bg-zinc-900 dark:shadow-none sm:p-6 md:p-7 print:rounded-none print:border-0 print:p-0 print:shadow-none dark:print:border-0 dark:print:bg-white">
+        <div className="hidden print:block print:text-[10px] print:leading-snug print:text-black">
+          <div className="print:flex print:flex-col print:items-center print:pb-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={invoiceLogoPath}
+              alt={invoiceTradeName}
+              className="print:mb-2 print:h-11 print:w-auto print:max-w-[58mm] print:object-contain"
+            />
+            <p className="print:text-center print:text-[12px] print:font-bold print:leading-tight">
+              {invoiceLegalName}
+            </p>
+            <p className="print:mt-0.5 print:text-center print:text-[10px] print:font-semibold">
+              NIT: {invoiceTaxNit} — {storeTaxRegime}
+            </p>
+            {invoiceStoreAddress ? (
+              <p className="print:mt-1 print:text-center print:text-[10px]">{invoiceStoreAddress}</p>
+            ) : null}
+            {invoiceStoreCity ? (
+              <p className="print:text-center print:text-[10px] print:font-semibold">
+                {invoiceStoreCity}
+              </p>
+            ) : null}
+            <p className="print:mt-1 print:text-center print:text-[10px] print:font-semibold">
+              TEL: {storeSupportPhone}
+            </p>
+            <p className="print:mt-2 print:text-center print:text-[10px] print:font-bold">
+              Factura #{invoiceRef}
+            </p>
+            <p className="print:text-center print:text-[10px] print:tabular-nums">
+              {formatInvoiceDateShort(createdAt)}
+            </p>
           </div>
-          <p className="mt-2 text-center text-[11px] font-semibold">Tel. {storeSupportPhone}</p>
-          {storeSupportEmail ? (
-            <p className="text-center text-[11px] font-semibold break-words">{storeSupportEmail}</p>
-          ) : null}
-        </div>
 
-        <div className="hidden print:mb-2.5 print:block print:border-2 print:border-black print:px-2.5 print:py-2 print:text-[11px] print:leading-snug print:text-black">
-          <p>
-            <span className="font-bold">Cliente:</span> {customerName}
-          </p>
-          {customerEmail && !customerEmail.includes("@local.invalid") ? (
-            <p className="mt-1 break-words">
-              <span className="font-bold">Correo:</span> {customerEmail}
+          <div className="print:my-2 print:border-t print:border-dashed print:border-black" />
+
+          <div className="print:space-y-1 print:px-0.5">
+            <p>
+              <span className="font-bold">Cliente:</span> {customerName}
             </p>
-          ) : null}
-          <p className="mt-1">
-            <span className="font-bold">Entrega:</span> {ubicacionLine}
-          </p>
-          <p className="mt-1">
-            <span className="font-bold">Tienda:</span> {invoiceTradeName}
-          </p>
-          <p className="mt-1">
-            <span className="font-bold">Vendedor:</span> {adminOwnerDisplayName}
-          </p>
-          {shippingPhone ? (
-            <p className="mt-1">
-              <span className="font-bold">Tel. pedido:</span> {shippingPhone}
-            </p>
-          ) : null}
-          <p className="mt-1">
-            <span className="font-bold">Estado factura:</span> {docEstado.label}
-          </p>
-          <p className="mt-1">
-            <span className="font-bold">Pago:</span> {pagoRecibido.label} · {pagoBadge.label}
-          </p>
+            {printDocumentId ? (
+              <p>
+                <span className="font-bold">Cédula:</span> {printDocumentId}
+              </p>
+            ) : null}
+            {printPhone ? (
+              <p>
+                <span className="font-bold">Teléfono:</span> {printPhone}
+              </p>
+            ) : null}
+            {printAddress ? (
+              <p className="print:break-words">
+                <span className="font-bold">Dirección:</span> {printAddress}
+              </p>
+            ) : null}
+          </div>
         </div>
 
         <div className="flex items-center justify-between gap-3 print:hidden">
@@ -332,11 +353,28 @@ export function OrderInvoiceDetailView(props: OrderInvoiceDetailViewProps) {
           </p>
         </div>
 
-        {shippingPhone ? (
-          <p className="mt-3 break-words text-sm text-zinc-600 print:hidden dark:text-zinc-400">
-            Tel. <span className="font-medium text-zinc-800 dark:text-zinc-200">{shippingPhone}</span>
-          </p>
-        ) : null}
+        {(printPhone || printDocumentId || printAddress) && (
+          <div className="mt-3 space-y-1 text-sm text-zinc-600 print:hidden dark:text-zinc-400">
+            {printDocumentId ? (
+              <p>
+                Cédula{" "}
+                <span className="font-medium text-zinc-800 dark:text-zinc-200">{printDocumentId}</span>
+              </p>
+            ) : null}
+            {printPhone ? (
+              <p>
+                Tel.{" "}
+                <span className="font-medium text-zinc-800 dark:text-zinc-200">{printPhone}</span>
+              </p>
+            ) : null}
+            {printAddress ? (
+              <p className="break-words">
+                Dirección{" "}
+                <span className="font-medium text-zinc-800 dark:text-zinc-200">{printAddress}</span>
+              </p>
+            ) : null}
+          </div>
+        )}
 
         {status === "cancelled" && cancellationReason?.trim() ? (
           <div className="mt-5 rounded-xl border border-red-100 bg-red-50/80 px-4 py-3 text-sm text-red-900 print:mt-3 print:rounded-md print:px-2 print:py-2 print:text-[10px] dark:border-red-900/50 dark:bg-red-950/35 dark:text-red-100 print:border-red-800 print:bg-red-50">
@@ -453,46 +491,46 @@ export function OrderInvoiceDetailView(props: OrderInvoiceDetailViewProps) {
         </div>
       ) : null}
 
-      <div className="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-[0_1px_0_0_rgb(24_24_27/0.04)] dark:border-zinc-700/90 dark:bg-zinc-900 dark:shadow-none md:p-7 print:rounded-none print:border-zinc-900 print:p-3 print:shadow-none dark:print:border-zinc-900 dark:print:bg-white">
-        <p className={`${labelClass} print:text-center print:text-[11px] print:font-bold print:tracking-normal print:text-black`}>
-          Productos de la factura
-        </p>
+      <div className="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-[0_1px_0_0_rgb(24_24_27/0.04)] dark:border-zinc-700/90 dark:bg-zinc-900 dark:shadow-none md:p-7 print:rounded-none print:border-0 print:p-0 print:shadow-none dark:print:border-0 dark:print:bg-white">
+        <p className={`${labelClass} print:hidden`}>Productos de la factura</p>
 
         {lines.length === 0 ? (
           <p className="mt-6 text-sm text-zinc-500 dark:text-zinc-400">No hay ítems en este pedido.</p>
         ) : (
           <>
-            <div className="mt-5 hidden space-y-0 border-y-2 border-black print:block">
-              {lines.map((line) => {
-                const sub = line.unitPriceCents * line.quantity;
-                const ref = line.reference?.trim();
-                return (
-                  <div
-                    key={`print-${line.id}`}
-                    className="border-b border-dashed border-zinc-800 py-2.5 text-[11px] last:border-b-0"
-                  >
-                    <div className="flex justify-between gap-2 font-bold leading-snug text-black">
-                      <span className="min-w-0 flex-1 break-words">
-                        {line.quantity} × {line.name}
-                        {ref ? (
-                          <span className="mt-1 block font-mono text-[10px] font-semibold text-zinc-900">
-                            ({ref})
+            <div className="mt-2 hidden print:block">
+              <table className="w-full border-collapse text-[10px] text-black">
+                <thead>
+                  <tr className="border-b-2 border-black">
+                    <th className="w-8 py-1 text-left font-bold">Cant.</th>
+                    <th className="py-1 text-left font-bold">Artículo</th>
+                    <th className="w-[4.5rem] py-1 text-right font-bold">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lines.map((line) => {
+                    const sub = line.unitPriceCents * line.quantity;
+                    const ref = line.reference?.trim();
+                    return (
+                      <tr
+                        key={`print-${line.id}`}
+                        className="border-b border-dashed border-zinc-500 align-top"
+                      >
+                        <td className="py-1.5 tabular-nums font-semibold">{line.quantity}</td>
+                        <td className="py-1.5 pr-1">
+                          <span className="block break-words font-medium leading-snug">
+                            {line.name}
                           </span>
-                        ) : null}
-                        {lineDiscountHint(line) ? (
-                          <span className="mt-1 block text-[10px] font-semibold text-zinc-900">
-                            {lineDiscountHint(line)}
-                          </span>
-                        ) : null}
-                      </span>
-                      <span className="shrink-0 tabular-nums text-black">{formatCop(sub)}</span>
-                    </div>
-                    <div className="mt-1 flex justify-between text-[10px] font-semibold text-zinc-900">
-                      <span>P. unit. {formatCop(line.unitPriceCents)}</span>
-                    </div>
-                  </div>
-                );
-              })}
+                          {ref ? (
+                            <span className="block font-mono text-[9px] text-zinc-800">Ref. {ref}</span>
+                          ) : null}
+                        </td>
+                        <td className="py-1.5 text-right tabular-nums font-bold">{formatCop(sub)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
 
             <div className="mt-5 overflow-x-auto print:hidden">
@@ -547,14 +585,14 @@ export function OrderInvoiceDetailView(props: OrderInvoiceDetailViewProps) {
               </table>
             </div>
 
-            <div className="mt-6 flex justify-end print:break-inside-avoid print:mt-4">
-              <div className="w-full max-w-xs rounded-xl border border-zinc-200 bg-zinc-50/80 px-5 py-4 dark:border-zinc-700 dark:bg-zinc-950/80 print:max-w-none print:border-2 print:border-black print:bg-white print:px-2 print:py-3">
+            <div className="mt-6 flex justify-end print:mt-2 print:break-inside-avoid">
+              <div className="w-full max-w-xs rounded-xl border border-zinc-200 bg-zinc-50/80 px-5 py-4 dark:border-zinc-700 dark:bg-zinc-950/80 print:max-w-none print:border-0 print:bg-white print:px-0 print:py-0">
                 {totalsMatch ? (
-                  <div className="flex justify-between gap-4 print:border-t-2 print:border-black print:pt-3 dark:border-zinc-700/90">
-                    <span className="font-bold text-zinc-900 print:text-[11px] print:text-black dark:text-zinc-200">
-                      Total
+                  <div className="flex justify-between gap-4 border-t-2 border-black pt-2 print:pt-2 dark:border-zinc-700/90">
+                    <span className="font-bold text-zinc-900 print:text-[12px] print:text-black dark:text-zinc-200">
+                      TOTAL
                     </span>
-                    <span className="text-lg font-bold tabular-nums text-zinc-900 print:text-base print:text-black dark:text-zinc-50">
+                    <span className="text-lg font-bold tabular-nums text-zinc-900 print:text-[13px] print:text-black dark:text-zinc-50">
                       {formatCop(totalCents)}
                     </span>
                   </div>
@@ -584,13 +622,17 @@ export function OrderInvoiceDetailView(props: OrderInvoiceDetailViewProps) {
         )}
       </div>
 
-      <p className="hidden border-t-2 border-black pt-3 text-center text-[11px] font-medium leading-relaxed text-black print:block">
-        Productos: {lines.length} ítem{lines.length === 1 ? "" : "s"} · IVA incluido
-        <br />
-        <span className="mt-2 block text-[12px] font-bold">
+      <div className="hidden print:mt-4 print:block print:text-black">
+        <p className="border-t border-dashed border-zinc-600 pt-8 text-center text-[10px]">
+          Firma cliente
+        </p>
+        <p className="mt-3 text-center text-[10px] font-semibold leading-snug">
+          {lines.length} producto{lines.length === 1 ? "" : "s"} · IVA incluido
+        </p>
+        <p className="mt-1 text-center text-[11px] font-bold">
           ¡Gracias por su compra! · {invoiceTradeName}
-        </span>
-      </p>
+        </p>
+      </div>
     </div>
   );
 }

@@ -32,6 +32,20 @@ export const invoiceTradeName =
   process.env.NEXT_PUBLIC_STORE_NAME?.trim() ||
   "Aleya Shop";
 
+/** Logo en tirilla / factura impresa. */
+export const invoiceLogoPath =
+  process.env.NEXT_PUBLIC_INVOICE_LOGO?.trim() ||
+  process.env.NEXT_PUBLIC_STORE_LOGO?.trim() ||
+  "/logo-aleyahso.png";
+
+/** Dirección física en tirilla (línea 1, ej. calle). */
+export const invoiceStoreAddress =
+  process.env.NEXT_PUBLIC_INVOICE_ADDRESS?.trim() ?? "";
+
+/** Ciudad en tirilla (línea 2). */
+export const invoiceStoreCity =
+  process.env.NEXT_PUBLIC_INVOICE_CITY?.trim() ?? "";
+
 /** Régimen tributario (texto libre; típico en CO: Responsables de IVA). */
 export const storeTaxRegime =
   process.env.NEXT_PUBLIC_STORE_TAX_REGIME?.trim() ||
