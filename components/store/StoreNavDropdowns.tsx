@@ -118,6 +118,17 @@ export function StoreNavDropdowns({
               </Link>
             </li>
             <li>
+              <Link href="/kits" onClick={close} className={drawerLinkClass}>
+                <span className="inline-flex items-center gap-3">
+                  <span className="text-[15px] text-stone-500" aria-hidden>
+                    ✦
+                  </span>
+                  Kits y combos
+                </span>
+                <ChevronRight className="size-4 shrink-0 text-stone-400" strokeWidth={1.5} aria-hidden />
+              </Link>
+            </li>
+            <li>
               <Link href="/favoritos" onClick={close} className={drawerLinkClass}>
                 <span className="inline-flex items-center gap-3">
                   <Heart className="size-[18px] text-stone-500" strokeWidth={1.5} aria-hidden />

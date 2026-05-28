@@ -105,6 +105,17 @@ const navSections: {
         ),
       },
       {
+        href: "/admin/kits",
+        label: "Kits y combos",
+        icon: (
+          <Icon>
+            <path d="M16.5 9.4 12 12 7.5 9.4" />
+            <path d="M21 16V8l-9-5-9 5v8l9 5 9-5z" />
+            <path d="M12 12v9" />
+          </Icon>
+        ),
+      },
+      {
         href: "/admin/customers",
         label: "Clientes",
         icon: (
@@ -201,6 +212,7 @@ function isActive(pathname: string, href: string) {
 }
 
 const PRODUCTS_HREF = "/admin/products";
+const KITS_HREF = "/admin/kits";
 const VENTAS_HREF = "/admin/ventas";
 /** Pedidos / facturas abren bajo esta ruta; debe seguir resaltando Ventas en el sidebar. */
 const ORDERS_HREF = "/admin/orders";
@@ -230,6 +242,9 @@ function navItemActive(
   }
   if (href === PRODUCTS_HREF) {
     return pathname === PRODUCTS_HREF || pathname.startsWith(`${PRODUCTS_HREF}/`);
+  }
+  if (href === KITS_HREF) {
+    return pathname === KITS_HREF || pathname.startsWith(`${KITS_HREF}/`);
   }
   if (href === CUSTOMERS_HREF) {
     return pathname === CUSTOMERS_HREF || pathname.startsWith(`${CUSTOMERS_HREF}/`);

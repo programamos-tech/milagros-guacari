@@ -3,7 +3,20 @@ import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
 import { startCheckout } from "@/app/actions/checkout";
 import { syncStoreCustomerFromSession } from "@/app/actions/store-customer";
-import { getCart, normalizeCartForCheckout } from "@/lib/cart";
+import {
+  isCartKitLine,
+  isCartProductLine,
+  normalizeCartForCheckout,
+} from "@/lib/cart";
+import { fetchKitsWithItems } from "@/lib/load-product-kits";
+import {
+  maxKitsAvailableFromItems,
+  resolveKitSalePriceCents,
+} from "@/lib/product-kits";
+import {
+  getStorefrontCartLines,
+} from "@/lib/storefront-cart";
+import { CheckoutKitLineControls } from "@/components/store/CheckoutKitLineControls";
 import { formatCop } from "@/lib/money";
 import {
   unitPriceAfterWholesaleCents,
@@ -245,8 +258,8 @@ export default async function CheckoutPage({
   const unpublishedProduct =
     typeof sp.product === "string" ? sp.product : undefined;
 
-  const cart = await getCart();
-  if (!cart.length) {
+  const displayCart = await getStorefrontCartLines();
+  if (!displayCart.length) {
     return (
       <CheckoutBolsaVaciaView
         error={error}
@@ -341,24 +354,46 @@ export default async function CheckoutPage({
     }
   }
 
+  const productLines = displayCart.filter(isCartProductLine);
+  const kitLines = displayCart.filter(isCartKitLine);
+
   const supabase = createSupabaseServiceClient();
-  const ids = [...new Set(cart.map((l) => l.productId))];
-  const { data: products } = await supabase
-    .from("products")
-    .select(
-      "id,name,price_cents,has_vat,image_path,fragrance_option_images,is_published,stock_quantity,colors",
-    )
-    .in("id", ids);
+  const productIds = [...new Set(productLines.map((l) => l.productId))];
+  let products: {
+    id: string;
+    name: string;
+    price_cents: number;
+    has_vat: boolean | null;
+    image_path: string | null;
+    fragrance_option_images: unknown;
+    stock_quantity: number | null;
+    colors: unknown;
+    is_published: boolean | null;
+  }[] = [];
 
-  const byId = new Map((products ?? []).map((p) => [p.id, p]));
-  const displayCart = normalizeCartForCheckout(cart, byId);
-  const cartAdjusted = JSON.stringify(cart) !== JSON.stringify(displayCart);
-
-  if (!displayCart.length) {
-    return <CheckoutBolsaVaciaView infoReason="invalid_lines" />;
+  if (productIds.length > 0) {
+    const { data } = await supabase
+      .from("products")
+      .select(
+        "id,name,price_cents,has_vat,image_path,fragrance_option_images,is_published,stock_quantity,colors",
+      )
+      .in("id", productIds);
+    products = data ?? [];
   }
 
-  const rows = displayCart.map((line) => {
+  const byId = new Map(products.map((p) => [p.id, p]));
+  const normalizedProducts = normalizeCartForCheckout(productLines, byId);
+  const cartAdjusted =
+    JSON.stringify(productLines) !== JSON.stringify(normalizedProducts);
+
+  const kitsById = new Map(
+    (await fetchKitsWithItems(supabase, { publishedOnly: true })).map((k) => [
+      k.id,
+      k,
+    ]),
+  );
+
+  const rows = normalizedProducts.map((line) => {
     const p = byId.get(line.productId)!;
     const netUnit = unitPriceAfterWholesaleCents(
       p.price_cents,
@@ -376,12 +411,28 @@ export default async function CheckoutPage({
     return { line, p, sub, catalogListLineGross, netLine };
   });
 
+  const kitRows = kitLines
+    .map((line) => {
+      const kit = kitsById.get(line.kitId);
+      if (!kit) return null;
+      const items = kit.items ?? [];
+      const unit = resolveKitSalePriceCents(kit, items, "storefront");
+      const sub = unit * line.quantity;
+      const maxStock = maxKitsAvailableFromItems(items, "storefront");
+      return { line, kit, sub, maxStock, unit };
+    })
+    .filter((r): r is NonNullable<typeof r> => r != null);
+
   const catalogListTotalGross = rows.reduce(
     (acc, r) => acc + r.catalogListLineGross,
     0,
   );
-  const totalGross = rows.reduce((acc, r) => acc + r.sub, 0);
-  const totalNet = rows.reduce((acc, r) => acc + r.netLine, 0);
+  const totalGross =
+    rows.reduce((acc, r) => acc + r.sub, 0) +
+    kitRows.reduce((acc, r) => acc + r.sub, 0);
+  const totalNet =
+    rows.reduce((acc, r) => acc + r.netLine, 0) +
+    kitRows.reduce((acc, r) => acc + r.sub, 0);
   const totalVat = Math.max(0, totalGross - totalNet);
   const wholesaleSavingCents = Math.max(0, catalogListTotalGross - totalGross);
 
@@ -523,6 +574,58 @@ export default async function CheckoutPage({
                               {formatCop(sub)}
                             </p>
                           )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                  {kitRows.map(({ line, kit, sub, maxStock }) => {
+                    const img = storagePublicObjectUrl(kit.image_path);
+                    return (
+                      <li
+                        key={`kit-${kit.id}`}
+                        className="flex flex-col gap-6 py-10 first:pt-0 sm:flex-row sm:items-start sm:justify-between sm:gap-8"
+                      >
+                        <div className="flex min-w-0 flex-1 gap-5 sm:gap-8">
+                          <Link
+                            href="/kits"
+                            className="relative size-[6.75rem] shrink-0 bg-[#f0eeeb] sm:size-28"
+                          >
+                            {img ? (
+                              <Image
+                                src={img}
+                                alt=""
+                                fill
+                                className="object-cover"
+                                sizes="112px"
+                                unoptimized={shouldUnoptimizeStorageImageUrl(img)}
+                              />
+                            ) : (
+                              <div className="flex size-full items-center justify-center text-stone-300">
+                                ◆
+                              </div>
+                            )}
+                          </Link>
+                          <div className="min-w-0 flex-1">
+                            <Link
+                              href="/kits"
+                              className="text-[15px] font-semibold leading-snug text-[var(--store-brand)] transition hover:text-[var(--store-brand-hover)]"
+                            >
+                              {kit.name}
+                            </Link>
+                            <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-violet-700">
+                              Kit / combo
+                            </p>
+                            <CheckoutKitLineControls
+                              kitId={kit.id}
+                              quantity={line.quantity}
+                              maxStock={maxStock}
+                            />
+                          </div>
+                        </div>
+                        <div className="shrink-0 text-left sm:pt-0.5 sm:text-right">
+                          <p className="text-[15px] font-medium tabular-nums text-stone-900">
+                            {formatCop(sub)}
+                          </p>
                         </div>
                       </li>
                     );

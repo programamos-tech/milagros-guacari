@@ -11,9 +11,23 @@ import {
   applyPosLineNetDiscountCents,
   discountedUnitNetCentsFromLine,
 } from "@/lib/pos-line-discount";
+import { fetchKitsWithItems } from "@/lib/load-product-kits";
+import {
+  buildKitPosComponentDeductions,
+  expandKitLinesToProductQty,
+  kitIsAvailable,
+  maxKitsAvailableFromItems,
+  resolveKitSalePriceCents,
+  type ProductKitRow,
+} from "@/lib/product-kits";
 import { unitPriceGrossCents } from "@/lib/product-vat-price";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+
+export type PosInvoiceKitLinePayload = {
+  kitId: string;
+  quantity: number;
+};
 
 export type PosInvoiceLinePayload = {
   productId: string;
@@ -27,6 +41,7 @@ export type PosInvoiceLinePayload = {
 export type PosInvoicePayload = {
   customerId: string;
   lines: PosInvoiceLinePayload[];
+  kitLines?: PosInvoiceKitLinePayload[];
   paymentMethod: "cash" | "transfer" | "mixed";
   shippingAddress: string | null;
   shippingPhone: string | null;
@@ -135,7 +150,16 @@ export async function createPosInvoiceAction(formData: FormData) {
     })
     .filter((r) => r.productId && r.quantity > 0);
 
-  if (lines.length === 0) redirectError("validation");
+  const kitLinesRaw = Array.isArray(payload.kitLines) ? payload.kitLines : [];
+  const kitLines = kitLinesRaw
+    .map((row) => {
+      const kitId = String((row as { kitId?: string }).kitId ?? "").trim();
+      const quantity = Math.floor(Number((row as { quantity?: number }).quantity));
+      return { kitId, quantity };
+    })
+    .filter((r) => r.kitId && r.quantity > 0);
+
+  if (lines.length === 0 && kitLines.length === 0) redirectError("validation");
 
   for (const l of lines) {
     if (l.discountPercent != null) {
@@ -167,28 +191,70 @@ export async function createPosInvoiceAction(formData: FormData) {
   );
 
   const productIds = [...new Set(lines.map((l) => l.productId))];
-  const { data: products, error: pErr } = await supabase
-    .from("products")
-    .select("id,name,price_cents,stock_local,has_vat,vat_percent")
-    .in("id", productIds);
+  const productById = new Map<
+    string,
+    {
+      id: string;
+      name: string;
+      price_cents: number;
+      stock_local: number | null;
+      has_vat: boolean | null;
+      vat_percent: number | null;
+    }
+  >();
 
-  if (pErr || !products || products.length !== productIds.length) {
-    redirectError("products");
+  if (productIds.length > 0) {
+    const { data: products, error: pErr } = await supabase
+      .from("products")
+      .select("id,name,price_cents,stock_local,has_vat,vat_percent")
+      .in("id", productIds);
+
+    if (pErr || !products || products.length !== productIds.length) {
+      redirectError("products");
+    }
+    for (const p of products) {
+      productById.set(p.id as string, p);
+    }
   }
 
-  const productRows = products;
-  const productById = new Map(productRows.map((p) => [p.id as string, p]));
+  const kitIds = [...new Set(kitLines.map((k) => k.kitId))];
+  const kitsById = new Map<string, ProductKitRow>();
+  if (kitIds.length > 0) {
+    const allKits = await fetchKitsWithItems(supabase);
+    for (const kit of allKits) {
+      if (kitIds.includes(kit.id)) kitsById.set(kit.id, kit);
+    }
+    if (kitsById.size !== kitIds.length) redirectError("products");
+    for (const kl of kitLines) {
+      const kit = kitsById.get(kl.kitId)!;
+      if (!kitIsAvailable(kit, "pos")) redirectError("stock");
+      const maxK = maxKitsAvailableFromItems(kit.items ?? [], "pos");
+      if (maxK < kl.quantity) redirectError("stock");
+    }
+  }
 
   const qtyByProduct = new Map<string, number>();
   for (const l of lines) {
     qtyByProduct.set(l.productId, (qtyByProduct.get(l.productId) ?? 0) + l.quantity);
   }
+  const kitQtyExpanded = expandKitLinesToProductQty(kitLines, kitsById);
+  for (const [pid, qty] of kitQtyExpanded) {
+    qtyByProduct.set(pid, (qtyByProduct.get(pid) ?? 0) + qty);
+  }
 
-  for (const [pid, qty] of qtyByProduct) {
-    const p = productById.get(pid);
-    if (!p) redirectError("products");
-    const stock = Number(p.stock_local ?? 0);
-    if (stock < qty) redirectError("stock");
+  if (qtyByProduct.size > 0) {
+    const stockIds = [...qtyByProduct.keys()];
+    const { data: stockRows } = await supabase
+      .from("products")
+      .select("id,stock_local")
+      .in("id", stockIds);
+    const stockById = new Map((stockRows ?? []).map((p) => [p.id as string, p]));
+    for (const [pid, qty] of qtyByProduct) {
+      const p = stockById.get(pid);
+      if (!p) redirectError("products");
+      const stock = Number(p.stock_local ?? 0);
+      if (stock < qty) redirectError("stock");
+    }
   }
 
   let subtotalCents = 0;
@@ -216,6 +282,15 @@ export async function createPosInvoiceAction(formData: FormData) {
     const unitFinal = unitPriceGrossCents(discNetUnit, hasVat, null);
     subtotalCents += lineNetAfter;
     totalCents += unitFinal * l.quantity;
+  }
+
+  for (const kl of kitLines) {
+    const kit = kitsById.get(kl.kitId)!;
+    const items = kit.items ?? [];
+    const unitKit = resolveKitSalePriceCents(kit, items, "pos");
+    const lineGross = unitKit * kl.quantity;
+    subtotalCents += lineGross;
+    totalCents += lineGross;
   }
   vatCents = Math.max(0, totalCents - subtotalCents);
 
@@ -262,7 +337,7 @@ export async function createPosInvoiceAction(formData: FormData) {
 
   const orderId = String(orderRow.id);
 
-  const itemRows = lines.map((l) => {
+  const productItemRows = lines.map((l) => {
     const p = productById.get(l.productId)!;
     const priceCatalog = Math.max(0, Math.floor(Number(p.price_cents ?? 0)));
     const netUnit = unitPriceAfterWholesaleCents(priceCatalog, wholesalePct);
@@ -282,6 +357,7 @@ export async function createPosInvoiceAction(formData: FormData) {
     return {
       order_id: orderId,
       product_id: l.productId,
+      kit_id: null,
       quantity: l.quantity,
       unit_price_cents: unitFinal,
       product_name_snapshot: String(p.name ?? "Producto"),
@@ -289,8 +365,31 @@ export async function createPosInvoiceAction(formData: FormData) {
       line_discount_amount_cents: pctForCalc != null ? 0 : amtForCalc,
       stock_deducted_local: l.quantity,
       stock_deducted_warehouse: 0,
+      kit_component_deductions: null,
     };
   });
+
+  const kitItemRows = kitLines.map((kl) => {
+    const kit = kitsById.get(kl.kitId)!;
+    const items = kit.items ?? [];
+    const unitKit = resolveKitSalePriceCents(kit, items, "pos");
+    const deductions = buildKitPosComponentDeductions(kit, kl.quantity);
+    return {
+      order_id: orderId,
+      product_id: null,
+      kit_id: kl.kitId,
+      quantity: kl.quantity,
+      unit_price_cents: unitKit,
+      product_name_snapshot: `Kit: ${kit.name}`,
+      line_discount_percent: null,
+      line_discount_amount_cents: 0,
+      stock_deducted_local: 0,
+      stock_deducted_warehouse: 0,
+      kit_component_deductions: deductions,
+    };
+  });
+
+  const itemRows = [...productItemRows, ...kitItemRows];
 
   const { error: iErr } = await supabase.from("order_items").insert(itemRows);
 
@@ -299,7 +398,10 @@ export async function createPosInvoiceAction(formData: FormData) {
     redirectError("db");
   }
 
-  const stockResult = await decrementPosStockLocal(supabase, qtyByProduct, productById);
+  const stockProductById = new Map(
+    [...productById.entries()].map(([id, p]) => [id, { stock_local: p.stock_local }]),
+  );
+  const stockResult = await decrementPosStockLocal(supabase, qtyByProduct, stockProductById);
   if (stockResult !== "ok") {
     await supabase.from("orders").delete().eq("id", orderId);
     redirectError(stockResult === "stock" ? "stock" : "db");
@@ -324,6 +426,7 @@ export async function createPosInvoiceAction(formData: FormData) {
       total_cents: totalCents,
       payment_method: paymentMethod,
       line_items: lines.length,
+      kit_lines: kitLines.length,
     },
   });
   revalidatePath("/admin/actividades");

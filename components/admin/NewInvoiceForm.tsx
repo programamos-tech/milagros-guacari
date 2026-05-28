@@ -42,6 +42,22 @@ type ProductHit = {
   vat_percent?: number | null;
 };
 
+type KitHit = {
+  id: string;
+  name: string;
+  price_cents: number;
+  max_stock: number;
+  available: boolean;
+  is_published: boolean;
+  item_count: number;
+};
+
+type KitCartLine = {
+  key: string;
+  kit: KitHit;
+  quantity: number;
+};
+
 type CustomerHit = {
   id: string;
   name: string;
@@ -251,6 +267,11 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
   const [productHits, setProductHits] = useState<ProductHit[]>([]);
   const [productLoading, setProductLoading] = useState(false);
 
+  const [kitQuery, setKitQuery] = useState("");
+  const debouncedKitQ = useDebounced(kitQuery, 280);
+  const [kitHits, setKitHits] = useState<KitHit[]>([]);
+  const [kitLoading, setKitLoading] = useState(false);
+
   const [customerQuery, setCustomerQuery] = useState("");
   const debouncedCustomerQ = useDebounced(customerQuery, 280);
   const [customerHits, setCustomerHits] = useState<CustomerHit[]>([]);
@@ -264,6 +285,7 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
   const [shipLoading, setShipLoading] = useState(false);
 
   const [lines, setLines] = useState<CartLine[]>([]);
+  const [kitLines, setKitLines] = useState<KitCartLine[]>([]);
   const [payment, setPayment] = useState<PaymentTab>("cash");
   const [cashGivenRaw, setCashGivenRaw] = useState("");
   const [transferRef, setTransferRef] = useState("");
@@ -396,6 +418,30 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
   }, [debouncedProductQ]);
 
   useEffect(() => {
+    const q = debouncedKitQ.trim();
+    if (q.length < 1) {
+      setKitHits([]);
+      return;
+    }
+    let cancelled = false;
+    setKitLoading(true);
+    void fetch(`/api/admin/kits-search?q=${encodeURIComponent(q)}`)
+      .then(async (r) => {
+        if (!r.ok) return { kits: [] as KitHit[] };
+        return r.json() as Promise<{ kits?: KitHit[] }>;
+      })
+      .then((j) => {
+        if (!cancelled) setKitHits(j.kits ?? []);
+      })
+      .finally(() => {
+        if (!cancelled) setKitLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedKitQ]);
+
+  useEffect(() => {
     const q = debouncedCustomerQ.trim();
     if (q.length < 1) {
       setCustomerHits([]);
@@ -416,13 +462,21 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
     };
   }, [debouncedCustomerQ]);
 
-  const subtotalCents = useMemo(() => {
+  const kitSubtotalCents = useMemo(() => {
     let s = 0;
+    for (const line of kitLines) {
+      s += line.kit.price_cents * line.quantity;
+    }
+    return s;
+  }, [kitLines]);
+
+  const subtotalCents = useMemo(() => {
+    let s = kitSubtotalCents;
     for (const line of lines) {
       s += lineNetAfterDiscount(line, customerWholesalePct);
     }
     return s;
-  }, [lines, customerWholesalePct]);
+  }, [lines, customerWholesalePct, kitSubtotalCents]);
 
   const wholesaleSavingsNetCents = useMemo(() => {
     if (customerWholesalePct <= 0) return 0;
@@ -465,8 +519,15 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
     for (const [pid, sum] of byId) {
       if (sum > (stockById.get(pid) ?? 0)) return true;
     }
+    for (const kl of kitLines) {
+      let sum = 0;
+      for (const l of kitLines) {
+        if (l.kit.id === kl.kit.id) sum += l.quantity;
+      }
+      if (sum > kl.kit.max_stock) return true;
+    }
     return false;
-  }, [lines]);
+  }, [lines, kitLines]);
 
   const selectedShipOption = useMemo(
     () => shipOptions.find((o) => o.id === shipChoice) ?? null,
@@ -495,7 +556,7 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
 
   const canSubmit =
     customer !== null &&
-    lines.length > 0 &&
+    (lines.length > 0 || kitLines.length > 0) &&
     totalCents > 0 &&
     shipChoice !== null &&
     shipChoice !== "" &&
@@ -545,6 +606,47 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
 
   function removeLine(key: string) {
     setLines((prev) => prev.filter((l) => l.key !== key));
+  }
+
+  function addKit(k: KitHit) {
+    if (!k.available || k.max_stock < 1) return;
+    setKitLines((prev) => {
+      let sum = 0;
+      for (const l of prev) {
+        if (l.kit.id === k.id) sum += l.quantity;
+      }
+      if (sum + 1 > k.max_stock) return prev;
+      const idx = prev.findIndex((l) => l.kit.id === k.id);
+      if (idx >= 0) {
+        return prev.map((l, i) =>
+          i === idx ? { ...l, quantity: l.quantity + 1 } : l,
+        );
+      }
+      return [
+        ...prev,
+        { key: crypto.randomUUID(), kit: k, quantity: 1 },
+      ];
+    });
+    setKitQuery("");
+    setKitHits([]);
+  }
+
+  function setKitQty(key: string, q: number) {
+    setKitLines((prev) => {
+      const line = prev.find((l) => l.key === key);
+      if (!line) return prev;
+      let usedElsewhere = 0;
+      for (const l of prev) {
+        if (l.kit.id === line.kit.id && l.key !== key) usedElsewhere += l.quantity;
+      }
+      const maxQty = Math.max(1, line.kit.max_stock - usedElsewhere);
+      const next = Math.max(1, Math.min(maxQty, Math.floor(q)));
+      return prev.map((l) => (l.key === key ? { ...l, quantity: next } : l));
+    });
+  }
+
+  function removeKitLine(key: string) {
+    setKitLines((prev) => prev.filter((l) => l.key !== key));
   }
 
   function setLineDiscountMode(key: string, mode: LineDiscountMode) {
@@ -604,11 +706,15 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
           discountAmountCents: amt,
         };
       }),
+      kitLines: kitLines.map((l) => ({
+        kitId: l.kit.id,
+        quantity: l.quantity,
+      })),
       paymentMethod: payment,
       shippingAddress: address,
       shippingPhone: phone,
     });
-  }, [customer, lines, payment, shipChoice, shipOptions, customerWholesalePct]);
+  }, [customer, lines, kitLines, payment, shipChoice, shipOptions, customerWholesalePct]);
 
   const banner = errorMessage(initialError);
 
@@ -627,12 +733,12 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
           <section
             className={`${cardSectionClass} order-2 xl:order-none xl:col-start-1 xl:row-start-1`}
           >
-            <h2 className={sectionTitle}>Productos</h2>
+            <h2 className={sectionTitle}>Productos y kits</h2>
             <div className="relative mt-5">
               <input
                 value={productQuery}
                 onChange={(e) => setProductQuery(e.target.value)}
-                placeholder="Buscar por nombre o código"
+                placeholder="Buscar producto por nombre o código"
                 className={inputClass}
                 autoComplete="off"
               />
@@ -672,15 +778,60 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
                 </div>
               ) : null}
             </div>
+            <div className="relative mt-4">
+              <input
+                value={kitQuery}
+                onChange={(e) => setKitQuery(e.target.value)}
+                placeholder="Buscar kit / combo"
+                className={inputClass}
+                autoComplete="off"
+              />
+              {kitQuery.trim().length > 0 ? (
+                <div className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-zinc-200 bg-white py-1 shadow-md shadow-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900 dark:shadow-lg dark:shadow-black/30">
+                  {kitLoading ? (
+                    <p className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400">
+                      Buscando…
+                    </p>
+                  ) : kitHits.length === 0 ? (
+                    <p className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400">
+                      Sin kits disponibles.
+                    </p>
+                  ) : (
+                    kitHits.map((k) => (
+                      <button
+                        key={k.id}
+                        type="button"
+                        onClick={() => addKit(k)}
+                        disabled={!k.available || k.max_stock < 1}
+                        className="flex w-full flex-col items-start gap-0.5 px-3 py-2.5 text-left text-sm transition hover:bg-zinc-50/80 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-zinc-800/90"
+                      >
+                        <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                          {k.name}
+                          <span className="ml-1.5 text-[11px] font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-300">
+                            Kit
+                          </span>
+                        </span>
+                        <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                          {formatCop(k.price_cents)}
+                          {k.item_count > 0 ? ` · ${k.item_count} productos` : null}
+                          {k.max_stock < 6 ? ` · Stock: ${k.max_stock}` : null}
+                          {!k.is_published ? " · Borrador" : null}
+                        </span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              ) : null}
+            </div>
           </section>
 
           <section
             className={`${cardSectionClass} order-3 xl:order-none xl:col-start-1 xl:row-start-2`}
           >
-            <h2 className={sectionTitle}>Productos seleccionados</h2>
-            {lines.length === 0 ? (
+            <h2 className={sectionTitle}>Ítems seleccionados</h2>
+            {lines.length === 0 && kitLines.length === 0 ? (
               <p className="mt-5 text-sm text-zinc-500 dark:text-zinc-400">
-                Agrega productos desde la búsqueda.
+                Agrega productos o kits desde la búsqueda.
               </p>
             ) : (
               <>
@@ -824,11 +975,70 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
                     </li>
                   );
                 })}
+                {kitLines.map((line) => {
+                  let usedElsewhere = 0;
+                  for (const l of kitLines) {
+                    if (l.kit.id === line.kit.id && l.key !== line.key) {
+                      usedElsewhere += l.quantity;
+                    }
+                  }
+                  const maxQtyThisLine = Math.max(1, line.kit.max_stock - usedElsewhere);
+                  const lineTotal = line.kit.price_cents * line.quantity;
+                  return (
+                    <li key={line.key} className="py-4">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-zinc-900 dark:text-zinc-100">
+                            {line.kit.name}
+                            <span className="ml-1.5 text-[11px] font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-300">
+                              Kit
+                            </span>
+                          </p>
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                            {formatCop(line.kit.price_cents)} c/u
+                            {line.kit.max_stock < 6
+                              ? ` · Stock: ${line.kit.max_stock}`
+                              : null}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            className="rounded-lg border border-zinc-200/90 bg-white px-2.5 py-1 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                            onClick={() => setKitQty(line.key, line.quantity - 1)}
+                          >
+                            −
+                          </button>
+                          <span className="w-8 text-center text-sm font-medium tabular-nums text-zinc-900 dark:text-zinc-100">
+                            {line.quantity}
+                          </span>
+                          <button
+                            type="button"
+                            className="rounded-lg border border-zinc-200/90 bg-white px-2.5 py-1 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                            onClick={() => setKitQty(line.key, line.quantity + 1)}
+                            disabled={line.quantity >= maxQtyThisLine}
+                          >
+                            +
+                          </button>
+                        </div>
+                        <p className="text-sm font-medium tabular-nums text-zinc-900 dark:text-zinc-100">
+                          {formatCop(lineTotal)}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => removeKitLine(line.key)}
+                          className="text-xs font-medium text-red-600 hover:underline dark:text-red-400"
+                        >
+                          Quitar
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
               {cartStockExceeded ? (
                 <p className="mt-3 text-sm text-red-600 dark:text-red-400">
-                  La cantidad total por producto supera el stock en tienda. Ajustá cantidades o
-                  quitá líneas.
+                  La cantidad supera el stock disponible. Ajustá cantidades o quitá líneas.
                 </p>
               ) : null}
               </>

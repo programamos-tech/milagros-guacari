@@ -14,7 +14,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, Minus, Plus } from "lucide-react";
-import { setLineQuantity } from "@/app/actions/cart";
+import { setKitLineQuantity, setLineQuantity } from "@/app/actions/cart";
 import { formatCop } from "@/lib/money";
 import { productColorSwatchClass } from "@/lib/product-colors";
 import {
@@ -23,7 +23,8 @@ import {
 } from "@/lib/storage-public-url";
 
 export type StoreCartDrawerItem = {
-  productId: string;
+  productId?: string;
+  kitId?: string;
   quantity: number;
   fragrance: string | null;
   name: string;
@@ -222,11 +223,12 @@ function DrawerLine({
   onAdjustQty: (nextQty: number) => void;
 }) {
   const img = storagePublicObjectUrl(item.imagePath);
+  const href = item.kitId ? "/kits" : `/products/${item.productId ?? ""}`;
   return (
     <li className="border-b border-stone-200/90 py-6">
       <div className="flex gap-4">
         <Link
-          href={`/products/${item.productId}`}
+          href={href}
           className="relative size-24 shrink-0 bg-[#f0eeeb]"
         >
           {img ? (
@@ -247,12 +249,17 @@ function DrawerLine({
         <div className="flex min-w-0 flex-1 items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
             <Link
-              href={`/products/${item.productId}`}
+              href={href}
               className="text-[13px] font-semibold uppercase leading-snug tracking-wide text-[var(--store-brand)] transition hover:text-[var(--store-brand-hover)]"
             >
               {item.name}
             </Link>
             <div className="mt-3 space-y-1 text-[12px] text-stone-600">
+              {item.kitId ? (
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-700">
+                  Kit / combo
+                </p>
+              ) : null}
               {item.fragrance ? (
                 <p>
                   <span className="text-stone-500">Fragancia / tono:</span>{" "}
@@ -402,14 +409,18 @@ export function StoreCartDrawerProvider({
   const [linePending, startLineTransition] = useTransition();
 
   const adjustQty = useCallback(
-    (productId: string, fragrance: string | null, nextQty: number) => {
+    (item: StoreCartDrawerItem, nextQty: number) => {
       startLineTransition(() => {
         void (async () => {
-          await setLineQuantity(
-            productId,
-            nextQty,
-            fragrance ?? undefined,
-          );
+          if (item.kitId) {
+            await setKitLineQuantity(item.kitId, nextQty);
+          } else if (item.productId) {
+            await setLineQuantity(
+              item.productId,
+              nextQty,
+              item.fragrance ?? undefined,
+            );
+          }
           await reloadCart("quiet");
           router.refresh();
         })();
@@ -482,12 +493,14 @@ export function StoreCartDrawerProvider({
                   <ul className="pb-2">
                     {items.map((item) => (
                       <DrawerLine
-                        key={`${item.productId}-${item.fragrance ?? ""}`}
+                        key={
+                          item.kitId
+                            ? `kit-${item.kitId}`
+                            : `${item.productId}-${item.fragrance ?? ""}`
+                        }
                         item={item}
                         pending={linePending}
-                        onAdjustQty={(next) =>
-                          adjustQty(item.productId, item.fragrance, next)
-                        }
+                        onAdjustQty={(next) => adjustQty(item, next)}
                       />
                     ))}
                   </ul>

@@ -35,6 +35,8 @@ export const PERMISSION_KEYS = [
   "actividades_ver",
   "marketing_ver",
   "ajustes_tienda_ver",
+  "kits_ver",
+  "kits_gestionar",
 ] as const;
 
 export type PermissionMap = Partial<Record<PermissionKey, boolean>>;
@@ -112,6 +114,14 @@ export const PERMISSION_MODULES: PermissionModule[] = [
     ],
   },
   {
+    id: "kits",
+    label: "Kits y combos",
+    items: [
+      { key: "kits_ver", label: "Ver kits" },
+      { key: "kits_gestionar", label: "Crear y editar kits" },
+    ],
+  },
+  {
     id: "marketing",
     label: "Marketing",
     items: [{ key: "marketing_ver", label: "Banners y cupones" }],
@@ -150,6 +160,7 @@ export function defaultPermissionsCashier(): PermissionMap {
   m.egresos_crear = true;
   m.proveedores_ver = true;
   m.inventario_ver = true;
+  m.kits_ver = true;
   m.actividades_ver = true;
   m.marketing_ver = false;
   m.ajustes_tienda_ver = false;

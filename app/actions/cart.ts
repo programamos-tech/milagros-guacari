@@ -4,16 +4,25 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   cartLinesMatchFragrance,
+  cartLinesMatchKit,
   getCart,
+  isCartKitLine,
+  isCartProductLine,
   setCart,
   type CartLine,
 } from "@/lib/cart";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { expandFragranceLabels } from "@/lib/fragrance-options";
+import { fetchKitWithItems } from "@/lib/load-product-kits";
+import {
+  kitIsAvailable,
+  maxKitsAvailableFromItems,
+} from "@/lib/product-kits";
 import { normalizeStorefrontCartLines } from "@/lib/storefront-cart";
 
 function revalidateStoreCart() {
   revalidatePath("/products");
+  revalidatePath("/kits");
   revalidatePath("/checkout");
   revalidatePath("/", "layout");
 }
@@ -62,8 +71,10 @@ export async function addToCart(
 
   const cart = await getCart();
   const next: CartLine[] = [...cart];
-  const i = next.findIndex((l) =>
-    cartLinesMatchFragrance(l, { productId, fragrance: frag }),
+  const i = next.findIndex(
+    (l) =>
+      isCartProductLine(l) &&
+      cartLinesMatchFragrance(l, { productId, fragrance: frag }),
   );
   const current = i >= 0 ? next[i]!.quantity : 0;
   const newQty = Math.min(current + q, stock);
@@ -102,16 +113,22 @@ export async function setLineQuantity(
 
   if (raw <= 0 || stock <= 0) {
     next = cart.filter(
-      (l) => !cartLinesMatchFragrance(l, { productId, fragrance: frag }),
+      (l) =>
+        !isCartProductLine(l) ||
+        !cartLinesMatchFragrance(l, { productId, fragrance: frag }),
     );
   } else {
     const q = Math.min(raw, stock);
-    const idx = cart.findIndex((l) =>
-      cartLinesMatchFragrance(l, { productId, fragrance: frag }),
+    const idx = cart.findIndex(
+      (l) =>
+        isCartProductLine(l) &&
+        cartLinesMatchFragrance(l, { productId, fragrance: frag }),
     );
     if (idx >= 0) {
       next = cart.map((l, i) =>
-        i === idx ? { ...l, quantity: q, fragrance: frag ?? l.fragrance } : l,
+        i === idx && isCartProductLine(l)
+          ? { ...l, quantity: q, fragrance: frag ?? l.fragrance }
+          : l,
       );
     } else {
       next = [...cart, { productId, quantity: q, fragrance: frag }];
@@ -185,6 +202,84 @@ export async function updateLineFromForm(formData: FormData) {
   const fragranceRaw = String(formData.get("fragrance") ?? "").trim();
   if (!productId) return;
   await setLineQuantity(productId, q, fragranceRaw || undefined);
+}
+
+export async function addKitToCart(kitId: string, quantity: number) {
+  await syncCartCookieIfStale();
+  const id = kitId.trim();
+  if (!id) return;
+  const q = Math.max(1, Math.floor(quantity || 1));
+
+  const supabase = await createSupabaseServerClient();
+  const kit = await fetchKitWithItems(supabase, id);
+  if (!kit || !kitIsAvailable(kit, "storefront")) return;
+
+  const maxK = maxKitsAvailableFromItems(kit.items ?? [], "storefront");
+  if (maxK < 1) return;
+
+  const cart = await getCart();
+  const next: CartLine[] = [...cart];
+  const i = next.findIndex(
+    (l) => isCartKitLine(l) && cartLinesMatchKit(l, { kitId: id }),
+  );
+  const current = i >= 0 ? next[i]!.quantity : 0;
+  const newQty = Math.min(current + q, maxK);
+  if (newQty <= 0) return;
+
+  const line: CartLine = { kitId: id, quantity: newQty };
+  if (i >= 0) next[i] = line;
+  else next.push(line);
+
+  await setCart(next);
+  revalidateStoreCart();
+}
+
+export async function setKitLineQuantity(kitId: string, quantity: number) {
+  await syncCartCookieIfStale();
+  const id = kitId.trim();
+  if (!id) return;
+  const raw = Math.floor(quantity);
+
+  const supabase = await createSupabaseServerClient();
+  const kit = await fetchKitWithItems(supabase, id);
+  const maxK = kit
+    ? maxKitsAvailableFromItems(kit.items ?? [], "storefront")
+    : 0;
+
+  const cart = await getCart();
+  let next: CartLine[];
+
+  if (raw <= 0 || maxK <= 0) {
+    next = cart.filter(
+      (l) => !isCartKitLine(l) || !cartLinesMatchKit(l, { kitId: id }),
+    );
+  } else {
+    const q = Math.min(raw, maxK);
+    const idx = cart.findIndex(
+      (l) => isCartKitLine(l) && cartLinesMatchKit(l, { kitId: id }),
+    );
+    if (idx >= 0) {
+      next = cart.map((l, i) => (i === idx ? { kitId: id, quantity: q } : l));
+    } else {
+      next = [...cart, { kitId: id, quantity: q }];
+    }
+  }
+  await setCart(next);
+  revalidateStoreCart();
+}
+
+export async function addKitToCartFromForm(formData: FormData) {
+  const kitId = String(formData.get("kitId") ?? "");
+  const qty = Number(formData.get("quantity") ?? 1);
+  if (!kitId) return;
+  await addKitToCart(kitId, Number.isFinite(qty) ? qty : 1);
+}
+
+export async function updateKitLineFromForm(formData: FormData) {
+  const kitId = String(formData.get("kitId") ?? "");
+  const q = Number(formData.get("quantity") ?? 0);
+  if (!kitId) return;
+  await setKitLineQuantity(kitId, q);
 }
 
 export async function clearCart() {

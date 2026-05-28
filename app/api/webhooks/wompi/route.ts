@@ -112,13 +112,49 @@ export async function POST(request: Request) {
   if (nextStatus === "paid") {
     const { data: items } = await supabase
       .from("order_items")
-      .select("id,product_id,quantity")
+      .select("id,product_id,kit_id,quantity,kit_component_deductions")
       .eq("order_id", orderId);
 
     for (const it of items ?? []) {
-      const pid = it.product_id as string | null;
       const itemId = it.id as string | null;
-      if (!pid || !itemId) continue;
+      if (!itemId) continue;
+
+      const kitId = it.kit_id as string | null;
+      if (kitId) {
+        const raw = it.kit_component_deductions;
+        const deductions = Array.isArray(raw) ? raw : [];
+        for (const row of deductions) {
+          const d = row as {
+            product_id?: string;
+            stock_deducted_local?: number;
+            stock_deducted_warehouse?: number;
+          };
+          const pid = d.product_id != null ? String(d.product_id) : "";
+          if (!pid) continue;
+          const takeL = Math.max(0, Math.floor(Number(d.stock_deducted_local ?? 0)));
+          const takeW = Math.max(0, Math.floor(Number(d.stock_deducted_warehouse ?? 0)));
+          if (takeL === 0 && takeW === 0) continue;
+
+          const { data: prod } = await supabase
+            .from("products")
+            .select("stock_warehouse,stock_local")
+            .eq("id", pid)
+            .maybeSingle();
+          if (!prod) continue;
+
+          await supabase
+            .from("products")
+            .update({
+              stock_local: Math.max(0, Number(prod.stock_local ?? 0) - takeL),
+              stock_warehouse: Math.max(0, Number(prod.stock_warehouse ?? 0) - takeW),
+            })
+            .eq("id", pid);
+        }
+        continue;
+      }
+
+      const pid = it.product_id as string | null;
+      if (!pid) continue;
       const { data: prod } = await supabase
         .from("products")
         .select("stock_warehouse,stock_local")

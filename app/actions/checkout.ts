@@ -1,6 +1,21 @@
 "use server";
 
-import { getCart, normalizeCartForCheckout, setCart } from "@/lib/cart";
+import {
+  getCart,
+  isCartKitLine,
+  isCartProductLine,
+  normalizeCartForCheckout,
+  setCart,
+} from "@/lib/cart";
+import { fetchKitsWithItems } from "@/lib/load-product-kits";
+import {
+  buildKitStorefrontComponentDeductions,
+  kitIsAvailable,
+  maxKitsAvailableFromItems,
+  resolveKitSalePriceCents,
+  type ProductKitRow,
+} from "@/lib/product-kits";
+import { normalizeStorefrontCartLines } from "@/lib/storefront-cart";
 import { storeBrand } from "@/lib/brand";
 import { ensureStoreCustomerLinked } from "@/lib/store-customer-service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -87,28 +102,67 @@ export async function startCheckout(formData: FormData) {
     redirect("/checkout?error=empty");
   }
 
-  const supabase = createSupabaseServiceClient();
-  const ids = [...new Set(cart.map((l) => l.productId))];
-  const { data: products, error: pErr } = await supabase
-    .from("products")
-    .select("id,name,price_cents,currency,stock_quantity,is_published,has_vat,vat_percent")
-    .in("id", ids);
-
-  if (pErr) {
-    if (process.env.NODE_ENV === "development") {
-      console.error("[checkout] products query:", pErr.message);
-    }
-    redirect("/checkout?error=products");
-  }
-
-  const byId = new Map(products.map((p) => [p.id, p]));
-  const normalized = normalizeCartForCheckout(cart, byId);
-
+  const normalized = await normalizeStorefrontCartLines(cart);
   if (JSON.stringify(cart) !== JSON.stringify(normalized)) {
     await setCart(normalized);
   }
-
   if (!normalized.length) {
+    redirect("/checkout?error=empty");
+  }
+
+  const productLines = normalized.filter(isCartProductLine);
+  const kitLines = normalized.filter(isCartKitLine);
+
+  const supabase = createSupabaseServiceClient();
+  const productIds = [...new Set(productLines.map((l) => l.productId))];
+  let products: {
+    id: string;
+    name: string;
+    price_cents: number;
+    currency: string | null;
+    stock_quantity: number | null;
+    is_published: boolean | null;
+    has_vat: boolean | null;
+    vat_percent: number | null;
+  }[] = [];
+
+  if (productIds.length > 0) {
+    const { data, error: pErr } = await supabase
+      .from("products")
+      .select(
+        "id,name,price_cents,currency,stock_quantity,is_published,has_vat,vat_percent",
+      )
+      .in("id", productIds);
+
+    if (pErr) {
+      if (process.env.NODE_ENV === "development") {
+        console.error("[checkout] products query:", pErr.message);
+      }
+      redirect("/checkout?error=products");
+    }
+    products = data ?? [];
+  }
+
+  const byId = new Map(products.map((p) => [p.id, p]));
+  const normalizedProducts = normalizeCartForCheckout(productLines, byId);
+
+  const kitsById = new Map<string, ProductKitRow>();
+  if (kitLines.length > 0) {
+    const allKits = await fetchKitsWithItems(supabase, { publishedOnly: true });
+    for (const kit of allKits) {
+      kitsById.set(kit.id, kit);
+    }
+    for (const kl of kitLines) {
+      const kit = kitsById.get(kl.kitId);
+      if (!kit || !kitIsAvailable(kit, "storefront")) {
+        redirect("/checkout?error=removed");
+      }
+      const maxK = maxKitsAvailableFromItems(kit.items ?? [], "storefront");
+      if (maxK < kl.quantity) redirect("/checkout?error=stock");
+    }
+  }
+
+  if (normalizedProducts.length === 0 && kitLines.length === 0) {
     redirect("/checkout?error=empty");
   }
 
@@ -131,13 +185,17 @@ export async function startCheckout(formData: FormData) {
 
   let total = 0;
   const lines: {
-    product_id: string;
+    product_id: string | null;
+    kit_id: string | null;
     quantity: number;
     unit_price_cents: number;
     product_name_snapshot: string;
+    kit_component_deductions: ReturnType<
+      typeof buildKitStorefrontComponentDeductions
+    > | null;
   }[] = [];
 
-  for (const line of normalized) {
+  for (const line of normalizedProducts) {
     const p = byId.get(line.productId);
     if (!p) {
       redirect("/checkout?error=removed");
@@ -152,9 +210,29 @@ export async function startCheckout(formData: FormData) {
     const frag = line.fragrance?.trim();
     lines.push({
       product_id: p.id,
+      kit_id: null,
       quantity: line.quantity,
       unit_price_cents: unit,
       product_name_snapshot: frag ? `${p.name} (${frag})` : p.name,
+      kit_component_deductions: null,
+    });
+  }
+
+  for (const kl of kitLines) {
+    const kit = kitsById.get(kl.kitId)!;
+    const items = kit.items ?? [];
+    const unit = resolveKitSalePriceCents(kit, items, "storefront");
+    total += unit * kl.quantity;
+    lines.push({
+      product_id: null,
+      kit_id: kl.kitId,
+      quantity: kl.quantity,
+      unit_price_cents: unit,
+      product_name_snapshot: `Kit: ${kit.name}`,
+      kit_component_deductions: buildKitStorefrontComponentDeductions(
+        kit,
+        kl.quantity,
+      ),
     });
   }
 
@@ -170,7 +248,7 @@ export async function startCheckout(formData: FormData) {
     const eligible =
       couponMatch.eligible_product_ids === null
         ? total
-        : normalized.reduce((sum, line) => {
+        : normalizedProducts.reduce((sum, line) => {
             if (!couponMatch.eligible_product_ids!.has(line.productId)) {
               return sum;
             }
@@ -197,8 +275,10 @@ export async function startCheckout(formData: FormData) {
   }
   const totalWithDiscount = Math.max(0, total - discount);
 
-  const first = byId.get(normalized[0]!.productId);
-  const currency = first?.currency ?? "COP";
+  const firstProduct = normalizedProducts[0]
+    ? byId.get(normalizedProducts[0].productId)
+    : null;
+  const currency = firstProduct?.currency ?? "COP";
 
   let customerId: string;
 
@@ -266,9 +346,11 @@ export async function startCheckout(formData: FormData) {
     lines.map((l) => ({
       order_id: orderId,
       product_id: l.product_id,
+      kit_id: l.kit_id,
       quantity: l.quantity,
       unit_price_cents: l.unit_price_cents,
       product_name_snapshot: l.product_name_snapshot,
+      kit_component_deductions: l.kit_component_deductions,
     })),
   );
 
