@@ -14,11 +14,20 @@ export type VentaOrderRow = {
   created_at: string;
   wompi_reference: string | null;
   customer_email: string | null;
-  checkout_payment_method?: string | null;
 };
 
+/** Columnas presentes en prod y local (sin checkout_payment_method). */
 const VENTAS_SELECT =
-  "id,status,customer_name,total_cents,created_at,wompi_reference,customer_email,checkout_payment_method";
+  "id,status,customer_name,total_cents,created_at,wompi_reference,customer_email";
+
+const EMPTY_VENTAS_FILTER_STATS: VentasFilterStats = {
+  totalCents: 0,
+  cashCents: 0,
+  transferCents: 0,
+  mixedCents: 0,
+  otherCents: 0,
+  paidCount: 0,
+};
 
 type VentasFilterOpts = {
   q?: string;
@@ -39,17 +48,13 @@ function applyVentaPagoFilter(query: any, payment: VentaPagoFilter) {
     return query.eq("wompi_reference", "POS:cash");
   }
   if (payment === "transfer") {
-    return query.or(
-      "wompi_reference.eq.POS:transfer,checkout_payment_method.eq.transfer",
-    );
+    return query.eq("wompi_reference", "POS:transfer");
   }
   if (payment === "mixed") {
     return query.eq("wompi_reference", "POS:mixed");
   }
   if (payment === "online") {
-    return query
-      .not("wompi_reference", "like", "POS:%")
-      .or("checkout_payment_method.is.null,checkout_payment_method.neq.transfer");
+    return query.not("wompi_reference", "like", "POS:%");
   }
   return query;
 }
@@ -112,6 +117,59 @@ function ventasDateBounds(opts: VentasFilterOpts): {
   return { gte: bounds.gte, lt: bounds.lt };
 }
 
+function parseVentasFilterStatsRpc(raw: unknown): VentasFilterStats | null {
+  if (raw == null) return null;
+  let payload: Record<string, unknown>;
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+      payload = parsed as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  } else if (typeof raw === "object" && !Array.isArray(raw)) {
+    payload = raw as Record<string, unknown>;
+  } else {
+    return null;
+  }
+
+  return {
+    totalCents: Number(payload.totalCents ?? 0),
+    cashCents: Number(payload.cashCents ?? 0),
+    transferCents: Number(payload.transferCents ?? 0),
+    mixedCents: Number(payload.mixedCents ?? 0),
+    otherCents: Number(payload.otherCents ?? 0),
+    paidCount: Number(payload.paidCount ?? 0),
+  };
+}
+
+async function fetchVentasFilterStatsFallback(
+  supabase: SupabaseClient,
+  opts: VentasFilterOpts,
+): Promise<VentasFilterStats> {
+  const { data, error } = await applyVentasFilters(supabase.from("orders"), opts).select(
+    "status,total_cents,wompi_reference",
+  ).limit(5000);
+
+  if (error) {
+    console.error("[ventas] fallback stats:", error.message);
+    return EMPTY_VENTAS_FILTER_STATS;
+  }
+
+  const rows = (data ?? []) as {
+    status: string;
+    total_cents: number;
+    wompi_reference: string | null;
+  }[];
+
+  if (rows.length >= 5000) {
+    console.warn("[ventas] fallback stats truncado a 5000 filas");
+  }
+
+  return computeVentasFilterStats(rows);
+}
+
 async function fetchVentasFilterStats(
   supabase: SupabaseClient,
   opts: VentasFilterOpts,
@@ -127,28 +185,15 @@ async function fetchVentasFilterStats(
     p_q: q,
   });
 
-  if (!error && data && typeof data === "object") {
-    const d = data as Record<string, unknown>;
-    return {
-      totalCents: Number(d.totalCents ?? 0),
-      cashCents: Number(d.cashCents ?? 0),
-      transferCents: Number(d.transferCents ?? 0),
-      mixedCents: Number(d.mixedCents ?? 0),
-      otherCents: Number(d.otherCents ?? 0),
-      paidCount: Number(d.paidCount ?? 0),
-    };
+  if (!error) {
+    const parsed = parseVentasFilterStatsRpc(data);
+    if (parsed) return parsed;
+    console.error("[ventas] admin_ventas_filter_stats: payload inválido");
+  } else {
+    console.error("[ventas] admin_ventas_filter_stats:", error.message);
   }
 
-  const statsRes = await applyVentasFilters(supabase.from("orders"), opts).select(
-    "status,total_cents,wompi_reference",
-  );
-  return computeVentasFilterStats(
-    (statsRes.data ?? []) as {
-      status: string;
-      total_cents: number;
-      wompi_reference: string | null;
-    }[],
-  );
+  return fetchVentasFilterStatsFallback(supabase, opts);
 }
 
 export type FetchAdminVentasPageOpts = VentasFilterOpts & {

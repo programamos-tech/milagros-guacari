@@ -58,7 +58,7 @@ export async function GET(request: Request) {
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   const orderSelect =
-    "id,status,customer_name,total_cents,created_at,wompi_reference,checkout_payment_method" as const;
+    "id,status,customer_name,total_cents,created_at,wompi_reference" as const;
 
   const canSearchIdFragment =
     qCompact.length >= 6 && /^[0-9a-f-]+$/i.test(qCompact);
