@@ -115,21 +115,16 @@ function csvEscape(value: string): string {
   return value;
 }
 
-/** Formato visual del Excel ALEYA: ` $  19.009 ` */
+/**
+ * Pesos COP enteros para celdas del CSV (sin `$` ni separador de miles).
+ * Así Excel y Google Sheets importan número y `SUMA()` cuadra con TOTALES.
+ */
 export function formatAleyaMoneyCell(pesos: number): string {
-  const n = Math.round(Number(pesos ?? 0));
-  if (n === 0) return " $  -   ";
-  const abs = Math.abs(n);
-  const formatted = new Intl.NumberFormat("es-CO", {
-    maximumFractionDigits: 0,
-    minimumFractionDigits: 0,
-  }).format(abs);
-  if (n < 0) return `-$  ${formatted} `;
-  return ` $  ${formatted} `;
+  return String(Math.round(Number(pesos ?? 0)));
 }
 
 function moneyCell(pesos: number): string {
-  return formatAleyaMoneyCell(Math.round(pesos));
+  return formatAleyaMoneyCell(pesos);
 }
 
 function intCell(n: number): string {
@@ -257,9 +252,9 @@ export function buildAleyaExportCsv(payload: AleyaExportPayload): string {
       `Mes: ${payload.yearMonth}`,
       `Pedidos pagados: ${payload.paidOrdersCount}`,
       `Unidades vendidas: ${t.qty}`,
-      `Ingresos sin IVA: ${moneyCell(payload.reportIngresosSinIva).trim()}`,
-      `GASTOS: ${moneyCell(payload.expensesPesos).trim()}`,
-      `UTILIDAD NETA: ${moneyCell(netMargin).trim()}`,
+      `Ingresos sin IVA: ${moneyCell(payload.reportIngresosSinIva)}`,
+      `GASTOS: ${moneyCell(payload.expensesPesos)}`,
+      `UTILIDAD NETA: ${moneyCell(netMargin)}`,
     ]
       .map((c) => csvEscape(String(c)))
       .join(","),
