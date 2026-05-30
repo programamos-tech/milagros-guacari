@@ -1,6 +1,7 @@
 "use server";
 
 import { logAdminActivity } from "@/lib/admin-activity-log";
+import { verifyInsertedRow, verifyRowCountAtLeast } from "@/lib/admin-insert-verify";
 import { assertActionPermission } from "@/lib/require-admin-permission";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
@@ -394,6 +395,23 @@ export async function createPosInvoiceAction(formData: FormData) {
   const { error: iErr } = await supabase.from("order_items").insert(itemRows);
 
   if (iErr) {
+    await supabase.from("orders").delete().eq("id", orderId);
+    redirectError("db");
+  }
+
+  if (!(await verifyInsertedRow(supabase, "orders", orderId))) {
+    await supabase.from("orders").delete().eq("id", orderId);
+    redirectError("db");
+  }
+  if (
+    !(await verifyRowCountAtLeast(
+      supabase,
+      "order_items",
+      { column: "order_id", value: orderId },
+      itemRows.length,
+    ))
+  ) {
+    await supabase.from("order_items").delete().eq("order_id", orderId);
     await supabase.from("orders").delete().eq("id", orderId);
     redirectError("db");
   }

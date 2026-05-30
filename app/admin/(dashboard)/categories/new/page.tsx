@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { createCategory } from "@/app/actions/admin/categories";
-
-const inputClass =
-  "w-full rounded-lg border-0 bg-stone-100 px-3 py-2.5 text-stone-900 focus:ring-2 focus:ring-[#6b7f6a]";
+import { CategoryCreateForm } from "@/components/admin/CategoryCreateForm";
+import { AdminNewPageShell } from "@/components/admin/AdminNewPageShell";
+import { adminCreateFailedMessage } from "@/lib/admin-create-failed-messages";
 
 export default async function NewCategoryPage({
   searchParams,
@@ -13,7 +12,7 @@ export default async function NewCategoryPage({
   const error = typeof sp.error === "string" ? sp.error : undefined;
 
   return (
-    <div className="mx-auto max-w-lg space-y-6">
+    <AdminNewPageShell className="space-y-6">
       <Link
         href="/admin/products?categories=1"
         className="text-sm font-medium text-[#556654] hover:underline"
@@ -35,21 +34,10 @@ export default async function NewCategoryPage({
       ) : null}
       {error === "db" ? (
         <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-900 ring-1 ring-red-100">
-          No se pudo guardar.
+          {adminCreateFailedMessage("category")}
         </p>
       ) : null}
-      <form action={createCategory} className="space-y-4">
-        <label className="block space-y-1.5 text-sm">
-          <span className="font-semibold text-stone-800">Nombre</span>
-          <input name="name" required className={inputClass} placeholder="Ej. Audio, Hogar, Ofertas" />
-        </label>
-        <button
-          type="submit"
-          className="rounded-full bg-[#3d5240] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#556654]"
-        >
-          Crear categoría
-        </button>
-      </form>
-    </div>
+      <CategoryCreateForm />
+    </AdminNewPageShell>
   );
 }

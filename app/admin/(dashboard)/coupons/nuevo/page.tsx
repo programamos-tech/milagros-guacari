@@ -2,6 +2,7 @@ import {
   NewCouponForm,
   NewCouponHeader,
 } from "@/components/admin/StoreCouponForms";
+import { AdminNewPageShell } from "@/components/admin/AdminNewPageShell";
 import { storeCouponAdminErrorMessage } from "@/lib/store-coupons";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +18,7 @@ export default async function AdminNuevoCuponPage({
   const errMsg = storeCouponAdminErrorMessage(couponError);
 
   return (
-    <div className="w-full min-w-0">
+    <AdminNewPageShell>
       <NewCouponHeader />
       {errMsg ? (
         <p
@@ -28,6 +29,6 @@ export default async function AdminNuevoCuponPage({
         </p>
       ) : null}
       <NewCouponForm />
-    </div>
+    </AdminNewPageShell>
   );
 }

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { updateStoreCustomerBirthDateAction } from "@/app/actions/store-customer-birthday";
+import { storeShellClass } from "@/lib/store-theme";
 
 const STORAGE_KEY = "tiendas_account_bday_banner_dismissed";
 
@@ -60,7 +61,7 @@ export function StoreAccountBirthdayBanner({ birthDate }: { birthDate: string | 
 
   return (
     <div className="relative border-b border-stone-200/80 bg-[#f4f4f3]">
-      <div className="mx-auto flex max-w-7xl flex-col items-stretch gap-6 px-4 py-6 sm:flex-row sm:items-center sm:gap-10 sm:px-6 lg:px-8">
+      <div className={`${storeShellClass} flex flex-col items-stretch gap-6 py-6 sm:flex-row sm:items-center sm:gap-10`}>
         <div className="relative mx-auto h-20 w-28 shrink-0 sm:mx-0 sm:h-24 sm:w-32">
           <Image
             src="https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&q=80&auto=format&fit=crop"

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { createSupplierInvoiceAction } from "@/app/actions/admin/suppliers";
+import { AdminFormSubmitButton } from "@/components/admin/AdminFormSubmitButton";
 import {
   AdminDateInput,
   productInputClass as inputClass,
@@ -508,13 +509,9 @@ export function SupplierNewInvoiceForm({
               </p>
             </div>
 
-            <button
-              type="submit"
-              disabled={!canSubmit}
-              className="mt-4 w-full rounded-lg border border-rose-950 bg-rose-950 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-900 hover:border-rose-900 disabled:cursor-not-allowed disabled:border-zinc-200 disabled:bg-zinc-200 disabled:text-zinc-500 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white dark:disabled:bg-zinc-800 dark:disabled:text-zinc-500"
-            >
+            <AdminFormSubmitButton pendingLabel="Creando…" disabled={!canSubmit} className="mt-4 w-full rounded-lg border border-rose-950 bg-rose-950 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-900 hover:border-rose-900 disabled:cursor-not-allowed disabled:border-zinc-200 disabled:bg-zinc-200 disabled:text-zinc-500 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white dark:disabled:bg-zinc-800 dark:disabled:text-zinc-500">
               Crear factura
-            </button>
+            </AdminFormSubmitButton>
           </section>
         </div>
       </div>

@@ -8,9 +8,10 @@ import {
   useRef,
   useState,
 } from "react";
-import { useFormStatus } from "react-dom";
 import { createQuickStoreCustomer } from "@/app/actions/admin/store-customers";
+import { AdminFormSubmitButton } from "@/components/admin/AdminFormSubmitButton";
 import { createPosInvoiceAction } from "@/app/actions/admin/pos-invoice";
+import { adminCreateFailedMessage } from "@/lib/admin-create-failed-messages";
 import {
   productInputClass as inputClass,
   productLabelClass as labelClass,
@@ -235,22 +236,17 @@ function errorMessage(code: string | undefined): string | null {
     case "stock":
       return "Stock insuficiente en tienda para uno o más productos.";
     case "db":
-      return "No se pudo guardar en la base de datos. En Supabase aplica las migraciones pendientes (POS, descuentos en order_items y 20260619120000_pos_decrement_stock_local) e intenta de nuevo.";
+      return adminCreateFailedMessage("sale");
     default:
       return "Ocurrió un error al confirmar la factura.";
   }
 }
 
 function ConfirmInvoiceButton({ disabled }: { disabled: boolean }) {
-  const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
-      disabled={disabled || pending}
-      className="mt-5 w-full rounded-lg border border-rose-950 bg-rose-950 py-3.5 text-sm font-medium text-white transition hover:bg-rose-900 hover:border-rose-900 disabled:cursor-not-allowed disabled:border-zinc-200 disabled:bg-zinc-200 disabled:text-zinc-500 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white dark:disabled:border-zinc-700 dark:disabled:bg-zinc-800 dark:disabled:text-zinc-500"
-    >
-      {pending ? "Guardando…" : "Confirmar factura"}
-    </button>
+    <AdminFormSubmitButton pendingLabel="Guardando…" disabled={disabled}>
+      Confirmar factura
+    </AdminFormSubmitButton>
   );
 }
 
@@ -362,6 +358,7 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
 
   async function submitQuickCustomer(e: React.FormEvent) {
     e.preventDefault();
+    if (quickPending) return;
     setQuickError(null);
     setQuickPending(true);
     const res = await createQuickStoreCustomer({
@@ -374,10 +371,12 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
         setQuickError("Sesión expirada. Recarga la página e inicia sesión de nuevo.");
       } else if (res.code === "forbidden") {
         setQuickError("No tenés permiso para crear clientes.");
+      } else if (res.code === "duplicate_document") {
+        setQuickError("Ya existe un cliente con esa cédula o documento.");
       } else if (res.code === "name") {
         setQuickError("El nombre es obligatorio.");
       } else {
-        setQuickError("No se pudo crear el cliente. Intenta de nuevo.");
+        setQuickError(adminCreateFailedMessage("customer"));
       }
       return;
     }

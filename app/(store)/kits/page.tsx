@@ -8,6 +8,7 @@ import {
 } from "@/lib/product-kits";
 import { getStorefrontCartQuantityByKitId } from "@/lib/storefront-cart";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { storeShellClass } from "@/lib/store-theme";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,7 @@ export default async function KitsPage() {
 
   return (
     <div className="min-h-[calc(100vh-8rem)] bg-white">
-      <div className="mx-auto max-w-6xl px-4 pb-16 pt-10 sm:px-6 lg:pt-12">
+      <div className={`${storeShellClass} pb-16 pt-10 lg:pt-12`}>
         <nav
           aria-label="Migas de pan"
           className="mb-6 text-[11px] uppercase tracking-[0.12em] text-stone-400"

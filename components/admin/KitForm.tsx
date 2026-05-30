@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { AdminFormSubmitButton, adminPrimarySubmitButtonClass } from "@/components/admin/AdminFormSubmitButton";
 import { useEffect, useMemo, useState } from "react";
 import {
   createKitAction,
@@ -520,13 +521,13 @@ export function KitForm({
 
       {canEdit ? (
         <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="submit"
+          <AdminFormSubmitButton
+            pendingLabel="Guardando…"
             disabled={items.length === 0 || name.trim().length < 2}
-            className="rounded-lg border border-rose-950 bg-rose-950 px-5 py-2.5 text-sm font-semibold text-white hover:bg-rose-900 disabled:cursor-not-allowed disabled:border-zinc-200 disabled:bg-zinc-200 disabled:text-zinc-500 dark:disabled:border-zinc-700 dark:disabled:bg-zinc-800 dark:disabled:text-zinc-500"
+            className={`px-5 py-2.5 ${adminPrimarySubmitButtonClass}`}
           >
             {mode === "create" ? "Crear kit" : "Guardar cambios"}
-          </button>
+          </AdminFormSubmitButton>
           {items.length === 0 ? (
             <p className="text-sm text-amber-800 dark:text-amber-200">
               Agregá al menos un producto al kit para poder guardar.

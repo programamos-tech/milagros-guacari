@@ -1,4 +1,5 @@
 import { NewExpenseForm, NewExpenseHeader } from "@/components/admin/NewExpenseForm";
+import { AdminNewPageShell } from "@/components/admin/AdminNewPageShell";
 import { requireAdminPermission } from "@/lib/require-admin-permission";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -31,10 +32,10 @@ export default async function AdminNuevoEgresoPage({
   });
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-7xl space-y-6">
+    <AdminNewPageShell className="space-y-6">
       <NewExpenseHeader />
       <NewExpenseForm initialError={expenseErrorCode} turnWorkers={turnWorkers} />
-    </div>
+    </AdminNewPageShell>
   );
 }
 

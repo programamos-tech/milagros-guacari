@@ -1,4 +1,6 @@
 import { NewProductForm, NewProductHeader } from "@/components/admin/NewProductForm";
+import { AdminNewPageShell } from "@/components/admin/AdminNewPageShell";
+import { adminCreateFailedMessage } from "@/lib/admin-create-failed-messages";
 import { requireAdminPermission } from "@/lib/require-admin-permission";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -21,22 +23,24 @@ export default async function NewProductPage({
   const cats = categories ?? [];
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-7xl">
+    <AdminNewPageShell>
       <NewProductHeader />
 
       {error ? (
         <p className="mb-6 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-900 dark:border-red-900/50 dark:bg-red-950/35 dark:text-red-100">
           {error === "reference"
             ? "La referencia es obligatoria. Completa el código del producto."
+            : error === "duplicate_reference"
+              ? "Ya existe un producto con esa referencia o código."
             : error === "name"
               ? "El nombre es obligatorio."
               : error === "rls"
                 ? "No tienes permiso para crear productos. Tu usuario de Supabase tiene que tener una fila en la tabla public.profiles con rol admin (misma id que auth.users)."
-                : "No se pudo guardar en la base de datos. Si el proyecto aún no tiene las columnas referencia / marca / costo, aplica en Supabase la migración 20260510120000_product_reference_brand_cost.sql (el sistema intenta guardar igual sin ellas; si sigue fallando, revisa los logs del servidor)."}
+                : adminCreateFailedMessage("product")}
         </p>
       ) : null}
 
       <NewProductForm categories={cats} />
-    </div>
+    </AdminNewPageShell>
   );
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { KitForm } from "@/components/admin/KitForm";
+import { AdminNewPageShell } from "@/components/admin/AdminNewPageShell";
 import { kitFormErrorMessage } from "@/lib/kit-form-errors";
 import { requireAdminPermission } from "@/lib/require-admin-permission";
 
@@ -14,7 +15,7 @@ export default async function AdminNewKitPage({
   const banner = kitFormErrorMessage(error);
 
   return (
-    <div className="w-full min-w-0 space-y-6">
+    <AdminNewPageShell className="space-y-6">
       <div>
         <p className="text-xs text-zinc-500">
           <Link href="/admin/kits">Kits</Link>
@@ -32,6 +33,6 @@ export default async function AdminNewKitPage({
         </p>
       ) : null}
       <KitForm mode="create" canEdit />
-    </div>
+    </AdminNewPageShell>
   );
 }

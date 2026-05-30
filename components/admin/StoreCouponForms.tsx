@@ -7,6 +7,7 @@ import {
   deleteStoreCoupon,
   updateStoreCoupon,
 } from "@/app/actions/admin/store-coupons";
+import { AdminFormSubmitButton, adminPrimarySubmitButtonClass } from "@/components/admin/AdminFormSubmitButton";
 import { useAdminTheme } from "@/components/admin/AdminThemeProvider";
 import {
   CouponProductPicker,
@@ -186,12 +187,12 @@ export function NewCouponForm() {
           </label>
         </div>
         <div className="mt-6 flex flex-wrap gap-2">
-          <button
-            type="submit"
-            className="inline-flex items-center justify-center rounded-lg border border-rose-950 bg-rose-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-900 hover:border-rose-900 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
+          <AdminFormSubmitButton
+            pendingLabel="Creando…"
+            className={`inline-flex items-center justify-center px-4 py-2.5 ${adminPrimarySubmitButtonClass}`}
           >
             Crear cupón
-          </button>
+          </AdminFormSubmitButton>
           <Link
             href="/admin/coupons"
             className="inline-flex items-center justify-center rounded-lg border border-rose-200/70 bg-white px-4 py-2.5 text-sm font-medium text-rose-950 transition hover:border-rose-300/80 hover:bg-rose-50/50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"

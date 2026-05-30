@@ -3,6 +3,7 @@ import {
   updateCategoryListingHero,
 } from "@/app/actions/admin/categories";
 import type { AdminCategoryManageRow } from "@/lib/supabase/admin-products-list";
+import { adminCreateFailedMessage } from "@/lib/admin-create-failed-messages";
 import { CategoryDeleteButton } from "@/components/admin/CategoryDeleteButton";
 import { CategoryIconPicker } from "@/components/admin/CategoryIconPicker";
 import { getCategoryIconComponent, resolveCategoryIconKey } from "@/lib/category-icons";
@@ -80,7 +81,7 @@ export function CategoriesPanel({ list, loadError, categoryError }: Props) {
           className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-900 ring-1 ring-red-100"
           role="alert"
         >
-          No se pudo guardar. Intenta de nuevo.
+          {adminCreateFailedMessage("category")}
         </p>
       ) : null}
 

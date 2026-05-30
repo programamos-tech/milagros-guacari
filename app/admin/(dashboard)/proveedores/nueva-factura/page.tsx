@@ -2,6 +2,8 @@ import {
   SupplierNewInvoiceForm,
   SupplierNewInvoiceHeader,
 } from "@/components/admin/SupplierNewInvoiceForm";
+import { AdminNewPageShell } from "@/components/admin/AdminNewPageShell";
+import { adminCreateFailedMessage } from "@/lib/admin-create-failed-messages";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Link from "next/link";
 
@@ -20,7 +22,7 @@ export default async function AdminNuevaFacturaProveedorPage({
   const issueDateDefault = new Date().toISOString().slice(0, 10);
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-7xl">
+    <AdminNewPageShell>
       <SupplierNewInvoiceHeader />
 
       {error ? (
@@ -28,7 +30,7 @@ export default async function AdminNuevaFacturaProveedorPage({
           {error === "validation"
             ? "Revisá proveedor, fecha y al menos un producto con cantidad y precio unitario válidos."
             : error === "db"
-              ? "No se pudo guardar la factura o sus líneas. Revisá permisos y que exista la migración supplier_invoice_lines."
+              ? adminCreateFailedMessage("supplierInvoice")
               : "No se pudo completar la operación."}
         </p>
       ) : null}
@@ -44,6 +46,6 @@ export default async function AdminNuevaFacturaProveedorPage({
       ) : (
         <SupplierNewInvoiceForm issueDateDefault={issueDateDefault} suppliers={list} />
       )}
-    </div>
+    </AdminNewPageShell>
   );
 }

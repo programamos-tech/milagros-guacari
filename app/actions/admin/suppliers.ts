@@ -1,6 +1,7 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
+import { verifyInsertedRow, verifyRowCountAtLeast } from "@/lib/admin-insert-verify";
 import { assertActionPermission } from "@/lib/require-admin-permission";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
@@ -39,8 +40,12 @@ export async function createSupplierAction(formData: FormData) {
     .single();
 
   if (error || !data?.id) redirect("/admin/proveedores/nuevo?error=db");
+  const supplierId = String(data.id);
+  if (!(await verifyInsertedRow(supabase, "suppliers", supplierId))) {
+    redirect("/admin/proveedores/nuevo?error=db");
+  }
   revalidatePath("/admin/proveedores");
-  redirect(`/admin/proveedores/${data.id}`);
+  redirect(`/admin/proveedores/${supplierId}`);
 }
 
 type ParsedSupplierLine = {
@@ -155,6 +160,24 @@ export async function createSupplierInvoiceAction(formData: FormData) {
   const { error: lineErr } = await supabase.from("supplier_invoice_lines").insert(insertLines);
 
   if (lineErr) {
+    await supabase.from("supplier_invoices").delete().eq("id", invId);
+    redirectDb();
+  }
+
+  if (!(await verifyInsertedRow(supabase, "supplier_invoices", invId))) {
+    await supabase.from("supplier_invoice_lines").delete().eq("invoice_id", invId);
+    await supabase.from("supplier_invoices").delete().eq("id", invId);
+    redirectDb();
+  }
+  if (
+    !(await verifyRowCountAtLeast(
+      supabase,
+      "supplier_invoice_lines",
+      { column: "invoice_id", value: invId },
+      lineRows.length,
+    ))
+  ) {
+    await supabase.from("supplier_invoice_lines").delete().eq("invoice_id", invId);
     await supabase.from("supplier_invoices").delete().eq("id", invId);
     redirectDb();
   }

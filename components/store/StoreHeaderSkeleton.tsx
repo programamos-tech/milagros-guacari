@@ -3,7 +3,7 @@ export function StoreHeaderSkeleton() {
     <header aria-hidden="true">
       <div className="h-9 animate-pulse bg-stone-100" />
       <div className="border-b border-white/20 bg-[var(--store-header-bg)]">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:h-[4.5rem]">
+        <div className="flex h-16 w-full min-w-0 items-center justify-between px-3 sm:h-[4.5rem] sm:px-4 md:px-5 lg:px-6">
           <div className="h-8 w-28 animate-pulse rounded bg-white/20" />
           <div className="hidden flex-1 justify-center gap-6 px-8 md:flex">
             <div className="h-4 w-16 animate-pulse rounded bg-white/20" />

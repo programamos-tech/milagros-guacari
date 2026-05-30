@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { adminCreateFailedMessage } from "@/lib/admin-create-failed-messages";
 
 export type StoreCouponRow = {
   id: string;
@@ -225,7 +226,7 @@ export function storeCouponAdminErrorMessage(
     case "duplicate_code":
       return "Ya existe un cupón con ese código (sin distinguir mayúsculas).";
     case "db":
-      return "No se pudo guardar. Revisa migraciones y permisos.";
+      return adminCreateFailedMessage("coupon");
     case "products_required":
       return "Con “solo productos seleccionados” tienes que agregar al menos un producto.";
     case "invalid_products":

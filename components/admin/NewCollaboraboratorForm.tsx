@@ -6,6 +6,7 @@ import {
   inviteCollaboratorAction,
   updateCollaboratorAction,
 } from "@/app/actions/admin/collaborators";
+import { AdminFormSubmitButton } from "@/components/admin/AdminFormSubmitButton";
 import { CustomerAvatar } from "@/components/admin/CustomerAvatar";
 import { useAdminTheme } from "@/components/admin/AdminThemeProvider";
 import {
@@ -425,13 +426,9 @@ export function NewCollaboraboratorForm({ mode, storeLabel, initial }: Props) {
                 </dd>
               </div>
             </dl>
-            <button
-              type="submit"
-              disabled={!canSubmit}
-              className="mt-6 w-full rounded-lg border border-rose-950 bg-rose-950 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-900 hover:border-rose-900 disabled:cursor-not-allowed disabled:border-zinc-200 disabled:bg-zinc-200 disabled:text-zinc-500 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white dark:disabled:bg-zinc-800 dark:disabled:text-zinc-500"
-            >
+            <AdminFormSubmitButton pendingLabel="Guardando…" disabled={!canSubmit}>
               {mode === "create" ? "Crear colaborador" : "Guardar cambios"}
-            </button>
+            </AdminFormSubmitButton>
           </section>
 
           <p className="text-center text-xs text-zinc-400 dark:text-zinc-500">{storeLabel}</p>

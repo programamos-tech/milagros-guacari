@@ -2,6 +2,8 @@ import {
   NewCustomerForm,
   NewCustomerHeader,
 } from "@/components/admin/NewCustomerForm";
+import { AdminNewPageShell } from "@/components/admin/AdminNewPageShell";
+import { adminCreateFailedMessage } from "@/lib/admin-create-failed-messages";
 import { requireAdminPermission } from "@/lib/require-admin-permission";
 
 export default async function NewCustomerPage({
@@ -14,7 +16,7 @@ export default async function NewCustomerPage({
   const error = typeof sp.error === "string" ? sp.error : undefined;
 
   return (
-    <div className="mx-auto max-w-7xl">
+    <AdminNewPageShell>
       <NewCustomerHeader />
 
       {error ? (
@@ -23,15 +25,17 @@ export default async function NewCustomerPage({
             ? "El nombre es obligatorio."
             : error === "duplicate_email"
               ? "Ya existe un cliente con ese correo electrónico."
-              : error === "addresses_invalid"
+              : error === "duplicate_document"
+                ? "Ya existe un cliente con esa cédula o documento."
+                : error === "addresses_invalid"
                 ? "Los datos de dirección no son válidos. Recarga la página e intenta de nuevo."
                 : error === "wholesale_required"
                   ? "Cliente mayorista: completá NIT, correo electrónico válido y teléfono (todos obligatorios)."
-                  : "No se pudo guardar en la base de datos. Ejecuta en Supabase la migración de direcciones (20260513120000_customer_addresses.sql) si falta la tabla."}
+                  : adminCreateFailedMessage("customer")}
         </p>
       ) : null}
 
       <NewCustomerForm />
-    </div>
+    </AdminNewPageShell>
   );
 }

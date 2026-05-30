@@ -11,6 +11,7 @@ import {
   acceptEssentialStoreCookies,
   hasStoreCookieConsent,
 } from "@/lib/store-cookie-consent";
+import { storeShellClass } from "@/lib/store-theme";
 
 const policyLinkClass =
   "font-medium text-[var(--store-brand)] underline decoration-[var(--store-brand)]/35 underline-offset-[3px] transition hover:text-[var(--store-brand-hover)] hover:decoration-[var(--store-brand)]/70";
@@ -52,7 +53,7 @@ export function StoreCookiesBanner() {
         className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--store-brand)]/55 to-transparent"
         aria-hidden="true"
       />
-      <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:gap-5 sm:py-3.5 lg:gap-6 lg:px-6">
+      <div className={`${storeShellClass} flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:gap-5 sm:py-3.5 lg:gap-6`}>
         <div className="min-w-0 flex-1 sm:max-w-[min(100%,22rem)] lg:max-w-sm">
           <p
             id="store-cookies-title"

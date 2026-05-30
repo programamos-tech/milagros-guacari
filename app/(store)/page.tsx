@@ -5,6 +5,7 @@ import { RevealOnScroll } from "@/components/store/RevealOnScroll";
 import { storeBrand } from "@/lib/brand";
 import { StoreBannerCarousel } from "@/components/store/StoreBannerCarousel";
 import { getCachedPublishedBanners, getCachedStorefrontCouponDiscounts, getCachedHomeFeaturedProducts } from "@/lib/store-public-cache";
+import { storeShellClass } from "@/lib/store-theme";
 
 export const revalidate = 120;
 
@@ -62,7 +63,7 @@ export default async function HomePage() {
 
       {/* Highlights */}
       <section className="border-t border-stone-200/60 bg-white py-14 sm:py-16">
-        <div className="mx-auto max-w-7xl px-4">
+        <div className={storeShellClass}>
           <ul className="grid gap-8 border-y border-stone-200/70 py-8 sm:py-10 md:grid-cols-3 md:gap-6">
             {STORE_HIGHLIGHTS.map(({ title, Icon }, i) => (
               <li key={title}>

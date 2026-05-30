@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { todayYmdInReportStore } from "@/lib/admin-report-range";
+import { verifyInsertedRow } from "@/lib/admin-insert-verify";
 import { EXPENSE_CANCELLATION_REASON_MIN_LENGTH } from "@/lib/expenses-constants";
 import { loadAdminPermissions } from "@/lib/load-admin-permissions";
 import { assertActionPermission } from "@/lib/require-admin-permission";
@@ -53,16 +54,25 @@ export async function createStoreExpense(formData: FormData) {
       ? expenseDateRaw
       : todayYmdInReportStore();
 
-  const { error } = await supabase.from("store_expenses").insert({
-    concept,
-    amount_cents: amountRaw,
-    category,
-    payment_method: paymentMethod,
-    notes,
-    expense_date: expenseDate,
-  });
+  const { data: row, error } = await supabase
+    .from("store_expenses")
+    .insert({
+      concept,
+      amount_cents: amountRaw,
+      category,
+      payment_method: paymentMethod,
+      notes,
+      expense_date: expenseDate,
+    })
+    .select("id")
+    .single();
 
-  if (error) redirect("/admin/egresos/nuevo?expense_error=db");
+  if (error || !row?.id) redirect("/admin/egresos/nuevo?expense_error=db");
+
+  const expenseId = String(row.id);
+  if (!(await verifyInsertedRow(supabase, "store_expenses", expenseId))) {
+    redirect("/admin/egresos/nuevo?expense_error=db");
+  }
 
   revalidatePath("/admin/egresos/nuevo");
   revalidatePath("/admin/egresos");

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { createStoreExpense } from "@/app/actions/admin/expenses";
+import { AdminFormSubmitButton, adminPrimarySubmitButtonClass } from "@/components/admin/AdminFormSubmitButton";
+import { adminCreateFailedMessage } from "@/lib/admin-create-failed-messages";
 import {
   AdminDateInput,
   ProductMoneyInput,
@@ -11,30 +13,17 @@ import {
   productSectionTitle as sectionTitle,
 } from "@/components/admin/product-form-primitives";
 import { todayYmdInReportStore } from "@/lib/admin-report-range";
+import {
+  EXPENSE_CONCEPT_OPTIONS,
+  EXPENSE_CONCEPT_OTHER,
+  EXPENSE_CONCEPT_PERSONAL_TURNOS,
+  type ExpensePaymentMethod,
+} from "@/lib/expense-concepts";
 
 const cardSectionClass =
   "rounded-xl border border-zinc-200/90 bg-white p-4 shadow-sm ring-1 ring-zinc-950/5 sm:p-6 dark:border-zinc-700/90 dark:bg-zinc-900 dark:shadow-none dark:ring-white/[0.06]";
 
 export type TurnWorkerOption = { id: string; label: string };
-
-const ALL_CONCEPT_OPTIONS: Array<{
-  concept: string;
-  category: string;
-  paymentMethod: "transferencia" | "efectivo" | "tarjeta" | "otro";
-}> = [
-  { concept: "Arriendo del local", category: "fijo", paymentMethod: "transferencia" },
-  { concept: "Servicios (luz/agua/internet)", category: "servicios", paymentMethod: "transferencia" },
-  { concept: "Pago de nómina", category: "nomina", paymentMethod: "transferencia" },
-  { concept: "Personal Turnos", category: "nomina", paymentMethod: "efectivo" },
-  { concept: "Transporte / domicilios", category: "logistica", paymentMethod: "efectivo" },
-  { concept: "Compra de insumos", category: "insumos", paymentMethod: "transferencia" },
-  { concept: "Publicidad / pauta", category: "marketing", paymentMethod: "tarjeta" },
-  { concept: "Mantenimiento", category: "mantenimiento", paymentMethod: "transferencia" },
-  { concept: "Impuestos / retenciones", category: "impuestos", paymentMethod: "transferencia" },
-  { concept: "Comisiones bancarias", category: "financiero", paymentMethod: "transferencia" },
-  { concept: "Papelería / oficina", category: "operativo", paymentMethod: "efectivo" },
-  { concept: "Otro", category: "operativo", paymentMethod: "transferencia" },
-];
 
 export function NewExpenseHeader() {
   return (
@@ -76,7 +65,7 @@ function errorMessage(code: string | undefined) {
     case "amount":
       return "Monto inválido en el egreso.";
     case "db":
-      return "No se pudo guardar el egreso en base de datos.";
+      return adminCreateFailedMessage("expense");
     default:
       return null;
   }
@@ -92,8 +81,10 @@ export function NewExpenseForm({
   const conceptOptionsForSelect = useMemo(
     () =>
       turnWorkers.length > 0
-        ? ALL_CONCEPT_OPTIONS
-        : ALL_CONCEPT_OPTIONS.filter((o) => o.concept !== "Personal Turnos"),
+        ? EXPENSE_CONCEPT_OPTIONS
+        : EXPENSE_CONCEPT_OPTIONS.filter(
+            (o) => o.concept !== EXPENSE_CONCEPT_PERSONAL_TURNOS,
+          ),
     [turnWorkers.length],
   );
 
@@ -105,9 +96,9 @@ export function NewExpenseForm({
   const [category, setCategory] = useState(
     () => conceptOptionsForSelect[0]?.category ?? "operativo",
   );
-  const [paymentMethod, setPaymentMethod] = useState<
-    "transferencia" | "efectivo" | "tarjeta" | "otro"
-  >(() => conceptOptionsForSelect[0]?.paymentMethod ?? "transferencia");
+  const [paymentMethod, setPaymentMethod] = useState<ExpensePaymentMethod>(
+    () => conceptOptionsForSelect[0]?.paymentMethod ?? "transferencia",
+  );
   const [notes, setNotes] = useState("");
   const [amountCents, setAmountCents] = useState(0);
   const [expenseDate, setExpenseDate] = useState(() => todayYmdInReportStore());
@@ -125,17 +116,17 @@ export function NewExpenseForm({
 
   const err = useMemo(() => errorMessage(initialError), [initialError]);
   const conceptValue = useMemo(() => {
-    if (conceptSelection === "Otro") return conceptOther.trim();
-    if (conceptSelection === "Personal Turnos") {
+    if (conceptSelection === EXPENSE_CONCEPT_OTHER) return conceptOther.trim();
+    if (conceptSelection === EXPENSE_CONCEPT_PERSONAL_TURNOS) {
       const w = turnWorkers.find((t) => t.id === turnWorkerId);
-      return w ? `Personal Turnos — ${w.label}` : "";
+      return w ? `${EXPENSE_CONCEPT_PERSONAL_TURNOS} — ${w.label}` : "";
     }
     return conceptSelection;
   }, [conceptSelection, conceptOther, turnWorkerId, turnWorkers]);
 
-  const otroIncomplete = conceptSelection === "Otro" && !conceptOther.trim();
+  const otroIncomplete = conceptSelection === EXPENSE_CONCEPT_OTHER && !conceptOther.trim();
   const turnoIncomplete =
-    conceptSelection === "Personal Turnos" &&
+    conceptSelection === EXPENSE_CONCEPT_PERSONAL_TURNOS &&
     (!turnWorkerId || !turnWorkers.some((t) => t.id === turnWorkerId));
   const submitBlocked = otroIncomplete || turnoIncomplete;
 
@@ -172,7 +163,7 @@ export function NewExpenseForm({
                 </option>
               ))}
             </select>
-            {conceptSelection === "Personal Turnos" ? (
+            {conceptSelection === EXPENSE_CONCEPT_PERSONAL_TURNOS ? (
               <div className="mt-3">
                 <label className={`${labelClass} text-zinc-600 dark:text-zinc-400`}>
                   Trabajador
@@ -193,7 +184,7 @@ export function NewExpenseForm({
                 </select>
               </div>
             ) : null}
-            {conceptSelection === "Otro" ? (
+            {conceptSelection === EXPENSE_CONCEPT_OTHER ? (
               <input
                 value={conceptOther}
                 onChange={(e) => setConceptOther(e.target.value)}
@@ -244,9 +235,7 @@ export function NewExpenseForm({
               name="payment_method"
               value={paymentMethod}
               onChange={(e) =>
-                setPaymentMethod(
-                  e.target.value as "transferencia" | "efectivo" | "tarjeta" | "otro",
-                )
+                setPaymentMethod(e.target.value as ExpensePaymentMethod)
               }
               className={inputClass}
             >
@@ -267,13 +256,13 @@ export function NewExpenseForm({
             />
           </div>
         </div>
-        <button
-          type="submit"
+        <AdminFormSubmitButton
+          pendingLabel="Registrando…"
           disabled={submitBlocked}
-          className="mt-5 rounded-lg border border-rose-950 bg-rose-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-900 hover:border-rose-900 disabled:pointer-events-none disabled:opacity-45 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white dark:disabled:opacity-40"
+          className={`mt-5 px-4 py-2.5 ${adminPrimarySubmitButtonClass}`}
         >
           Registrar egreso
-        </button>
+        </AdminFormSubmitButton>
       </section>
     </form>
   );

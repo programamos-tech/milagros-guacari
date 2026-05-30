@@ -2,6 +2,7 @@ import {
   NewCollaboraboratorForm,
   NewCollaboratorHeader,
 } from "@/components/admin/NewCollaboraboratorForm";
+import { AdminNewPageShell } from "@/components/admin/AdminNewPageShell";
 import { storeBrand } from "@/lib/brand";
 import { requireAdminPermission } from "@/lib/require-admin-permission";
 
@@ -36,7 +37,7 @@ export default async function AdminNuevoColaboradorPage({ searchParams }: Props)
   const banner = errorMessage(err);
 
   return (
-    <div className="w-full min-w-0">
+    <AdminNewPageShell>
       <NewCollaboratorHeader />
       {banner ? (
         <p className="mb-6 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-900 dark:border-red-900/50 dark:bg-red-950/35 dark:text-red-100">
@@ -44,6 +45,6 @@ export default async function AdminNuevoColaboradorPage({ searchParams }: Props)
         </p>
       ) : null}
       <NewCollaboraboratorForm mode="create" storeLabel={storeBrand} />
-    </div>
+    </AdminNewPageShell>
   );
 }

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { createProduct } from "@/app/actions/admin/products";
+import { AdminFormSubmitButton } from "@/components/admin/AdminFormSubmitButton";
 import { formatCop, formatQuantityInputGrouping } from "@/lib/money";
 import {
   AdminDateInput,
@@ -457,12 +458,9 @@ export function NewProductForm({
               stock después.
             </p>
 
-            <button
-              type="submit"
-              className="mt-5 w-full rounded-lg border border-rose-950 bg-rose-950 py-3.5 text-sm font-medium text-white transition hover:bg-rose-900 hover:border-rose-900 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
-            >
+            <AdminFormSubmitButton pendingLabel="Creando…">
               Crear producto
-            </button>
+            </AdminFormSubmitButton>
           </section>
         </div>
       </div>

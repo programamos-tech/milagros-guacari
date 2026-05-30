@@ -11,6 +11,7 @@ import {
   storeSupportPhone,
   storeWhatsAppUrl,
 } from "@/lib/brand";
+import { storeShellClass } from "@/lib/store-theme";
 
 const footerColumnTitle =
   "text-[11px] font-semibold uppercase tracking-[0.14em] text-white/90";
@@ -30,7 +31,7 @@ export function StoreFooter() {
     <footer className="border-t border-white/20 bg-[var(--store-header-bg)] text-[var(--store-header-fg)]">
       {/* 1 · Columnas de navegación */}
       <div>
-        <div className="mx-auto max-w-7xl px-4 py-10 sm:py-12 lg:py-14">
+        <div className={`${storeShellClass} py-10 sm:py-12 lg:py-14`}>
           <div className="flex flex-col gap-10 lg:gap-12">
             <div className="flex justify-center px-2">
               <Link
@@ -145,7 +146,7 @@ export function StoreFooter() {
 
       {/* 2 · Legal */}
       <div className="border-t border-white/15">
-        <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+        <div className={`${storeShellClass} flex flex-col gap-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6`}>
           <p className="text-[11px] text-white/70 sm:text-xs">
             © {year} {storeCopyrightHolder}. Todos los derechos reservados.
           </p>

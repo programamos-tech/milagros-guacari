@@ -12,6 +12,12 @@ export const STORE_ACCENT_HOVER = STORE_BRAND_HOVER;
 export const STORE_HEADER_BG = STORE_BRAND;
 export const STORE_HEADER_FG = "#ffffff" as const;
 
+/** Contenedor ancho completo de la vitrina (sin max-width). */
+export const storeShellClass = "w-full min-w-0 px-3 sm:px-4 md:px-5 lg:px-6";
+
+/** Margen horizontal negativo para carruseles al borde del shell. */
+export const storeShellBleedXClass = "-mx-3 sm:-mx-4 md:-mx-5 lg:-mx-6";
+
 /** Franja superior de avisos (marquee). */
 export const STORE_ANNOUNCEMENT_BG = "#fff5f8" as const;
 

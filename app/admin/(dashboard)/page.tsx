@@ -123,7 +123,7 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
 
       <div
         key={`reports-body-${rangeFrom}-${rangeTo}`}
-        className="border-t border-rose-200/55 pt-10 pb-12 dark:border-zinc-800"
+        className="border-t border-rose-200/55 pt-10 pb-4 dark:border-zinc-800"
       >
         <p className={cardLabelClass}>Resumen del periodo</p>
         <p className="mt-1 text-sm text-stone-500 dark:text-zinc-400">{periodLabel}</p>
@@ -287,12 +287,12 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
 
       <section
         key={`reports-chart-${rangeFrom}-${rangeTo}`}
-        className={`reports-chart-reveal ${adminPanelLgClass} mt-10 overflow-hidden`}
+        className={`reports-chart-reveal ${adminPanelLgClass} mt-6 overflow-hidden`}
         style={{ ["--reports-chart-delay" as string]: "520ms" }}
       >
-        <div className="px-6 pt-6 pb-3 sm:px-8 sm:pt-8 sm:pb-4">
+        <div className="px-6 pt-4 pb-2 sm:px-8 sm:pt-5 sm:pb-3">
           <h2 className={sectionTitleClass}>Ingresos y egresos por día</h2>
-          <p className="mt-1 max-w-xl text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="mt-1 w-full text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
             Las tarjetas de arriba usan el periodo del filtro ({periodLabel}). Esta curva muestra siempre{" "}
             <span className="font-medium text-zinc-600 dark:text-zinc-300">7 días</span> calendario
             terminando en el último día del filtro ({prettyReportDayShortLabel(chartTo)}). Ingresos por

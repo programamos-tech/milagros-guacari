@@ -14,6 +14,7 @@ import { StoreHeaderActions } from "@/components/store/StoreHeaderActions";
 import { StoreNavDropdowns } from "@/components/store/StoreNavDropdowns";
 import { StoreSearch } from "@/components/store/StoreSearch";
 import { getCachedStoreCategoriesWithCounts } from "@/lib/store-public-cache";
+import { storeShellClass } from "@/lib/store-theme";
 
 function accountFirstNameFromUser(user: User | null): string | null {
   if (!user) return null;
@@ -47,7 +48,7 @@ export async function StoreHeader() {
       <StoreAnnouncementBar />
 
       <div className="border-b border-white/20 bg-[var(--store-header-bg)] text-[var(--store-header-fg)]">
-        <div className="mx-auto grid max-w-7xl grid-cols-[auto_1fr_auto] items-center gap-x-2 px-3 py-3 sm:gap-x-3 sm:px-4 md:py-3.5 lg:grid-cols-[1fr_auto_1fr] lg:gap-x-6 lg:px-10 lg:py-5">
+        <div className={`${storeShellClass} grid grid-cols-[auto_1fr_auto] items-center gap-x-2 py-3 sm:gap-x-3 md:py-3.5 lg:grid-cols-[1fr_auto_1fr] lg:gap-x-6 lg:py-5`}>
           <div className="flex min-w-0 items-center justify-start lg:pr-4">
             <StoreNavDropdowns
               menuCategories={menuCategories}

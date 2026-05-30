@@ -63,8 +63,13 @@ export function CatalogRowScroller({
     });
   };
 
+  const arrowClass =
+    "flex size-9 shrink-0 items-center justify-center self-center rounded-full border border-stone-200/90 bg-white/95 text-stone-700 shadow-sm transition hover:bg-white hover:text-stone-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400/50 sm:size-10";
+
   return (
-    <div className={`relative min-w-0 max-w-full ${className}`.trim()}>
+    <div
+      className={`flex min-w-0 max-w-full items-center gap-1 sm:gap-2 ${className}`.trim()}
+    >
       <button
         type="button"
         aria-label="Anteriores"
@@ -72,28 +77,9 @@ export function CatalogRowScroller({
         tabIndex={canLeft ? 0 : -1}
         disabled={!canLeft}
         onClick={() => scrollByDir(-1)}
-        className={`absolute left-0 top-1/2 z-10 flex size-9 -translate-y-1/2 items-center justify-center rounded-full border border-stone-200/90 bg-white/95 text-stone-700 shadow-sm transition hover:bg-white hover:text-stone-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400/50 sm:size-10 ${
-          canLeft ? "" : "invisible pointer-events-none"
-        }`}
+        className={`${arrowClass} ${canLeft ? "" : "invisible pointer-events-none"}`}
       >
         <ChevronLeft
-          className="size-5 sm:size-[1.35rem]"
-          strokeWidth={STORE_HEADER_ICON_STROKE}
-          aria-hidden
-        />
-      </button>
-      <button
-        type="button"
-        aria-label="Siguientes"
-        aria-hidden={!canRight}
-        tabIndex={canRight ? 0 : -1}
-        disabled={!canRight}
-        onClick={() => scrollByDir(1)}
-        className={`absolute right-0 top-1/2 z-10 flex size-9 -translate-y-1/2 items-center justify-center rounded-full border border-stone-200/90 bg-white/95 text-stone-700 shadow-sm transition hover:bg-white hover:text-stone-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400/50 sm:size-10 ${
-          canRight ? "" : "invisible pointer-events-none"
-        }`}
-      >
-        <ChevronRight
           className="size-5 sm:size-[1.35rem]"
           strokeWidth={STORE_HEADER_ICON_STROKE}
           aria-hidden
@@ -102,10 +88,26 @@ export function CatalogRowScroller({
 
       <div
         ref={ref}
-        className="store-cart-suggestions-scroll flex max-w-full snap-x snap-mandatory gap-3 overscroll-x-contain px-10 pb-2 pt-1 sm:gap-4 sm:px-11 lg:gap-5"
+        className="store-cart-suggestions-scroll flex min-w-0 flex-1 snap-x snap-mandatory gap-3 overscroll-x-contain pb-2 pt-1 sm:gap-4 lg:gap-5"
       >
         {children}
       </div>
+
+      <button
+        type="button"
+        aria-label="Siguientes"
+        aria-hidden={!canRight}
+        tabIndex={canRight ? 0 : -1}
+        disabled={!canRight}
+        onClick={() => scrollByDir(1)}
+        className={`${arrowClass} ${canRight ? "" : "invisible pointer-events-none"}`}
+      >
+        <ChevronRight
+          className="size-5 sm:size-[1.35rem]"
+          strokeWidth={STORE_HEADER_ICON_STROKE}
+          aria-hidden
+        />
+      </button>
     </div>
   );
 }

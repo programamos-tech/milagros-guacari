@@ -9,6 +9,7 @@ import {
   normalizeSizeOptionsFromRow,
 } from "@/lib/product-size-options";
 import { fetchStorefrontCouponDiscountPercentForProduct } from "@/lib/store-coupons";
+import { storeShellClass } from "@/lib/store-theme";
 
 export const dynamic = "force-dynamic";
 
@@ -78,7 +79,7 @@ export default async function ProductDetailPage({ params }: Props) {
   const categoryId = product.category_id;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:py-12 lg:py-14">
+    <div className={`${storeShellClass} py-10 sm:py-12 lg:py-14`}>
       <nav aria-label="Migas de pan" className="mb-8 text-[11px] uppercase tracking-[0.12em] text-stone-400">
         <ol className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <li>

@@ -1,3 +1,5 @@
+import { adminCreateFailedMessage } from "@/lib/admin-create-failed-messages";
+
 export function kitFormErrorMessage(code: string | undefined): string | null {
   if (!code) return null;
   switch (code) {
@@ -12,7 +14,7 @@ export function kitFormErrorMessage(code: string | undefined): string | null {
     case "image_upload":
       return "No se pudo subir la imagen a Storage. Revisá que el bucket product-images exista y que tu usuario tenga permiso de admin.";
     case "db":
-      return "No se pudo guardar en la base de datos. Revisá permisos de admin y los logs del servidor.";
+      return adminCreateFailedMessage("kit");
     case "not_found":
       return "No se encontró el kit.";
     case "delete":

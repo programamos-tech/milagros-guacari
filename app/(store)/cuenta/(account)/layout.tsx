@@ -6,10 +6,10 @@ import { StoreAccountHeroNav } from "@/components/store/StoreAccountHeroNav";
 import { StoreSignOutButton } from "@/components/store/StoreSignOutButton";
 import { STORE_ACCOUNT_HERO_IMAGE } from "@/lib/store-account-hero";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { storeShellClass } from "@/lib/store-theme";
 
-const shellClass =
-  "w-full px-4 sm:px-6 lg:px-8 py-8 sm:py-10";
-const innerClass = "mx-auto w-full max-w-7xl";
+const shellClass = `${storeShellClass} py-8 sm:py-10`;
+const innerClass = "w-full min-w-0";
 
 function accountHeroFirstName(displayName: string): string {
   const t =

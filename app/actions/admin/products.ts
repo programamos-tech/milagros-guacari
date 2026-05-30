@@ -1,6 +1,7 @@
 "use server";
 
 import { logAdminActivity } from "@/lib/admin-activity-log";
+import { verifyInsertedRow } from "@/lib/admin-insert-verify";
 import {
   legacySizeFromOptions,
   parseSizeOptionsFromFormData,
@@ -315,6 +316,13 @@ export async function createProduct(formData: FormData) {
     redirect("/admin/products/new?error=reference");
   }
 
+  const { data: dupReference } = await supabase
+    .from("products")
+    .select("id")
+    .eq("reference", reference)
+    .maybeSingle();
+  if (dupReference) redirect("/admin/products/new?error=duplicate_reference");
+
   const baseRow = {
     name,
     description,
@@ -400,6 +408,9 @@ export async function createProduct(formData: FormData) {
   }
 
   const id = row.id as string;
+  if (!(await verifyInsertedRow(supabase, "products", id))) {
+    redirect("/admin/products/new?error=db");
+  }
   await logAdminActivity(supabase, {
     actorId: user.id,
     actionType: "product_created",
@@ -430,8 +441,7 @@ export async function createProduct(formData: FormData) {
       .eq("id", id);
   } else if (uploaded.status === "error") {
     revalidateStoreProductCache();
-    revalidateStoreProductCache();
-  revalidatePath("/products");
+    revalidatePath("/products");
     revalidatePath("/admin/products");
     redirect("/admin/products?saved=1&uploadError=1");
   }

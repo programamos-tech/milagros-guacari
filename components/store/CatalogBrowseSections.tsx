@@ -75,7 +75,7 @@ export function CatalogBrowseSections({
               ))}
             </ul>
           ) : (
-            <CatalogRowScroller className="-mx-4">
+            <CatalogRowScroller>
               {section.products.map((p, index) => (
                 <CatalogRowProductSlot
                   key={p.id}

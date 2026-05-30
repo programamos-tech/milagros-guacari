@@ -8,6 +8,7 @@ import {
 } from "@/lib/brand";
 import { STORE_HEADER_ICON_STROKE } from "@/lib/store-header-icons";
 import type { StoreCouponBannerPayload } from "@/lib/store-coupons";
+import { storeShellClass } from "@/lib/store-theme";
 
 const PROMO_DISMISS_EVENT = "tiendas-promo-dismiss";
 
@@ -63,7 +64,7 @@ export function StoreWelcomeDiscountBanner({
 
   return (
     <div className="border-b border-[#ffd6e8]/80 bg-[#fff8fb]">
-      <div className="relative mx-auto max-w-5xl px-4 py-2.5 pr-11 sm:pr-12">
+      <div className={`${storeShellClass} relative py-2.5 pr-11 sm:pr-12`}>
         <p className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-center text-[11px] font-medium uppercase leading-snug tracking-[0.14em] text-stone-700 sm:text-xs sm:tracking-[0.16em]">
           <span className="max-w-[min(100%,38rem)]">{message}</span>
           <span className="inline-flex shrink-0 items-center rounded border border-[#FF76A1]/35 bg-white px-2 py-0.5 text-[10px] font-semibold tracking-[0.06em] text-[var(--store-accent)] tabular-nums">

@@ -1,4 +1,5 @@
 import { NewInvoiceForm, NewInvoiceHeader } from "@/components/admin/NewInvoiceForm";
+import { AdminNewPageShell } from "@/components/admin/AdminNewPageShell";
 import { requireAdminPermission } from "@/lib/require-admin-permission";
 
 export const dynamic = "force-dynamic";
@@ -13,9 +14,9 @@ export default async function AdminNuevaFacturaPage({ searchParams }: Props) {
   const initialError = typeof sp.error === "string" ? sp.error : undefined;
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-7xl">
+    <AdminNewPageShell>
       <NewInvoiceHeader />
       <NewInvoiceForm initialError={initialError} />
-    </div>
+    </AdminNewPageShell>
   );
 }

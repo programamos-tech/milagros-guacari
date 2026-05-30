@@ -6,6 +6,7 @@ import {
   parseStoreCustomerKind,
 } from "@/lib/customer-wholesale-pricing";
 import { loadAdminPermissions } from "@/lib/load-admin-permissions";
+import { verifyInsertedRow, verifyRowCountAtLeast } from "@/lib/admin-insert-verify";
 import { assertActionPermission } from "@/lib/require-admin-permission";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
@@ -21,7 +22,21 @@ export type QuickStoreCustomerRow = {
 
 export type CreateQuickStoreCustomerResult =
   | { ok: true; customer: QuickStoreCustomerRow }
-  | { ok: false; code: "auth" | "forbidden" | "name" | "db" };
+  | { ok: false; code: "auth" | "forbidden" | "name" | "duplicate_document" | "db" };
+
+async function customerExistsWithDocumentId(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  documentId: string,
+): Promise<boolean> {
+  const trimmed = documentId.trim();
+  if (!trimmed) return false;
+  const { data } = await supabase
+    .from("customers")
+    .select("id")
+    .eq("document_id", trimmed)
+    .maybeSingle();
+  return Boolean(data?.id);
+}
 
 /** Alta mínima desde POS (sin redirect); para modal en nueva factura. */
 export async function createQuickStoreCustomer(input: {
@@ -41,6 +56,10 @@ export async function createQuickStoreCustomer(input: {
   const documentId = String(input.document_id ?? "").trim();
   if (!name) return { ok: false, code: "name" };
 
+  if (documentId && (await customerExistsWithDocumentId(supabase, documentId))) {
+    return { ok: false, code: "duplicate_document" };
+  }
+
   const { data: cust, error: insertErr } = await supabase
     .from("customers")
     .insert({
@@ -57,6 +76,11 @@ export async function createQuickStoreCustomer(input: {
     .single();
 
   if (insertErr || !cust) return { ok: false, code: "db" };
+
+  const customerId = (cust as { id: string }).id;
+  if (!(await verifyInsertedRow(supabase, "customers", customerId))) {
+    return { ok: false, code: "db" };
+  }
 
   await logAdminActivity(supabase, {
     actorId: user.id,
@@ -180,6 +204,10 @@ export async function createStoreCustomer(formData: FormData) {
     if (dup) redirect("/admin/customers/new?error=duplicate_email");
   }
 
+  if (documentId && (await customerExistsWithDocumentId(supabase, documentId))) {
+    redirect("/admin/customers/new?error=duplicate_document");
+  }
+
   const primary = meaningful[0];
   const shippingAddress = primary
     ? [primary.address_line, primary.reference].filter(Boolean).join("\n\n") || null
@@ -218,6 +246,23 @@ export async function createStoreCustomer(formData: FormData) {
     const { error: addrErr } = await supabase.from("customer_addresses").insert(rows);
 
     if (addrErr) {
+      await supabase.from("customers").delete().eq("id", customerId);
+      redirect("/admin/customers/new?error=db");
+    }
+  }
+
+  if (!(await verifyInsertedRow(supabase, "customers", customerId))) {
+    redirect("/admin/customers/new?error=db");
+  }
+  if (meaningful.length > 0) {
+    const addressesOk = await verifyRowCountAtLeast(
+      supabase,
+      "customer_addresses",
+      { column: "customer_id", value: customerId },
+      meaningful.length,
+    );
+    if (!addressesOk) {
+      await supabase.from("customer_addresses").delete().eq("customer_id", customerId);
       await supabase.from("customers").delete().eq("id", customerId);
       redirect("/admin/customers/new?error=db");
     }
