@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { Heart, Minus, Plus } from "lucide-react";
 import {
@@ -23,9 +22,9 @@ import {
 import { expandFragranceLabels } from "@/lib/fragrance-options";
 import { catalogSizeSummaryLine } from "@/lib/product-size-options";
 import {
-  shouldUnoptimizeStorageImageUrl,
   storagePublicObjectUrl,
 } from "@/lib/storage-public-url";
+import { StoreProductImageFrame } from "@/components/store/StoreProductImageFrame";
 
 type Product = {
   id: string;
@@ -101,26 +100,14 @@ function ShowcaseProductCard({
         href={`/products/${product.id}`}
         className="group block outline-none focus-visible:ring-2 focus-visible:ring-[var(--store-accent)]/35 focus-visible:ring-offset-2"
       >
-        <div
-          className={`relative aspect-[4/5] w-full shrink-0 overflow-hidden ${imageBgClass} transition-colors duration-300 ${
-            outOfStock ? "opacity-[0.78]" : ""
-          }`}
-        >
-          {img ? (
-            <Image
-              src={img}
-              alt={product.name}
-              fill
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-              className="object-cover object-center transition duration-300 group-hover:scale-[1.02]"
-              unoptimized={shouldUnoptimizeStorageImageUrl(img)}
-            />
-          ) : (
-            <span className="flex size-full items-center justify-center text-3xl text-stone-200">
-              ◆
-            </span>
-          )}
-        </div>
+        <StoreProductImageFrame
+          src={img}
+          alt={product.name}
+          bgClass={imageBgClass}
+          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+          imageClassName="transition duration-300 group-hover:scale-[1.02]"
+          dimmed={outOfStock}
+        />
         <div className="space-y-1.5 pt-4 text-left">
           <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-stone-400">
             {showcaseBrandLabel(product)}
@@ -210,28 +197,21 @@ function CatalogProductCard({
 
   return (
     <article className="flex h-full flex-col">
-      <div
-        className={`relative aspect-[4/5] w-full shrink-0 overflow-hidden ${imageBgClass} transition-colors duration-300 ${outOfStock ? "opacity-[0.78]" : ""}`}
-      >
+      <div className="group/image relative w-full shrink-0">
+        <StoreProductImageFrame
+          src={img}
+          alt={product.name}
+          bgClass={imageBgClass}
+          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+          imageClassName="transition duration-300 group-hover/image:scale-[1.02]"
+          placeholderClassName="text-4xl text-stone-300"
+          dimmed={outOfStock}
+        />
         <Link
           href={`/products/${product.id}`}
           className="group/image absolute inset-0 block outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--store-accent)]/40"
-        >
-          {img ? (
-            <Image
-              src={img}
-              alt={product.name}
-              fill
-              className="object-cover object-center transition duration-300 group-hover/image:scale-[1.02]"
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-              unoptimized={shouldUnoptimizeStorageImageUrl(img)}
-            />
-          ) : (
-            <span className="flex size-full items-center justify-center text-4xl text-stone-300">
-              ◆
-            </span>
-          )}
-        </Link>
+          aria-label={product.name}
+        />
         <button
           type="button"
           onClick={(e) => {

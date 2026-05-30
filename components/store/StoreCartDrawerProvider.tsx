@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { StoreProductImageFrame } from "@/components/store/StoreProductImageFrame";
 import Link from "next/link";
 import {
   createContext,
@@ -147,22 +148,13 @@ function CartDrawerSuggestionsRow({
                 onClick={onPickProduct}
                 className="block outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-[var(--store-accent)]/25 focus-visible:ring-offset-2"
               >
-                <div className="relative aspect-[11/13] w-full bg-[#f4f4f3]">
-                  {img ? (
-                    <Image
-                      src={img}
-                      alt=""
-                      fill
-                      className="object-cover"
-                      sizes="130px"
-                      unoptimized={shouldUnoptimizeStorageImageUrl(img)}
-                    />
-                  ) : (
-                    <div className="flex size-full items-center justify-center text-xl text-stone-200">
-                      ◆
-                    </div>
-                  )}
-                </div>
+                <StoreProductImageFrame
+                  src={img}
+                  alt={s.name}
+                  bgClass="bg-[#f4f4f3]"
+                  sizes="130px"
+                  placeholderClassName="text-xl text-stone-200"
+                />
                 <p className="mt-2 line-clamp-2 text-[10px] font-semibold uppercase leading-snug tracking-[0.08em] text-[var(--store-brand)]">
                   {s.name}
                 </p>

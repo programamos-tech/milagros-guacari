@@ -1,16 +1,13 @@
 "use client";
 
-import Image from "next/image";
 import { Minus, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { addKitToCartFromForm, setKitLineQuantity } from "@/app/actions/cart";
 import { useStoreCartDrawer } from "@/components/store/StoreCartDrawerProvider";
+import { StoreProductImageFrame } from "@/components/store/StoreProductImageFrame";
 import { formatCop } from "@/lib/money";
-import {
-  shouldUnoptimizeStorageImageUrl,
-  storagePublicObjectUrl,
-} from "@/lib/storage-public-url";
+import { storagePublicObjectUrl } from "@/lib/storage-public-url";
 
 export type StoreKitCardKit = {
   id: string;
@@ -38,21 +35,13 @@ export function StoreKitCard({
 
   return (
     <article className="flex flex-col">
-      <div className="relative aspect-[4/5] bg-[#f0eeeb]">
-        {img ? (
-          <Image
-            src={img}
-            alt=""
-            fill
-            className="object-cover"
-            sizes="(max-width: 640px) 50vw, 25vw"
-            unoptimized={shouldUnoptimizeStorageImageUrl(img)}
-          />
-        ) : (
-          <div className="flex size-full items-center justify-center text-stone-300">
-            ◆
-          </div>
-        )}
+      <div className="relative">
+        <StoreProductImageFrame
+          src={img}
+          alt={kit.name}
+          bgClass="bg-[#f0eeeb]"
+          sizes="(max-width: 640px) 50vw, 25vw"
+        />
         <span className="absolute left-2 top-2 bg-white/95 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-800">
           Kit
         </span>

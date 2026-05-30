@@ -25,3 +25,11 @@ export const STORE_ANNOUNCEMENT_BG = "#fff5f8" as const;
 export const STORE_IMAGE_WELL = "#ebebeb" as const;
 /** Variante rosada suave para columnas editoriales. */
 export const STORE_IMAGE_WELL_TINT = "#fce8ef" as const;
+
+/** Marco 4:5 compartido en tarjetas de producto (catálogo, destacados, sugeridos). */
+export const storeProductImageFrameClass =
+  "relative aspect-[4/5] w-full shrink-0 overflow-hidden";
+
+/** Imagen dentro del marco: encaja completa sin recortes desiguales. */
+export const storeProductImageMediaClass =
+  "object-contain object-center p-4 sm:p-5";
