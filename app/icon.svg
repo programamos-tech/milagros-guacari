@@ -1,7 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Milagros">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Aleya Shop">
   <rect width="32" height="32" rx="7" fill="#FF76A1"/>
+  <!-- Serif A inspirada en el wordmark Aleyashop -->
   <path
     fill="#ffffff"
-    d="M7.4 25.6V7.5h2.3l6.35 12.35 6.35-12.35h2.3v18.1h-1.95v-13.95L15.97 21.92 10.03 11.92v13.68H7.4z"
+    d="M16 6.75 8.15 25.25h2.55l1.55-4.05h9.5l1.55 4.05h2.55L16 6.75z"
+  />
+  <path
+    fill="#FF76A1"
+    d="M13.85 18.55h4.3L16 12.95l-2.15 5.6z"
   />
 </svg>

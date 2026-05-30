@@ -28,10 +28,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: storeBrand,
   description: storeShortDescription,
-  /** favicon vía convención `app/icon.svg` (rosa Milagros + M). Solo Apple desde PNG de marca */
-  icons: {
-    apple: [{ url: "/logo-milagros.png", sizes: "180x180", type: "image/png" }],
-  },
+  /** Favicon: `app/icon.svg` + `app/apple-icon.png` (marca Aleya Shop). */
 };
 
 export default function RootLayout({
