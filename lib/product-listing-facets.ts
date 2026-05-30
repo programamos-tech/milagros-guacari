@@ -54,6 +54,76 @@ export async function fetchListingFacets(
   supabase: SupabaseClient,
   options: { categoryIds: string[] | null },
 ): Promise<ListingFacets> {
+  const categoryIds = options.categoryIds?.length ? options.categoryIds : null;
+  const { data, error } = await supabase.rpc("store_listing_facets_agg", {
+    p_category_ids: categoryIds,
+  });
+
+  if (!error && data && typeof data === "object") {
+    return facetsFromAggregatedPayload(data as Record<string, unknown>);
+  }
+
+  if (error) {
+    console.error("[listing-facets] store_listing_facets_agg:", error.message);
+  }
+
+  return fetchListingFacetsFallback(supabase, options);
+}
+
+function facetsFromAggregatedPayload(payload: Record<string, unknown>): ListingFacets {
+  const brands = Array.isArray(payload.brands)
+    ? (payload.brands as unknown[]).filter((b): b is string => typeof b === "string")
+    : [];
+  const colors = Array.isArray(payload.colors)
+    ? (payload.colors as unknown[]).filter((c): c is string => typeof c === "string")
+    : [];
+
+  const sizeSeen = new Set<string>();
+  const sizes: SizeFacetOption[] = [];
+  const sizeRows = Array.isArray(payload.sizeRows) ? payload.sizeRows : [];
+  for (const raw of sizeRows) {
+    if (!raw || typeof raw !== "object") continue;
+    const row = raw as Record<string, unknown>;
+    const optRows = normalizeSizeOptionsFromRow({
+      size_options: row.size_options,
+      size_value: row.size_value as number | null,
+      size_unit: row.size_unit as string | null,
+    });
+    for (const opt of optRows) {
+      const su = opt.unit.trim().toLowerCase();
+      if (!["ml", "l", "g", "kg", "oz", "unidad"].includes(su)) continue;
+      const v = Number(Number(opt.value).toFixed(2));
+      if (v <= 0) continue;
+      const key = `${v}:${su}`;
+      if (sizeSeen.has(key)) continue;
+      sizeSeen.add(key);
+      const numLabel = String(v).replace(/\.0+$/, "");
+      sizes.push({
+        key,
+        label: `${numLabel} ${su}`,
+        value: v,
+        unit: su,
+      });
+    }
+  }
+
+  brands.sort((a, b) => a.localeCompare(b, "es"));
+  colors.sort((a, b) => a.localeCompare(b, "es"));
+  sizes.sort((a, b) => a.label.localeCompare(b.label, "es"));
+
+  return {
+    brands,
+    colors,
+    sizes,
+    priceMin: Math.max(0, Number(payload.priceMin ?? 0)),
+    priceMax: Math.max(0, Number(payload.priceMax ?? 0)),
+  };
+}
+
+async function fetchListingFacetsFallback(
+  supabase: SupabaseClient,
+  options: { categoryIds: string[] | null },
+): Promise<ListingFacets> {
   let q = supabase
     .from("products")
     .select("brand, colors, size_options, size_value, size_unit, price_cents")

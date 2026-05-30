@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
 import { assertActionPermission } from "@/lib/require-admin-permission";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { revalidateStoreWelcomeModalTag } from "@/lib/revalidate-store-cache";
 import { parseStoragePublicPath } from "@/lib/storage-bucket-path";
 
 async function assertProfile(
@@ -23,6 +24,7 @@ async function assertProfile(
 }
 
 function revalidateAll() {
+  revalidateStoreWelcomeModalTag();
   revalidatePath("/");
   revalidatePath("/products");
   revalidatePath("/admin/settings");

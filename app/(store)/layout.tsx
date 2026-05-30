@@ -1,9 +1,11 @@
 import type { CSSProperties } from "react";
+import { Suspense } from "react";
 import { StoreAuthModalProvider } from "@/components/store/StoreAuthModals";
 import { StoreCookiesBanner } from "@/components/store/StoreCookiesBanner";
 import { StoreFavoritesProvider } from "@/components/store/StoreFavoritesProvider";
 import { StoreFooter } from "@/components/store/StoreFooter";
 import { StoreHeader } from "@/components/store/StoreHeader";
+import { StoreHeaderSkeleton } from "@/components/store/StoreHeaderSkeleton";
 import { StoreWelcomeSignupModal } from "@/components/store/StoreWelcomeSignupModal";
 import { StoreWelcomeDiscountBanner } from "@/components/store/StoreWelcomeDiscountBanner";
 import { StoreWhatsAppFloatingButton } from "@/components/store/StoreWhatsAppFloatingButton";
@@ -38,9 +40,13 @@ export default async function StoreLayout({
               } as CSSProperties
             }
           >
-            <StoreHeader />
+            <Suspense fallback={<StoreHeaderSkeleton />}>
+              <StoreHeader />
+            </Suspense>
             <StoreWelcomeDiscountBanner dbCoupon={promoBanner} />
-            <main className="flex-1">{children}</main>
+            <main className="flex-1">
+              <Suspense>{children}</Suspense>
+            </main>
             <StoreFooter />
             <StoreWhatsAppFloatingButton />
             <StoreCookiesBanner />

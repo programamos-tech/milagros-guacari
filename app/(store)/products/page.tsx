@@ -34,7 +34,7 @@ import {
   getCachedPublishedBanners,
 } from "@/lib/store-public-cache";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 120;
 
 /** Tope de filas en listado filtrado (evita respuestas enormes). */
 const CATALOG_FILTERED_LIST_MAX = 300;
@@ -103,31 +103,39 @@ export default async function ProductsPage({ searchParams }: Props) {
   }
 
   const supabase = await createSupabaseServerClient();
+  const filterCategoryIds = categoryId
+    ? []
+    : parseProductsCategoriesFilterParam(firstSearchParam(sp.categories));
 
+  const [catRes, allCategoryRows] = await Promise.all([
+    categoryId
+      ? supabase
+          .from("categories")
+          .select("name,listing_hero_image_path,listing_hero_alt_text")
+          .eq("id", categoryId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    getCachedAllCategoryRows(),
+  ]);
+
+  const cat = catRes.data;
   let categoryName: string | null = null;
   let categoryFilterId: string | null = null;
   let categoryListingHeroPath: string | null = null;
   let categoryListingHeroAlt: string | null = null;
-  if (categoryId) {
-    const { data: cat } = await supabase
-      .from("categories")
-      .select("name,listing_hero_image_path,listing_hero_alt_text")
-      .eq("id", categoryId)
-      .maybeSingle();
-    if (cat?.name) {
-      categoryName = cat.name;
-      categoryFilterId = categoryId;
-      categoryListingHeroPath =
-        typeof cat.listing_hero_image_path === "string" &&
-        cat.listing_hero_image_path.trim()
-          ? cat.listing_hero_image_path.trim()
-          : null;
-      categoryListingHeroAlt =
-        typeof cat.listing_hero_alt_text === "string" &&
-        cat.listing_hero_alt_text.trim()
-          ? cat.listing_hero_alt_text.trim()
-          : null;
-    }
+  if (categoryId && cat?.name) {
+    categoryName = cat.name;
+    categoryFilterId = categoryId;
+    categoryListingHeroPath =
+      typeof cat.listing_hero_image_path === "string" &&
+      cat.listing_hero_image_path.trim()
+        ? cat.listing_hero_image_path.trim()
+        : null;
+    categoryListingHeroAlt =
+      typeof cat.listing_hero_alt_text === "string" &&
+      cat.listing_hero_alt_text.trim()
+        ? cat.listing_hero_alt_text.trim()
+        : null;
   }
 
   const categoryHeroResolvedSrc = categoryListingHeroPath
@@ -138,17 +146,11 @@ export default async function ProductsPage({ searchParams }: Props) {
     categoryView && categoryHeroResolvedSrc,
   );
 
-  const allCategoryRows = await getCachedAllCategoryRows();
-
-  const filterCategoryIds = categoryFilterId
-    ? []
-    : parseProductsCategoriesFilterParam(firstSearchParam(sp.categories));
-
   let expandedCategoryIds: string[] | null = null;
   if (categoryFilterId) {
     expandedCategoryIds =
-      allCategoryRows.length ?
-        expandCategoryIdsFromRows(allCategoryRows, categoryFilterId)
+      allCategoryRows.length
+        ? expandCategoryIdsFromRows(allCategoryRows, categoryFilterId)
       : await fetchExpandedCategoryIds(supabase, categoryFilterId);
   }
 
@@ -165,15 +167,9 @@ export default async function ProductsPage({ searchParams }: Props) {
   }
   if (!facetCategoryIds?.length) facetCategoryIds = null;
 
-  const listingFacets = await getCachedListingFacets(facetCategoryIds);
-
   const categoriesForFilterMenu = categoryFilterId
     ? []
     : mergeCategoryRowsForFilterMenu(allCategoryRows);
-
-  const productsBanners = categoryView
-    ? []
-    : await getCachedPublishedBanners("products");
 
   const hasListingFilters =
     q.length > 0 ||
@@ -187,11 +183,7 @@ export default async function ProductsPage({ searchParams }: Props) {
 
   const catalogBrowseMode = !categoryView && !hasListingFilters;
 
-  let catalogSections: Awaited<
-    ReturnType<typeof getCachedCatalogBrowseSections>
-  > | null = null;
-
-  let list: Array<{
+  type ListProduct = {
     id: string;
     name: string;
     brand: string;
@@ -205,14 +197,11 @@ export default async function ProductsPage({ searchParams }: Props) {
     size_unit: string | null;
     fragrance_options: string[] | null;
     created_at: string;
-  }> = [];
+  };
 
-  if (catalogBrowseMode) {
-    catalogSections =
-      allCategoryRows.length ?
-        await getCachedCatalogBrowseSections(allCategoryRows)
-      : [];
-  } else {
+  async function fetchFilteredList(): Promise<ListProduct[]> {
+    if (catalogBrowseMode) return [];
+
     let query = supabase
       .from("products")
       .select(
@@ -278,13 +267,27 @@ export default async function ProductsPage({ searchParams }: Props) {
     }
 
     query = query.limit(CATALOG_FILTERED_LIST_MAX);
-
     const { data: products } = await query;
-    list = products ?? [];
+    return products ?? [];
   }
 
-  const cartQtyByProductId = await getStorefrontCartQuantityByProductId();
-  const couponPctByProductId = await getCachedStorefrontCouponDiscounts();
+  const [
+    listingFacets,
+    productsBanners,
+    catalogSections,
+    list,
+    cartQtyByProductId,
+    couponPctByProductId,
+  ] = await Promise.all([
+    getCachedListingFacets(facetCategoryIds),
+    categoryView ? Promise.resolve([]) : getCachedPublishedBanners("products"),
+    catalogBrowseMode && allCategoryRows.length
+      ? getCachedCatalogBrowseSections(allCategoryRows)
+      : Promise.resolve(null),
+    fetchFilteredList(),
+    getStorefrontCartQuantityByProductId(),
+    getCachedStorefrontCouponDiscounts(),
+  ]);
 
   const invalidCategory = Boolean(categoryId && !categoryName);
 

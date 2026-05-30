@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { revalidateStoreCouponsTag } from "@/lib/revalidate-store-cache";
 import { assertActionPermission } from "@/lib/require-admin-permission";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -21,6 +22,7 @@ async function assertProfile(
 }
 
 function revalidateStoreCoupons() {
+  revalidateStoreCouponsTag();
   revalidatePath("/");
   revalidatePath("/checkout");
   revalidatePath("/admin/coupons");

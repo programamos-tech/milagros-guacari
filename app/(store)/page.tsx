@@ -24,10 +24,11 @@ const STORE_HIGHLIGHTS = [
 ] as const;
 
 export default async function HomePage() {
-  const heroBanners = await getCachedPublishedBanners("hero");
-  const homeProducts = await getCachedHomeFeaturedProducts();
-  const featuredProducts = homeProducts;
-  const couponPctByProductId = await getCachedStorefrontCouponDiscounts();
+  const [heroBanners, featuredProducts, couponPctByProductId] = await Promise.all([
+    getCachedPublishedBanners("hero"),
+    getCachedHomeFeaturedProducts(),
+    getCachedStorefrontCouponDiscounts(),
+  ]);
 
   return (
     <div>

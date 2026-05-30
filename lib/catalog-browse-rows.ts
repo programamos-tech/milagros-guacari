@@ -21,6 +21,7 @@ export type CatalogBrowseProductRow = {
   size_value: number | null;
   size_unit: string | null;
   fragrance_options: string[] | null;
+  created_at?: string;
 };
 
 export type CatalogBrowseSection = {
@@ -32,59 +33,136 @@ export type CatalogBrowseSection = {
   layout?: "row" | "grid";
 };
 
-export async function fetchCatalogBrowseSections(
+type BrowsePreviewRow = CatalogBrowseProductRow & {
+  category_id: string | null;
+  created_at: string;
+};
+
+function sortByCreatedDesc(
+  a: CatalogBrowseProductRow & { created_at?: string },
+  b: CatalogBrowseProductRow & { created_at?: string },
+) {
+  const ta = a.created_at ? Date.parse(a.created_at) : 0;
+  const tb = b.created_at ? Date.parse(b.created_at) : 0;
+  return tb - ta;
+}
+
+function toProductRow(row: BrowsePreviewRow): CatalogBrowseProductRow {
+  const {
+    category_id: _categoryId,
+    created_at: _createdAt,
+    ...product
+  } = row;
+  return product;
+}
+
+async function fetchCatalogBrowsePreviewRows(
   supabase: SupabaseClient,
-  allCategoryRows: { id: string; name: string; sort_order: number }[],
-): Promise<CatalogBrowseSection[]> {
-  const merged = mergeCategoryRowsForFilterMenu(allCategoryRows);
+): Promise<BrowsePreviewRow[]> {
+  const { data, error } = await supabase.rpc("store_catalog_browse_preview", {
+    p_per_category: CATALOG_ROW_PREVIEW_LIMIT + 1,
+  });
 
-  const rowsByCategory = await Promise.all(
-    merged.map(async (cat) => {
-      const expandedIds = expandCategoryIdsFromRows(allCategoryRows, cat.id);
-      if (!expandedIds.length) return null;
-
-      const { data, error } = await supabase
-        .from("products")
-        .select(PRODUCT_SELECT)
-        .eq("is_published", true)
-        .in("category_id", expandedIds)
-        .order("created_at", { ascending: false })
-        .limit(CATALOG_ROW_PREVIEW_LIMIT);
-
-      if (error || !data?.length) return null;
-
-      const section: CatalogBrowseSection = {
-        categoryId: cat.id,
-        categoryName: cat.name,
-        products: data as CatalogBrowseProductRow[],
-        showSeeAll: true,
-        layout: "row",
-      };
-      return section;
-    }),
-  );
-
-  const sections: CatalogBrowseSection[] = [];
-  for (const r of rowsByCategory) {
-    if (r) sections.push(r);
+  if (!error && data?.length) {
+    return data as BrowsePreviewRow[];
   }
 
-  const { data: uncategorized, error: orphanErr } = await supabase
+  if (error) {
+    console.error("[catalog-browse] store_catalog_browse_preview:", error.message);
+  }
+
+  return fetchCatalogBrowsePreviewRowsFallback(supabase);
+}
+
+/** Fallback si la migración RPC aún no está aplicada. */
+async function fetchCatalogBrowsePreviewRowsFallback(
+  supabase: SupabaseClient,
+): Promise<BrowsePreviewRow[]> {
+  const merged = await supabase
+    .from("categories")
+    .select("id,name,sort_order")
+    .order("sort_order", { ascending: true });
+
+  const categories = merged.data ?? [];
+  if (!categories.length) return [];
+
+  const rows: BrowsePreviewRow[] = [];
+  for (const cat of categories) {
+    const { data } = await supabase
+      .from("products")
+      .select(`${PRODUCT_SELECT},category_id,created_at`)
+      .eq("is_published", true)
+      .eq("category_id", cat.id)
+      .order("created_at", { ascending: false })
+      .limit(CATALOG_ROW_PREVIEW_LIMIT + 1);
+    if (data?.length) rows.push(...(data as BrowsePreviewRow[]));
+  }
+
+  const { data: uncategorized } = await supabase
     .from("products")
-    .select(PRODUCT_SELECT)
+    .select(`${PRODUCT_SELECT},category_id,created_at`)
     .eq("is_published", true)
     .is("category_id", null)
     .order("created_at", { ascending: false })
     .limit(CATALOG_ROW_PREVIEW_LIMIT + 1);
 
-  if (!orphanErr && uncategorized?.length) {
+  if (uncategorized?.length) rows.push(...(uncategorized as BrowsePreviewRow[]));
+  return rows;
+}
+
+export async function fetchCatalogBrowseSections(
+  supabase: SupabaseClient,
+  allCategoryRows: { id: string; name: string; sort_order: number }[],
+): Promise<CatalogBrowseSection[]> {
+  const previewRows = await fetchCatalogBrowsePreviewRows(supabase);
+  const merged = mergeCategoryRowsForFilterMenu(allCategoryRows);
+  const byCategoryId = new Map<string, BrowsePreviewRow[]>();
+
+  for (const row of previewRows) {
+    const cid = row.category_id;
+    if (!cid) continue;
+    const bucket = byCategoryId.get(cid) ?? [];
+    bucket.push(row);
+    byCategoryId.set(cid, bucket);
+  }
+
+  const sections: CatalogBrowseSection[] = [];
+
+  for (const cat of merged) {
+    const expandedIds = expandCategoryIdsFromRows(allCategoryRows, cat.id);
+    if (!expandedIds.length) continue;
+
+    const products: BrowsePreviewRow[] = [];
+    for (const id of expandedIds) {
+      const bucket = byCategoryId.get(id);
+      if (bucket?.length) products.push(...bucket);
+    }
+    if (!products.length) continue;
+
+    products.sort(sortByCreatedDesc);
+    const slice = products.slice(0, CATALOG_ROW_PREVIEW_LIMIT);
+    const showSeeAll = products.length > CATALOG_ROW_PREVIEW_LIMIT;
+
+    sections.push({
+      categoryId: cat.id,
+      categoryName: cat.name,
+      products: slice.map(toProductRow),
+      showSeeAll,
+      layout: "row",
+    });
+  }
+
+  const uncategorized = previewRows
+    .filter((row) => row.category_id == null)
+    .sort(sortByCreatedDesc);
+
+  if (uncategorized.length) {
     sections.push({
       categoryId: null,
       categoryName: "Otros productos",
-      products: (uncategorized as CatalogBrowseProductRow[]).slice(
-        0,
-        CATALOG_ROW_PREVIEW_LIMIT,
-      ),
+      products: uncategorized
+        .slice(0, CATALOG_ROW_PREVIEW_LIMIT)
+        .map(toProductRow),
       showSeeAll: uncategorized.length > CATALOG_ROW_PREVIEW_LIMIT,
       layout: "grid",
     });

@@ -4,12 +4,32 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const cuentaPublicPaths = new Set(["/cuenta/entrar", "/cuenta/registro"]);
 
+const PUBLIC_STORE_STATIC = new Set([
+  "/terminos",
+  "/cookies",
+  "/privacidad",
+  "/quien-soy",
+]);
+
+/** Catálogo y páginas de tienda sin auth en middleware (header/cuenta cargan sesión si hace falta). */
+function isPublicStorePath(path: string): boolean {
+  if (path === "/") return true;
+  if (path === "/products" || path.startsWith("/products/")) return true;
+  if (path === "/kits" || path.startsWith("/kits/")) return true;
+  if (path === "/favoritos" || path === "/cart") return true;
+  if (path === "/checkout" || path.startsWith("/checkout/")) return true;
+  if (PUBLIC_STORE_STATIC.has(path)) return true;
+  if (path.startsWith("/api/store/")) return true;
+  return false;
+}
+
 /** Rutas públicas sin sesión Supabase en middleware (menos latencia). */
 function skipsMiddlewareAuth(path: string): boolean {
   return (
     path.startsWith("/api/products/") ||
     path.startsWith("/api/webhooks/") ||
-    path === "/icon.svg"
+    path === "/icon.svg" ||
+    isPublicStorePath(path)
   );
 }
 

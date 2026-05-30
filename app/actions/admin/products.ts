@@ -8,9 +8,14 @@ import {
 import { SALE_VAT_PERCENT } from "@/lib/product-vat-price";
 import { assertActionPermission } from "@/lib/require-admin-permission";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { revalidateStoreCatalogTags } from "@/lib/revalidate-store-cache";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
+
+function revalidateStoreProductCache() {
+  revalidateStoreCatalogTags();
+}
 
 function extFromFilename(name: string) {
   const i = name.lastIndexOf(".");
@@ -424,11 +429,14 @@ export async function createProduct(formData: FormData) {
       .update({ image_path: uploaded.imagePath })
       .eq("id", id);
   } else if (uploaded.status === "error") {
-    revalidatePath("/products");
+    revalidateStoreProductCache();
+    revalidateStoreProductCache();
+  revalidatePath("/products");
     revalidatePath("/admin/products");
     redirect("/admin/products?saved=1&uploadError=1");
   }
 
+  revalidateStoreProductCache();
   revalidatePath("/products");
   revalidatePath("/admin/products");
   redirect("/admin/products?saved=1");
@@ -566,12 +574,15 @@ export async function updateProduct(productId: string, formData: FormData) {
       .update({ image_path: uploaded.imagePath })
       .eq("id", productId);
   } else if (uploaded.status === "error") {
-    revalidatePath("/products");
+    revalidateStoreProductCache();
+    revalidateStoreProductCache();
+  revalidatePath("/products");
     revalidatePath(`/products/${productId}`);
     revalidatePath("/admin/products");
     redirect("/admin/products?saved=1&uploadError=1");
   }
 
+  revalidateStoreProductCache();
   revalidatePath("/products");
   revalidatePath(`/products/${productId}`);
   revalidatePath("/admin/products");
@@ -587,6 +598,7 @@ export async function deleteProduct(productId: string) {
   await assertActionPermission("productos_editar");
 
   await supabase.from("products").delete().eq("id", productId);
+  revalidateStoreProductCache();
   revalidatePath("/products");
   revalidatePath("/admin/products");
   revalidatePath(`/admin/products/${productId}`);
@@ -666,6 +678,7 @@ export async function adjustProductStock(productId: string, formData: FormData) 
 
   const returnTo = safeStockAdjustReturnTo(String(formData.get("return_to") ?? ""));
 
+  revalidateStoreProductCache();
   revalidatePath("/products");
   revalidatePath(`/products/${productId}`);
   revalidatePath("/admin/products");
@@ -747,6 +760,7 @@ export async function transferProductStock(productId: string, formData: FormData
 
   const returnTo = safeStockAdjustReturnTo(String(formData.get("return_to") ?? ""));
 
+  revalidateStoreProductCache();
   revalidatePath("/products");
   revalidatePath(`/products/${productId}`);
   revalidatePath("/admin/products");

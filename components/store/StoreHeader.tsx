@@ -33,12 +33,11 @@ function accountFirstNameFromUser(user: User | null): string | null {
 
 export async function StoreHeader() {
   const supabase = await createSupabaseServerClient();
-  const menuCategories = await getCachedStoreCategoriesWithCounts();
-  const cartItemCount = await getStorefrontCartItemCount();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [menuCategories, cartItemCount, { data: { user } }] = await Promise.all([
+    getCachedStoreCategoriesWithCounts(),
+    getStorefrontCartItemCount(),
+    supabase.auth.getUser(),
+  ]);
   const userIconHref = user ? "/cuenta" : "/cuenta/entrar";
   const userIconLabel = user ? "Mi cuenta" : "Iniciar sesión";
   const accountFirstName = accountFirstNameFromUser(user);

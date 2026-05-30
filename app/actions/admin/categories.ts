@@ -3,6 +3,7 @@
 import { isCategoryIconKey, resolveCategoryIconKey } from "@/lib/category-icons";
 import { assertActionPermission } from "@/lib/require-admin-permission";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { revalidateStoreCatalogTags } from "@/lib/revalidate-store-cache";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -35,6 +36,7 @@ export async function createCategory(formData: FormData) {
     .insert({ name, icon_key: iconKey });
   if (error) redirectErr("db");
 
+  revalidateStoreCatalogTags();
   revalidatePath("/admin/categories");
   revalidatePath("/admin/products");
   redirect("/admin/products?categories=1");
@@ -49,6 +51,7 @@ export async function deleteCategory(categoryId: string) {
   await assertActionPermission("categorias_gestionar");
 
   await supabase.from("categories").delete().eq("id", categoryId);
+  revalidateStoreCatalogTags();
   revalidatePath("/admin/categories");
   revalidatePath("/admin/products");
   redirect("/admin/products?categories=1");
@@ -80,6 +83,7 @@ export async function updateCategoryListingHero(formData: FormData) {
     redirect("/admin/products?categories=1&category_error=db");
   }
 
+  revalidateStoreCatalogTags();
   revalidatePath("/products");
   revalidatePath("/admin/products");
   redirect("/admin/products?categories=1");

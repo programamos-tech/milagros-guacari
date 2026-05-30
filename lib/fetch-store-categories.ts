@@ -33,6 +33,73 @@ export async function fetchStoreCategoriesWithCounts(
 
   if (catErr || !categories?.length) return [];
 
+  const countByCategory = await fetchPublishedProductCountsByCategory(supabase);
+
+  const groups = new Map<string, typeof categories>();
+  for (const c of categories) {
+    const k = categoryGroupKey(c.name);
+    const arr = groups.get(k) ?? [];
+    arr.push(c);
+    groups.set(k, arr);
+  }
+
+  const out: StoreCategoryMenuItem[] = [];
+  let visualIndex = 0;
+  for (const [, arr] of groups) {
+    const canonicalId = pickCanonicalCategoryId(arr) ?? arr[0]!.id;
+    const winner = arr.find((c) => c.id === canonicalId) ?? arr[0]!;
+    const minSort = Math.min(...arr.map((c) => c.sort_order));
+    let productCount = 0;
+    for (const c of arr) {
+      productCount += countByCategory.get(c.id) ?? 0;
+    }
+    if (productCount <= 0) continue;
+
+    const visual = getStoreCategoryVisual(winner.name, visualIndex);
+    visualIndex += 1;
+
+    out.push({
+      id: canonicalId,
+      name: winner.name,
+      sort_order: minSort,
+      iconKey: resolveCategoryIconKey(winner.icon_key),
+      productCount,
+      ...visual,
+    });
+  }
+
+  out.sort(
+    (a, b) =>
+      a.sort_order - b.sort_order ||
+      a.name.localeCompare(b.name, "es"),
+  );
+  return out;
+}
+
+async function fetchPublishedProductCountsByCategory(
+  supabase: SupabaseClient,
+): Promise<Map<string, number>> {
+  const { data, error } = await supabase.rpc(
+    "store_published_product_counts_by_category",
+  );
+
+  if (!error && data?.length) {
+    const map = new Map<string, number>();
+    for (const row of data as { category_id: string; product_count: number }[]) {
+      if (row.category_id) {
+        map.set(row.category_id, Number(row.product_count ?? 0));
+      }
+    }
+    return map;
+  }
+
+  if (error) {
+    console.error(
+      "[store-categories] store_published_product_counts_by_category:",
+      error.message,
+    );
+  }
+
   const { data: products, error: prodErr } = await supabase
     .from("products")
     .select("category_id")
@@ -46,45 +113,5 @@ export async function fetchStoreCategoriesWithCounts(
       countByCategory.set(cid, (countByCategory.get(cid) ?? 0) + 1);
     }
   }
-
-  const groups = new Map<string, typeof categories>();
-  for (const c of categories) {
-    const k = categoryGroupKey(c.name);
-    const arr = groups.get(k) ?? [];
-    arr.push(c);
-    groups.set(k, arr);
-  }
-
-  const merged: StoreCategoryMenuItem[] = [];
-  let visualIndex = 0;
-  for (const [, arr] of groups) {
-    const productCount = arr.reduce(
-      (sum, c) => sum + (countByCategory.get(c.id) ?? 0),
-      0,
-    );
-
-    const canonicalId = pickCanonicalCategoryId(arr) ?? arr[0]!.id;
-    const winner = arr.find((c) => c.id === canonicalId) ?? arr[0]!;
-    const minSort = Math.min(...arr.map((c) => c.sort_order));
-
-    const visual = getStoreCategoryVisual(winner.name, visualIndex);
-    visualIndex += 1;
-
-    merged.push({
-      id: canonicalId,
-      name: winner.name,
-      sort_order: minSort,
-      iconKey: resolveCategoryIconKey(winner.icon_key),
-      productCount,
-      ...visual,
-    });
-  }
-
-  merged.sort(
-    (a, b) =>
-      a.sort_order - b.sort_order ||
-      a.name.localeCompare(b.name, "es"),
-  );
-
-  return merged.filter((item) => item.productCount > 0);
+  return countByCategory;
 }

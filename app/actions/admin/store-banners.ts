@@ -3,6 +3,7 @@
 import { assertActionPermission } from "@/lib/require-admin-permission";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { StoreBannerPlacement } from "@/lib/store-banners";
+import { revalidateStoreBannersTag } from "@/lib/revalidate-store-cache";
 import { parseStoragePublicPath } from "@/lib/storage-bucket-path";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -38,6 +39,7 @@ async function assertProfile(supabase: Awaited<ReturnType<typeof createSupabaseS
 }
 
 function revalidateStorefront() {
+  revalidateStoreBannersTag();
   revalidatePath("/");
   revalidatePath("/products");
   revalidatePath("/admin/banners");

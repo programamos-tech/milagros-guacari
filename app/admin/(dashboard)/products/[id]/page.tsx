@@ -107,16 +107,29 @@ export default async function AdminProductDetailPage({ params }: Props) {
     ? `${String(saleVatPercentLabel(true) ?? 0).replace(/\.0+$/, "")}%`
     : "No aplica";
 
-  const { data: pendingOrders } = await supabase.from("orders").select("id").eq("status", "pending");
-  const pendingIds = (pendingOrders ?? []).map((o) => o.id).filter(Boolean);
+  const { data: reservedQtyRaw, error: reservedErr } = await supabase.rpc(
+    "admin_product_reserved_quantity",
+    { p_product_id: id },
+  );
   let reservedQty = 0;
-  if (pendingIds.length > 0) {
+  if (!reservedErr && reservedQtyRaw != null) {
+    reservedQty = Number(reservedQtyRaw);
+  } else {
+    if (reservedErr) {
+      console.error(
+        "[admin-product] admin_product_reserved_quantity:",
+        reservedErr.message,
+      );
+    }
     const { data: lines } = await supabase
       .from("order_items")
-      .select("quantity")
+      .select("quantity, orders!inner(status)")
       .eq("product_id", id)
-      .in("order_id", pendingIds);
-    reservedQty = (lines ?? []).reduce((s, r) => s + Number(r.quantity ?? 0), 0);
+      .eq("orders.status", "pending");
+    reservedQty = (lines ?? []).reduce(
+      (s, r) => s + Number(r.quantity ?? 0),
+      0,
+    );
   }
 
   const plataStock = cost * stockTotal;
