@@ -253,16 +253,25 @@ body {
   }
 }
 
+/* Reportes admin: animación opcional; contenido siempre visible si la animación no corre. */
 .reports-metric-card {
-  opacity: 0;
-  animation: reports-metric-in 0.72s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  animation-delay: var(--reports-stagger, 0ms);
+  opacity: 1;
 }
 
 .reports-chart-reveal {
-  opacity: 0;
-  animation: reports-metric-in 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  animation-delay: var(--reports-chart-delay, 0ms);
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .reports-metric-card {
+    animation: reports-metric-in 0.72s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--reports-stagger, 0ms);
+  }
+
+  .reports-chart-reveal {
+    animation: reports-metric-in 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--reports-chart-delay, 0ms);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

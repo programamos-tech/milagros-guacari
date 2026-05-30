@@ -258,7 +258,7 @@ export function ProductsListingControls({
 
   return (
     <>
-      <div className="flex items-center justify-end gap-0 px-2 py-3 sm:px-4">
+      <div className="flex items-center justify-end gap-0 px-2 py-1 sm:px-4 sm:py-1.5">
         <div className="flex items-center gap-1 text-[11px] font-semibold tracking-[0.18em] text-stone-800 sm:text-xs sm:tracking-[0.2em]">
           <button
             type="button"

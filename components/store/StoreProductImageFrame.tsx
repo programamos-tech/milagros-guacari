@@ -16,7 +16,7 @@ type Props = {
   dimmed?: boolean;
 };
 
-/** Foto de producto en vitrina: marco fijo 4:5 con `object-contain` para tamaño uniforme. */
+/** Foto de producto en vitrina: marco fijo 4:5, imagen a borde de borde. */
 export function StoreProductImageFrame({
   src,
   alt,

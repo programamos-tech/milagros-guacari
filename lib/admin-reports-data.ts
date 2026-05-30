@@ -1,18 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ReportExpenseDetailLine } from "@/components/admin/ReportLiquidityMetricCards";
 import {
-  dayInRange,
   dayKeysInclusiveReport,
   prettyReportDayShortLabel,
-  reportCalendarDayKeyFromIso,
   REPORT_LINE_DETAIL_MAX_DAYS,
   reportRangeDayCountInclusive,
 } from "@/lib/admin-report-range";
-import { fetchOrderItemsInChunks, fetchOrdersCreatedInReportYmdWindow } from "@/lib/admin-fetch-orders-for-report";
+import { fetchOrderItemsInChunks } from "@/lib/admin-fetch-orders-for-report";
 import { formatCop } from "@/lib/money";
 import type { TicketTrendPoint } from "@/lib/customer-ticket-trend";
 import {
-  revenueNetGrossFromLines,
   sumGrossProfitNetOnLinesForPaidOrders,
   sumRevenueNetGrossForOrders,
   type OrderItemRow,
@@ -53,7 +50,6 @@ export type AdminReportDashboardData = {
   peakIncomeDayKey: string | null;
   peakIncomeDayCents: number;
   ordersRangeError: string | null;
-  /** Ingresos/ganancia del periodo usaron `total_cents` (rango > {@link REPORT_LINE_DETAIL_MAX_DAYS} días). */
   revenueApproxFromOrderTotals: boolean;
 };
 
@@ -89,23 +85,175 @@ async function fetchStockInvestmentTotals(supabase: SupabaseClient): Promise<{
 
   const { data: products } = await supabase
     .from("products")
-    .select("stock_quantity,cost_cents,cost_gross_cents");
+    .select("stock_quantity,cost_cents");
   const rows = products ?? [];
   let netCents = 0;
-  let grossCents = 0;
   for (const p of rows) {
     const stock = Number((p as { stock_quantity?: number }).stock_quantity ?? 0);
     const cost = Number((p as { cost_cents?: number }).cost_cents ?? 0);
-    const gross = Number(
-      (p as { cost_gross_cents?: number }).cost_gross_cents ?? cost,
-    );
     netCents += cost * stock;
-    grossCents += gross * stock;
   }
-  return { netCents, grossCents, productCount: rows.length };
+  return { netCents, grossCents: netCents, productCount: rows.length };
 }
 
-export async function fetchAdminReportDashboardData(
+function parseRpcExpenseLines(raw: unknown): ReportExpenseDetailLine[] {
+  if (!Array.isArray(raw)) return [];
+  const out: ReportExpenseDetailLine[] = [];
+  for (const row of raw) {
+    if (!row || typeof row !== "object") continue;
+    const r = row as Record<string, unknown>;
+    out.push({
+      id: String(r.id ?? ""),
+      concept: String(r.concept ?? ""),
+      amount_cents: Number(r.amount_cents ?? 0),
+      expense_date: String(r.expense_date ?? ""),
+      payment_method: String(r.payment_method ?? ""),
+      category: r.category != null ? String(r.category) : null,
+      created_at: typeof r.created_at === "string" ? r.created_at : null,
+    });
+  }
+  return out;
+}
+
+function splitExpenseLines(lines: ReportExpenseDetailLine[]): {
+  efectivo: ReportExpenseDetailLine[];
+  otros: ReportExpenseDetailLine[];
+} {
+  const efectivo: ReportExpenseDetailLine[] = [];
+  const otros: ReportExpenseDetailLine[] = [];
+  for (const line of lines) {
+    if (line.payment_method.trim().toLowerCase() === "efectivo") {
+      efectivo.push(line);
+    } else {
+      otros.push(line);
+    }
+  }
+  return { efectivo, otros };
+}
+
+async function fetchPaidOrdersForRevenue(
+  supabase: SupabaseClient,
+  paidOrderIds: string[],
+): Promise<OrderRowRef[]> {
+  if (paidOrderIds.length === 0) return [];
+  const out: OrderRowRef[] = [];
+  for (let i = 0; i < paidOrderIds.length; i += 120) {
+    const part = paidOrderIds.slice(i, i + 120);
+    const { data, error } = await supabase
+      .from("orders")
+      .select("id,status,total_cents,created_at,wompi_reference")
+      .in("id", part);
+    if (error) {
+      console.error("[admin reportes] orders by id:", error.message);
+      break;
+    }
+    out.push(...((data ?? []) as OrderRowRef[]));
+  }
+  return out;
+}
+
+async function fetchLineDetailForOrders(
+  supabase: SupabaseClient,
+  paidPeriodOrders: OrderRowRef[],
+): Promise<{
+  orderItems: OrderItemRow[];
+  productsById: Map<string, ProductVatRow>;
+}> {
+  const paidOrderIds = paidPeriodOrders.map((o) => o.id).filter(Boolean);
+  if (paidOrderIds.length === 0) {
+    return { orderItems: [], productsById: new Map() };
+  }
+
+  const { rows: itemRows, error: itemsErr } = await fetchOrderItemsInChunks(
+    supabase,
+    paidOrderIds,
+    "order_id,product_id,quantity,unit_price_cents",
+  );
+  if (itemsErr) console.error("[admin reportes] order_items:", itemsErr);
+  const orderItems = itemRows as OrderItemRow[];
+
+  const productsById = new Map<string, ProductVatRow>();
+  const pids = [
+    ...new Set(
+      orderItems.map((i) => i.product_id).filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  for (let i = 0; i < pids.length; i += 120) {
+    const part = pids.slice(i, i + 120);
+    const { data: prodData } = await supabase
+      .from("products")
+      .select("id,price_cents,has_vat,vat_percent,cost_cents")
+      .in("id", part);
+    for (const p of prodData ?? []) {
+      productsById.set(p.id as string, p as ProductVatRow);
+    }
+  }
+
+  return { orderItems, productsById };
+}
+
+function buildChartPointsFromRpc(
+  chartFrom: string,
+  chartTo: string,
+  chartPointsRaw: unknown,
+  expensesByChartDayRaw: unknown,
+): {
+  points: TicketTrendPoint[];
+  peakIncomeDayKey: string | null;
+  peakIncomeDayCents: number;
+} {
+  const incomeByDay = new Map<string, { income: number; count: number }>();
+  if (Array.isArray(chartPointsRaw)) {
+    for (const row of chartPointsRaw) {
+      if (!row || typeof row !== "object") continue;
+      const r = row as Record<string, unknown>;
+      const dayKey = String(r.day_key ?? "");
+      if (!dayKey) continue;
+      incomeByDay.set(dayKey, {
+        income: Number(r.income_cents ?? 0),
+        count: Number(r.order_count ?? 0),
+      });
+    }
+  }
+
+  const expensesByDay = new Map<string, number>();
+  if (expensesByChartDayRaw && typeof expensesByChartDayRaw === "object") {
+    for (const [key, value] of Object.entries(
+      expensesByChartDayRaw as Record<string, unknown>,
+    )) {
+      expensesByDay.set(key, Number(value ?? 0));
+    }
+  }
+
+  let peakIncomeDayKey: string | null = null;
+  let peakIncomeDayCents = 0;
+  const points: TicketTrendPoint[] = dayKeysInclusiveReport(chartFrom, chartTo).map(
+    (key) => {
+      const income = incomeByDay.get(key);
+      const value = income?.income ?? 0;
+      const n = income?.count ?? 0;
+      if (value > peakIncomeDayCents) {
+        peakIncomeDayCents = value;
+        peakIncomeDayKey = key;
+      }
+      const label = prettyReportDayShortLabel(key);
+      const eg = expensesByDay.get(key) ?? 0;
+      return {
+        monthKey: key,
+        labelX: label,
+        dayKey: key,
+        detail: `${label}: ${formatCop(value)} ingresos (IVA, ventas pagadas) · ${formatCop(eg)} egresos`,
+        avgCents: value,
+        orderCount: n,
+        expenseCents: eg,
+      };
+    },
+  );
+
+  return { points, peakIncomeDayKey, peakIncomeDayCents };
+}
+
+async function fetchAdminReportViaRpc(
   supabase: SupabaseClient,
   opts: {
     rangeFrom: string;
@@ -116,135 +264,48 @@ export async function fetchAdminReportDashboardData(
     fetchTo: string;
     periodLabel: string;
   },
-): Promise<AdminReportDashboardData> {
+): Promise<AdminReportDashboardData | null> {
   const { rangeFrom, rangeTo, chartFrom, chartTo, fetchFrom, fetchTo, periodLabel } =
     opts;
 
-  const [stockTotals, expensesRes, ordersResult] = await Promise.all([
+  const [stockTotals, rpcRes] = await Promise.all([
     fetchStockInvestmentTotals(supabase),
-    supabase
-      .from("store_expenses")
-      .select(
-        "id,concept,category,amount_cents,payment_method,notes,expense_date,created_at,is_cancelled",
-      )
-      .gte("expense_date", fetchFrom)
-      .lte("expense_date", fetchTo)
-      .order("expense_date", { ascending: false })
-      .order("created_at", { ascending: false })
-      .limit(1500),
-    fetchOrdersCreatedInReportYmdWindow(
-      supabase,
-      fetchFrom,
-      fetchTo,
-      "id,status,total_cents,created_at,wompi_reference",
-    ),
+    supabase.rpc("admin_report_dashboard_agg", {
+      p_fetch_from: fetchFrom,
+      p_fetch_to: fetchTo,
+      p_range_from: rangeFrom,
+      p_range_to: rangeTo,
+      p_chart_from: chartFrom,
+      p_chart_to: chartTo,
+    }),
   ]);
 
-  const expenses = expensesRes.data ?? [];
-  const orders = (ordersResult.rows ?? []) as OrderRowRef[];
-
-  let totalCobradoPedidos = 0;
-  let efectivo = 0;
-  let transferencia = 0;
-  let anuladas = 0;
-  let ventasVirtuales = 0;
-  let ventasPagadasPeriod = 0;
-  let egresosPeriod = 0;
-  let egresosEfectivoCents = 0;
-  let egresosTransferenciaBucketCents = 0;
-  let cantidadEgresosPeriod = 0;
-  const expensesByDayCents = new Map<string, number>();
-  const reportExpensesEfectivoLines: ReportExpenseDetailLine[] = [];
-  const reportExpensesOtrosLines: ReportExpenseDetailLine[] = [];
-
-  for (const o of orders) {
-    const createdAt = typeof o.created_at === "string" ? o.created_at : null;
-    const dk = createdAt ? reportCalendarDayKeyFromIso(createdAt) : "";
-    if (!createdAt || !dayInRange(dk, rangeFrom, rangeTo)) continue;
-    const total = Number(o.total_cents ?? 0);
-    if (o.status === "paid") {
-      ventasPagadasPeriod += 1;
-      totalCobradoPedidos += total;
-      const ref = String(o.wompi_reference ?? "");
-      if (!ref.startsWith("POS:")) ventasVirtuales += total;
-      if (ref === "POS:cash") efectivo += total;
-      else if (
-        ref === "POS:transfer" ||
-        ref === "POS:mixed" ||
-        !ref.startsWith("POS:")
-      ) {
-        transferencia += total;
-      }
-    } else if (o.status === "cancelled") {
-      anuladas += 1;
+  if (rpcRes.error || !rpcRes.data || typeof rpcRes.data !== "object") {
+    if (rpcRes.error) {
+      console.error("[admin reportes] admin_report_dashboard_agg:", rpcRes.error.message);
     }
+    return null;
   }
 
-  const paidPeriodOrders = orders.filter(
-    (o) =>
-      o.status === "paid" &&
-      typeof o.created_at === "string" &&
-      dayInRange(reportCalendarDayKeyFromIso(o.created_at), rangeFrom, rangeTo),
-  );
-
-  const paidOrdersForChart = orders.filter(
-    (o) =>
-      o.status === "paid" &&
-      typeof o.created_at === "string" &&
-      dayInRange(reportCalendarDayKeyFromIso(o.created_at), chartFrom, chartTo),
-  );
-
+  const d = rpcRes.data as Record<string, unknown>;
   const periodDayCount = reportRangeDayCountInclusive(rangeFrom, rangeTo);
   const needsLineDetailForPeriod = periodDayCount <= REPORT_LINE_DETAIL_MAX_DAYS;
   const revenueApproxFromOrderTotals = !needsLineDetailForPeriod;
 
-  const paidOrderIdsForItems = [
-    ...new Set(
-      [
-        ...(needsLineDetailForPeriod ? paidPeriodOrders : []),
-        ...paidOrdersForChart,
-      ]
-        .map((o) => o.id)
-        .filter(Boolean),
-    ),
-  ];
+  const paidOrderIds = Array.isArray(d.paidOrderIds)
+    ? d.paidOrderIds.map((id) => String(id)).filter(Boolean)
+    : [];
 
-  let orderItems: OrderItemRow[] = [];
-  const productsById = new Map<string, ProductVatRow>();
+  let ingresosSinIvaPeriod = 0;
+  let ingresosConIvaPeriod = 0;
+  let gananciaBruta = 0;
 
-  if (paidOrderIdsForItems.length > 0) {
-    const { rows: itemRows, error: itemsErr } = await fetchOrderItemsInChunks(
+  if (needsLineDetailForPeriod && paidOrderIds.length > 0) {
+    const paidPeriodOrders = await fetchPaidOrdersForRevenue(supabase, paidOrderIds);
+    const { orderItems, productsById } = await fetchLineDetailForOrders(
       supabase,
-      paidOrderIdsForItems,
-      "order_id,product_id,quantity,unit_price_cents",
+      paidPeriodOrders,
     );
-    if (itemsErr) console.error("[admin reportes] order_items:", itemsErr);
-    orderItems = itemRows as OrderItemRow[];
-
-    const pids = [
-      ...new Set(
-        orderItems.map((i) => i.product_id).filter((id): id is string => Boolean(id)),
-      ),
-    ];
-    if (pids.length > 0) {
-      for (let i = 0; i < pids.length; i += 120) {
-        const part = pids.slice(i, i + 120);
-        const { data: prodData } = await supabase
-          .from("products")
-          .select("id,price_cents,has_vat,vat_percent,cost_cents")
-          .in("id", part);
-        for (const p of prodData ?? []) {
-          productsById.set(p.id as string, p as ProductVatRow);
-        }
-      }
-    }
-  }
-
-  let ingresosSinIvaPeriod: number;
-  let ingresosConIvaPeriod: number;
-  let gananciaBruta: number;
-
-  if (needsLineDetailForPeriod) {
     const rev = sumRevenueNetGrossForOrders(
       paidPeriodOrders,
       orderItems,
@@ -257,106 +318,40 @@ export async function fetchAdminReportDashboardData(
       orderItems,
       productsById,
     );
-  } else {
+  } else if (paidOrderIds.length > 0) {
+    const paidPeriodOrders = await fetchPaidOrdersForRevenue(supabase, paidOrderIds);
     const rev = revenueNetGrossFromOrderTotals(paidPeriodOrders);
     ingresosSinIvaPeriod = rev.net;
     ingresosConIvaPeriod = rev.gross;
     gananciaBruta = 0;
   }
+
   const ivaRecaudadoPeriod = Math.max(
     0,
     ingresosConIvaPeriod - ingresosSinIvaPeriod,
   );
 
-  for (const e of expenses) {
-    if ((e as { is_cancelled?: boolean }).is_cancelled === true) continue;
-    const raw =
-      typeof e.expense_date === "string" && String(e.expense_date).length >= 10
-        ? String(e.expense_date).slice(0, 10)
-        : typeof e.created_at === "string" && e.created_at
-          ? reportCalendarDayKeyFromIso(e.created_at)
-          : null;
-    if (!raw) continue;
-    const amount = Number(e.amount_cents ?? 0);
-    if (dayInRange(raw, chartFrom, chartTo)) {
-      expensesByDayCents.set(raw, (expensesByDayCents.get(raw) ?? 0) + amount);
-    }
-    if (!dayInRange(raw, rangeFrom, rangeTo)) continue;
-    egresosPeriod += amount;
-    cantidadEgresosPeriod += 1;
-    const pm = String(e.payment_method ?? "").trim().toLowerCase();
-    const line: ReportExpenseDetailLine = {
-      id: String(e.id),
-      concept: String((e as { concept?: string }).concept ?? ""),
-      amount_cents: amount,
-      expense_date: raw,
-      payment_method: String((e as { payment_method?: string }).payment_method ?? ""),
-      category:
-        (e as { category?: string | null }).category != null
-          ? String((e as { category?: string | null }).category)
-          : null,
-      created_at:
-        typeof (e as { created_at?: string }).created_at === "string"
-          ? (e as { created_at: string }).created_at
-          : null,
-    };
-    if (pm === "efectivo") {
-      egresosEfectivoCents += amount;
-      reportExpensesEfectivoLines.push(line);
-    } else {
-      egresosTransferenciaBucketCents += amount;
-      reportExpensesOtrosLines.push(line);
-    }
-  }
+  const expenseLines = parseRpcExpenseLines(d.expenseLines);
+  const { efectivo: reportExpensesEfectivoLines, otros: reportExpensesOtrosLines } =
+    splitExpenseLines(expenseLines);
 
-  const compareReportExpenseLines = (
-    a: ReportExpenseDetailLine,
-    b: ReportExpenseDetailLine,
-  ) => {
-    const byDate = b.expense_date.localeCompare(a.expense_date);
-    if (byDate !== 0) return byDate;
-    return (b.created_at ?? "").localeCompare(a.created_at ?? "");
-  };
-  reportExpensesEfectivoLines.sort(compareReportExpenseLines);
-  reportExpensesOtrosLines.sort(compareReportExpenseLines);
-
+  const egresosPeriod = Number(d.egresosPeriod ?? 0);
+  const egresosEfectivoCents = Number(d.egresosEfectivoCents ?? 0);
+  const egresosTransferenciaBucketCents = Number(
+    d.egresosTransferenciaBucketCents ?? 0,
+  );
   const gananciaNeta = gananciaBruta - egresosPeriod;
+  const efectivo = Number(d.efectivo ?? 0);
+  const transferencia = Number(d.transferencia ?? 0);
   const efectivoNetoCaja = efectivo - egresosEfectivoCents;
   const transferenciaNeta = transferencia - egresosTransferenciaBucketCents;
 
-  const trendDayKeys = dayKeysInclusiveReport(chartFrom, chartTo);
-  const trendByDay = new Map(trendDayKeys.map((key) => [key, 0]));
-  const paidOrdersPerTrendDay = new Map<string, number>();
-
-  for (const o of paidOrdersForChart) {
-    const key = reportCalendarDayKeyFromIso(o.created_at);
-    if (!trendByDay.has(key)) continue;
-    paidOrdersPerTrendDay.set(key, (paidOrdersPerTrendDay.get(key) ?? 0) + 1);
-    const { gross } = revenueNetGrossFromLines(o, orderItems, productsById);
-    trendByDay.set(key, (trendByDay.get(key) ?? 0) + gross);
-  }
-
-  let peakIncomeDayKey: string | null = null;
-  let peakIncomeDayCents = 0;
-  const reportIncomeChartPoints: TicketTrendPoint[] = trendDayKeys.map((key) => {
-    const value = trendByDay.get(key) ?? 0;
-    if (value > peakIncomeDayCents) {
-      peakIncomeDayCents = value;
-      peakIncomeDayKey = key;
-    }
-    const n = paidOrdersPerTrendDay.get(key) ?? 0;
-    const label = prettyReportDayShortLabel(key);
-    const eg = expensesByDayCents.get(key) ?? 0;
-    return {
-      monthKey: key,
-      labelX: label,
-      dayKey: key,
-      detail: `${label}: ${formatCop(value)} ingresos (IVA, ventas pagadas) · ${formatCop(eg)} egresos`,
-      avgCents: value,
-      orderCount: n,
-      expenseCents: eg,
-    };
-  });
+  const { points, peakIncomeDayKey, peakIncomeDayCents } = buildChartPointsFromRpc(
+    chartFrom,
+    chartTo,
+    d.chartPoints,
+    d.expensesByChartDay,
+  );
 
   return {
     periodLabel,
@@ -373,24 +368,44 @@ export async function fetchAdminReportDashboardData(
     ivaRecaudadoPeriod,
     gananciaBruta,
     gananciaNeta,
-    totalCobradoPedidos,
+    totalCobradoPedidos: Number(d.totalCobradoPedidos ?? 0),
     efectivo,
     transferencia,
-    anuladas,
-    ventasVirtuales,
-    ventasPagadasPeriod,
+    anuladas: Number(d.anuladas ?? 0),
+    ventasVirtuales: Number(d.ventasVirtuales ?? 0),
+    ventasPagadasPeriod: Number(d.ventasPagadasPeriod ?? 0),
     egresosPeriod,
     egresosEfectivoCents,
     egresosTransferenciaBucketCents,
-    cantidadEgresosPeriod,
+    cantidadEgresosPeriod: Number(d.cantidadEgresosPeriod ?? 0),
     efectivoNetoCaja,
     transferenciaNeta,
     reportExpensesEfectivoLines,
     reportExpensesOtrosLines,
-    reportIncomeChartPoints,
+    reportIncomeChartPoints: points,
     peakIncomeDayKey,
     peakIncomeDayCents,
-    ordersRangeError: ordersResult.error,
+    ordersRangeError: null,
     revenueApproxFromOrderTotals,
   };
+}
+
+export async function fetchAdminReportDashboardData(
+  supabase: SupabaseClient,
+  opts: {
+    rangeFrom: string;
+    rangeTo: string;
+    chartFrom: string;
+    chartTo: string;
+    fetchFrom: string;
+    fetchTo: string;
+    periodLabel: string;
+  },
+): Promise<AdminReportDashboardData> {
+  const viaRpc = await fetchAdminReportViaRpc(supabase, opts);
+  if (viaRpc) return viaRpc;
+
+  throw new Error(
+    "No se pudieron cargar los reportes. Reintentá en unos segundos o contactá soporte.",
+  );
 }

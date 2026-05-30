@@ -375,11 +375,7 @@ export default async function ProductsPage({ searchParams }: Props) {
       </div>
 
       <div
-        className={`${storeShellClass} space-y-10 sm:space-y-12 lg:py-14 ${
-          categoryView
-            ? "py-8 sm:py-10"
-            : "py-10 sm:py-12 lg:py-14"
-        }`}
+        className={`${storeShellClass} space-y-10 pb-10 pt-2 sm:space-y-12 sm:pb-12 sm:pt-3 lg:pb-14`}
       >
         {!categoryView && !catalogBrowseMode && productsBanners.length > 0 ? (
           <RevealOnScroll className="w-full">
