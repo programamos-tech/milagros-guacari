@@ -1,7 +1,9 @@
 import { Suspense } from "react";
 import { ReportsPeriodFilter } from "@/components/admin/ReportsPeriodFilter";
+import { ReportsAleyaExportButton } from "@/components/admin/ReportsAleyaExportButton";
 import { ReportsDashboardBody } from "@/components/admin/ReportsDashboardBody";
 import {
+  currentYearMonthInReportStore,
   parseReportRangeFromSearchParams,
   prettyReportPeriodLabel,
   reportDataFetchYmdRange,
@@ -77,6 +79,13 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
           </p>
         </div>
         <div className="flex w-full shrink-0 flex-wrap items-center justify-end gap-2 sm:w-auto">
+          <ReportsAleyaExportButton
+            defaultYearMonth={
+              rangeFrom.slice(0, 7) === rangeTo.slice(0, 7)
+                ? rangeFrom.slice(0, 7)
+                : currentYearMonthInReportStore()
+            }
+          />
           <ReportsPeriodFilter
             rangeFrom={rangeFrom}
             rangeTo={rangeTo}

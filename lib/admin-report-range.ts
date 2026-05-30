@@ -251,3 +251,63 @@ export function prettyReportPeriodLabel(
   const b = fmtShort(to, true);
   return `${a} – ${b}`;
 }
+
+const YM = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+/** `YYYY-MM` válido para exportes mensuales. */
+export function isValidYearMonth(s: string): boolean {
+  return YM.test(s.trim());
+}
+
+/** Primer y último día calendario del mes (tienda), inclusive. */
+export function monthYmdBounds(yearMonth: string): { from: string; to: string } | null {
+  if (!isValidYearMonth(yearMonth)) return null;
+  const [ys, ms] = yearMonth.split("-");
+  const y = Number(ys);
+  const m = Number(ms);
+  if (!y || m < 1 || m > 12) return null;
+  const from = `${yearMonth}-01`;
+  const lastDay = new Date(y, m, 0).getDate();
+  const to = `${yearMonth}-${String(lastDay).padStart(2, "0")}`;
+  return { from, to };
+}
+
+const MONTH_NAMES_UPPER = [
+  "",
+  "ENERO",
+  "FEBRERO",
+  "MARZO",
+  "ABRIL",
+  "MAYO",
+  "JUNIO",
+  "JULIO",
+  "AGOSTO",
+  "SEPTIEMBRE",
+  "OCTUBRE",
+  "NOVIEMBRE",
+  "DICIEMBRE",
+] as const;
+
+/** Etiqueta tipo Excel ALEYA: `ABRIL`, `MAYO`, … */
+export function monthAleyaLabel(yearMonth: string): string {
+  if (!isValidYearMonth(yearMonth)) return "PERIODO";
+  const m = Number(yearMonth.split("-")[1]);
+  return MONTH_NAMES_UPPER[m] ?? "PERIODO";
+}
+
+/** Etiqueta legible: «abril de 2026». */
+export function prettyYearMonthLabel(yearMonth: string): string {
+  if (!isValidYearMonth(yearMonth)) return yearMonth;
+  const [y, mo] = yearMonth.split("-").map(Number);
+  const inst = new Date(noonOnStoreCalendarYmdAsUtcMs(y, mo, 1));
+  return new Intl.DateTimeFormat("es-CO", {
+    timeZone: REPORT_STORE_TIME_ZONE,
+    month: "long",
+    year: "numeric",
+  }).format(inst);
+}
+
+/** Mes calendario actual en tienda como `YYYY-MM`. */
+export function currentYearMonthInReportStore(now: Date = new Date()): string {
+  return reportYearMonthFromIso(now.toISOString()) || todayYmdInReportStore(now).slice(0, 7);
+}
