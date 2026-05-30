@@ -34,16 +34,30 @@ export async function ReportsDashboardBody({
   fetchTo: string;
   periodLabel: string;
 }) {
-  const supabase = await createSupabaseServerClient();
-  const report = await fetchAdminReportDashboardData(supabase, {
-    rangeFrom,
-    rangeTo,
-    chartFrom,
-    chartTo,
-    fetchFrom,
-    fetchTo,
-    periodLabel,
-  });
+  let report;
+  try {
+    const supabase = await createSupabaseServerClient();
+    report = await fetchAdminReportDashboardData(supabase, {
+      rangeFrom,
+      rangeTo,
+      chartFrom,
+      chartTo,
+      fetchFrom,
+      fetchTo,
+      periodLabel,
+    });
+  } catch (err) {
+    console.error("[admin reportes] body:", err);
+    return (
+      <div className="rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-6 text-sm text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
+        <p className="font-semibold">No se pudieron cargar los reportes</p>
+        <p className="mt-2">
+          Ocurrió un error al consultar los datos. Recargá la página o probá de nuevo en unos
+          segundos.
+        </p>
+      </div>
+    );
+  }
 
   if (report.ordersRangeError) {
     console.error("[admin reportes] orders:", report.ordersRangeError);
@@ -87,6 +101,12 @@ export async function ReportsDashboardBody({
       >
         <p className={cardLabelClass}>Resumen del periodo</p>
         <p className="mt-1 text-sm text-stone-500 dark:text-zinc-400">{periodLabel}</p>
+        {report.ordersRangeError ? (
+          <p className="mt-3 rounded-lg border border-amber-200/90 bg-amber-50/80 px-3 py-2 text-xs leading-relaxed text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/25 dark:text-amber-100">
+            Algunos datos no se pudieron agregar en el servidor ({report.ordersRangeError}). Se
+            muestra lo disponible; si persiste, recargá la página.
+          </p>
+        ) : null}
         {revenueApproxFromOrderTotals ? (
           <p className="mt-2 max-w-3xl text-[11px] leading-snug text-amber-900/85 dark:text-amber-100/85">
             Periodo largo: ingresos, IVA y ganancia se calculan desde el total del pedido (más
