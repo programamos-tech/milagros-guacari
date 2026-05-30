@@ -250,7 +250,13 @@ function ConfirmInvoiceButton({ disabled }: { disabled: boolean }) {
   );
 }
 
-export function NewInvoiceForm({ initialError }: { initialError?: string }) {
+export function NewInvoiceForm({
+  initialError,
+  initialCustomerId,
+}: {
+  initialError?: string;
+  initialCustomerId?: string;
+}) {
   const quickNameInputRef = useRef<HTMLInputElement>(null);
   const [quickModalOpen, setQuickModalOpen] = useState(false);
   const [quickName, setQuickName] = useState("");
@@ -299,7 +305,9 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
     setShipLoading(true);
     setShipChoice(null);
     try {
-      const res = await fetch(`/api/admin/customers/${id}/pos-profile`);
+      const res = await fetch(`/api/admin/customers/${id}/pos-profile`, {
+        cache: "no-store",
+      });
       if (!res.ok) {
         setShipOptions([]);
         setCustomerWholesalePct(0);
@@ -322,6 +330,63 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
       setShipLoading(false);
     }
   }, []);
+
+  const searchCustomers = useCallback(async (q: string, signal?: AbortSignal) => {
+    const trimmed = q.trim();
+    if (trimmed.length < 1) {
+      setCustomerHits([]);
+      return;
+    }
+    setCustomerLoading(true);
+    try {
+      const res = await fetch(
+        `/api/admin/customers-search?q=${encodeURIComponent(trimmed)}`,
+        { cache: "no-store", signal },
+      );
+      const j = (await res.json()) as { customers?: CustomerHit[] };
+      if (!signal?.aborted) setCustomerHits(j.customers ?? []);
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      if (!signal?.aborted) setCustomerHits([]);
+    } finally {
+      if (!signal?.aborted) setCustomerLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!initialCustomerId) return;
+    let cancelled = false;
+    void fetch(`/api/admin/customers/${initialCustomerId}/pos-profile`, {
+      cache: "no-store",
+    })
+      .then(async (res) => {
+        if (!res.ok || cancelled) return;
+        const json = (await res.json()) as {
+          customer?: {
+            id: string;
+            name: string;
+            email?: string | null;
+            phone?: string | null;
+            document_id?: string | null;
+          };
+        };
+        const c = json.customer;
+        if (!c?.id || cancelled) return;
+        setCustomer({
+          id: c.id,
+          name: c.name,
+          email: c.email ?? null,
+          phone: c.phone ?? null,
+          document_id: c.document_id ?? null,
+        });
+        setCustomerQuery("");
+        setCustomerHits([]);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [initialCustomerId]);
 
   useEffect(() => {
     if (customer) {
@@ -441,25 +506,26 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
   }, [debouncedKitQ]);
 
   useEffect(() => {
-    const q = debouncedCustomerQ.trim();
-    if (q.length < 1) {
-      setCustomerHits([]);
-      return;
+    const ac = new AbortController();
+    void searchCustomers(debouncedCustomerQ, ac.signal);
+    return () => ac.abort();
+  }, [debouncedCustomerQ, searchCustomers]);
+
+  useEffect(() => {
+    function refreshCustomerSearch() {
+      if (document.visibilityState !== "visible") return;
+      if (customer) return;
+      const q = debouncedCustomerQ.trim();
+      if (q.length < 1) return;
+      void searchCustomers(q);
     }
-    let cancelled = false;
-    setCustomerLoading(true);
-    void fetch(`/api/admin/customers-search?q=${encodeURIComponent(q)}`)
-      .then((r) => r.json())
-      .then((j: { customers?: CustomerHit[] }) => {
-        if (!cancelled) setCustomerHits(j.customers ?? []);
-      })
-      .finally(() => {
-        if (!cancelled) setCustomerLoading(false);
-      });
+    window.addEventListener("focus", refreshCustomerSearch);
+    document.addEventListener("visibilitychange", refreshCustomerSearch);
     return () => {
-      cancelled = true;
+      window.removeEventListener("focus", refreshCustomerSearch);
+      document.removeEventListener("visibilitychange", refreshCustomerSearch);
     };
-  }, [debouncedCustomerQ]);
+  }, [debouncedCustomerQ, customer, searchCustomers]);
 
   const kitSubtotalCents = useMemo(() => {
     let s = 0;
@@ -1460,9 +1526,7 @@ export function NewInvoiceForm({ initialError }: { initialError?: string }) {
               </div>
               <p className="text-center text-xs text-zinc-500 dark:text-zinc-400">
                 <Link
-                  href="/admin/customers/new"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  href="/admin/customers/new?return=%2Fadmin%2Fventas%2Fnueva"
                   className="font-medium text-zinc-700 underline decoration-zinc-300 underline-offset-2 hover:text-zinc-900 dark:text-zinc-300 dark:decoration-zinc-600 dark:hover:text-zinc-100"
                   onClick={closeQuickCustomerModal}
                 >

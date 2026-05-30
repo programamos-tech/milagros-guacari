@@ -95,6 +95,7 @@ export async function createQuickStoreCustomer(input: {
   });
   revalidatePath("/admin/actividades");
   revalidatePath("/admin/customers");
+  revalidatePath("/admin/ventas/nueva");
   return {
     ok: true,
     customer: cust as QuickStoreCustomerRow,
@@ -148,6 +149,14 @@ type AddressPayload = {
   reference: string;
 };
 
+function parseAdminReturnPath(raw: string): string | null {
+  const t = String(raw ?? "").trim();
+  if (!t.startsWith("/admin/") || t.includes("://") || t.includes("?") || t.includes("#")) {
+    return null;
+  }
+  return t;
+}
+
 export async function createStoreCustomer(formData: FormData) {
   const supabase = await createSupabaseServerClient();
   const {
@@ -155,6 +164,16 @@ export async function createStoreCustomer(formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/admin/login");
   await assertActionPermission("clientes_crear");
+
+  const returnTo = parseAdminReturnPath(String(formData.get("return_to") ?? ""));
+  const redirectNewCustomerError = (code: string): never => {
+    if (returnTo) {
+      redirect(
+        `/admin/customers/new?error=${encodeURIComponent(code)}&return=${encodeURIComponent(returnTo)}`,
+      );
+    }
+    redirect(`/admin/customers/new?error=${code}`);
+  };
 
   const name = String(formData.get("name") ?? "").trim();
   const emailRaw = String(formData.get("email") ?? "").trim();
@@ -166,15 +185,17 @@ export async function createStoreCustomer(formData: FormData) {
     const raw = String(formData.get("addresses_payload") ?? "").trim();
     if (raw) {
       const parsed = JSON.parse(raw) as unknown;
-      if (!Array.isArray(parsed)) redirect("/admin/customers/new?error=addresses_invalid");
-      addresses = parsed.map((row) => ({
+      if (!Array.isArray(parsed)) {
+        redirectNewCustomerError("addresses_invalid");
+      }
+      addresses = (parsed as unknown[]).map((row) => ({
         label: String((row as AddressPayload).label ?? "Casa").trim() || "Casa",
         address_line: String((row as AddressPayload).address_line ?? "").trim(),
         reference: String((row as AddressPayload).reference ?? "").trim(),
       }));
     }
   } catch {
-    redirect("/admin/customers/new?error=addresses_invalid");
+    redirectNewCustomerError("addresses_invalid");
   }
 
   const meaningful = addresses.filter(
@@ -185,14 +206,14 @@ export async function createStoreCustomer(formData: FormData) {
   const { customer_kind, wholesale_discount_percent } =
     wholesaleFieldsFromForm(formData);
 
-  if (!name) redirect("/admin/customers/new?error=name");
+  if (!name) redirectNewCustomerError("name");
 
   assertWholesaleMandatoryFields(
     customer_kind,
     documentId,
     emailRaw,
     phone,
-    (code) => redirect(`/admin/customers/new?error=${code}`),
+    (code) => redirectNewCustomerError(code),
   );
 
   if (email) {
@@ -201,11 +222,11 @@ export async function createStoreCustomer(formData: FormData) {
       .select("id")
       .eq("email", email)
       .maybeSingle();
-    if (dup) redirect("/admin/customers/new?error=duplicate_email");
+    if (dup) redirectNewCustomerError("duplicate_email");
   }
 
   if (documentId && (await customerExistsWithDocumentId(supabase, documentId))) {
-    redirect("/admin/customers/new?error=duplicate_document");
+    redirectNewCustomerError("duplicate_document");
   }
 
   const primary = meaningful[0];
@@ -230,9 +251,9 @@ export async function createStoreCustomer(formData: FormData) {
     .select("id")
     .single();
 
-  if (insertErr || !cust) redirect("/admin/customers/new?error=db");
+  if (insertErr || !cust) redirectNewCustomerError("db");
 
-  const customerId = cust.id as string;
+  const customerId = String(cust!.id);
 
   if (meaningful.length > 0) {
     const rows = meaningful.map((a, i) => ({
@@ -247,12 +268,12 @@ export async function createStoreCustomer(formData: FormData) {
 
     if (addrErr) {
       await supabase.from("customers").delete().eq("id", customerId);
-      redirect("/admin/customers/new?error=db");
+      redirectNewCustomerError("db");
     }
   }
 
   if (!(await verifyInsertedRow(supabase, "customers", customerId))) {
-    redirect("/admin/customers/new?error=db");
+    redirectNewCustomerError("db");
   }
   if (meaningful.length > 0) {
     const addressesOk = await verifyRowCountAtLeast(
@@ -264,7 +285,7 @@ export async function createStoreCustomer(formData: FormData) {
     if (!addressesOk) {
       await supabase.from("customer_addresses").delete().eq("customer_id", customerId);
       await supabase.from("customers").delete().eq("id", customerId);
-      redirect("/admin/customers/new?error=db");
+      redirectNewCustomerError("db");
     }
   }
 
@@ -285,6 +306,10 @@ export async function createStoreCustomer(formData: FormData) {
   });
   revalidatePath("/admin/actividades");
   revalidatePath("/admin/customers");
+  revalidatePath("/admin/ventas/nueva");
+  if (returnTo) {
+    redirect(`${returnTo}?customer=${encodeURIComponent(customerId)}`);
+  }
   redirect("/admin/customers");
 }
 

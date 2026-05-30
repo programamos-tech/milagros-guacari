@@ -9,11 +9,15 @@ import { requireAdminPermission } from "@/lib/require-admin-permission";
 export default async function NewCustomerPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; return?: string }>;
 }) {
   await requireAdminPermission("clientes_crear");
   const sp = await searchParams;
   const error = typeof sp.error === "string" ? sp.error : undefined;
+  const returnTo =
+    typeof sp.return === "string" && sp.return.startsWith("/admin/")
+      ? sp.return
+      : undefined;
 
   return (
     <AdminNewPageShell>
@@ -35,7 +39,7 @@ export default async function NewCustomerPage({
         </p>
       ) : null}
 
-      <NewCustomerForm />
+      <NewCustomerForm returnTo={returnTo} />
     </AdminNewPageShell>
   );
 }

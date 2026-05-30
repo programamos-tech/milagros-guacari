@@ -70,5 +70,8 @@ export async function GET(
     });
   }
 
-  return NextResponse.json({ customer, shipOptions });
+  return NextResponse.json(
+    { customer, shipOptions },
+    { headers: { "Cache-Control": "no-store, max-age=0" } },
+  );
 }

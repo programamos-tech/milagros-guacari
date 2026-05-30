@@ -65,7 +65,7 @@ export function NewCustomerHeader() {
   );
 }
 
-export function NewCustomerForm() {
+export function NewCustomerForm({ returnTo }: { returnTo?: string }) {
   const [name, setName] = useState("");
   const [documentId, setDocumentId] = useState("");
   const [phone, setPhone] = useState("");
@@ -125,6 +125,7 @@ export function NewCustomerForm() {
 
   return (
     <form action={createStoreCustomer} className="space-y-6">
+      {returnTo ? <input type="hidden" name="return_to" value={returnTo} /> : null}
       <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">
         <div className="space-y-6 lg:col-span-2">
           <section className={`${shellCard} p-6 sm:p-8`}>

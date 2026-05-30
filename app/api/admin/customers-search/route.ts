@@ -36,5 +36,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ customers: data ?? [] });
+  return NextResponse.json(
+    { customers: data ?? [] },
+    { headers: { "Cache-Control": "no-store, max-age=0" } },
+  );
 }
