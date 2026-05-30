@@ -1,3 +1,4 @@
+import { cache } from "react";
 import {
   mergePermissionsWithDefaults,
   normalizeCollaboratorJobRole,
@@ -5,7 +6,7 @@ import {
 } from "@/lib/admin-permissions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export async function loadAdminPermissions(): Promise<{
+async function loadAdminPermissionsUncached(): Promise<{
   userId: string;
   permissions: PermissionMap;
 } | null> {
@@ -31,3 +32,6 @@ export async function loadAdminPermissions(): Promise<{
 
   return { userId: user.id, permissions };
 }
+
+/** Una sola lectura de perfil por request (layout + página + permisos de sección). */
+export const loadAdminPermissions = cache(loadAdminPermissionsUncached);

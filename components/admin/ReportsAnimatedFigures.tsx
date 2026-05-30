@@ -20,9 +20,49 @@ function easeOutExpo(t: number): number {
   return t >= 1 ? 1 : 1 - 2 ** (-10 * t);
 }
 
+/** Valor estático — preferir en tablas y listados (sin RAF). */
+export function StaticCopCents({
+  cents,
+  className,
+}: {
+  cents: number;
+  className?: string;
+}) {
+  const raw = Number(cents);
+  const value = Number.isFinite(raw) ? Math.trunc(raw) : 0;
+  return <span className={className}>{formatCop(value)}</span>;
+}
+
+export function StaticCopCompactCents({
+  cents,
+  className,
+}: {
+  cents: number;
+  className?: string;
+}) {
+  const raw = Number(cents);
+  const value = Number.isFinite(raw) ? Math.trunc(raw) : 0;
+  return <span className={className}>{formatCopCompact(value)}</span>;
+}
+
+export function StaticInteger({
+  value,
+  className,
+}: {
+  value: number;
+  className?: string;
+}) {
+  const n = Math.max(0, Math.floor(Math.abs(Number(value))));
+  return (
+    <span className={className}>
+      {new Intl.NumberFormat("es-CO").format(n)}
+    </span>
+  );
+}
+
 export function AnimatedCopCents({
   cents,
-  duration = 1000,
+  duration = 450,
   delay = 0,
   className,
 }: {
@@ -65,7 +105,7 @@ export function AnimatedCopCents({
 /** Misma unidad que `formatCop` / totales POS (entero en “cents” del proyecto). */
 export function AnimatedCopCompactCents({
   cents,
-  duration = 1000,
+  duration = 450,
   delay = 0,
   className,
 }: {
@@ -108,7 +148,7 @@ export function AnimatedCopCompactCents({
 /** Porcentaje con un decimal (0–100), animado desde 0. */
 export function AnimatedPercentOneDecimal({
   value,
-  duration = 900,
+  duration = 400,
   delay = 0,
   className,
 }: {
@@ -160,7 +200,7 @@ export function AnimatedPercentOneDecimal({
 
 export function AnimatedInteger({
   value,
-  duration = 900,
+  duration = 400,
   delay = 0,
   className,
 }: {

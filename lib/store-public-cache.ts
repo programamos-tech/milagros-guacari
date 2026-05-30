@@ -1,0 +1,108 @@
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { unstable_cache } from "next/cache";
+import { fetchCatalogBrowseSections } from "@/lib/catalog-browse-rows";
+import { fetchStoreCategoriesWithCounts } from "@/lib/fetch-store-categories";
+import { fetchListingFacets } from "@/lib/product-listing-facets";
+import { fetchPublishedBanners } from "@/lib/store-banners";
+import { fetchBannerStoreCoupon, fetchStorefrontCouponDiscountPercentByProductId } from "@/lib/store-coupons";
+import { fetchActiveWelcomeModal } from "@/lib/store-welcome-modal";
+
+const STORE_CACHE_REVALIDATE_SEC = 120;
+
+function publicSupabase(): SupabaseClient {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) {
+    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  }
+  return createClient(url, key);
+}
+
+export const getCachedStoreCategoriesWithCounts = unstable_cache(
+  async () => fetchStoreCategoriesWithCounts(publicSupabase()),
+  ["store-categories-with-counts"],
+  { revalidate: STORE_CACHE_REVALIDATE_SEC, tags: ["store-categories"] },
+);
+
+export const getCachedAllCategoryRows = unstable_cache(
+  async () => {
+    const { data } = await publicSupabase()
+      .from("categories")
+      .select("id,name,sort_order")
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true });
+    return data ?? [];
+  },
+  ["store-all-category-rows"],
+  { revalidate: STORE_CACHE_REVALIDATE_SEC, tags: ["store-categories"] },
+);
+
+export async function getCachedListingFacets(
+  categoryIds: string[] | null,
+): Promise<Awaited<ReturnType<typeof fetchListingFacets>>> {
+  const key =
+    categoryIds?.length ?
+      `store-listing-facets:${[...categoryIds].sort().join(",")}`
+    : "store-listing-facets:all";
+  return unstable_cache(
+    async () => fetchListingFacets(publicSupabase(), { categoryIds }),
+    [key],
+    { revalidate: STORE_CACHE_REVALIDATE_SEC, tags: ["store-products"] },
+  )();
+}
+
+export async function getCachedCatalogBrowseSections(
+  allCategoryRows: { id: string; name: string; sort_order: number }[],
+) {
+  const key = `store-catalog-sections:${allCategoryRows.map((c) => c.id).join(",")}`;
+  return unstable_cache(
+    async () => fetchCatalogBrowseSections(publicSupabase(), allCategoryRows),
+    [key],
+    { revalidate: STORE_CACHE_REVALIDATE_SEC, tags: ["store-products"] },
+  )();
+}
+
+export const getCachedPublishedBanners = async (
+  placement: "hero" | "products",
+) =>
+  unstable_cache(
+    async () => fetchPublishedBanners(publicSupabase(), placement),
+    [`store-published-banners:${placement}`],
+    { revalidate: STORE_CACHE_REVALIDATE_SEC, tags: ["store-banners"] },
+  )();
+
+export const getCachedBannerStoreCoupon = unstable_cache(
+  async () => fetchBannerStoreCoupon(publicSupabase()),
+  ["store-banner-coupon"],
+  { revalidate: STORE_CACHE_REVALIDATE_SEC, tags: ["store-coupons"] },
+);
+
+export const getCachedActiveWelcomeModal = unstable_cache(
+  async () => fetchActiveWelcomeModal(publicSupabase()),
+  ["store-welcome-modal"],
+  { revalidate: STORE_CACHE_REVALIDATE_SEC, tags: ["store-welcome-modal"] },
+);
+
+export const getCachedStorefrontCouponDiscounts = unstable_cache(
+  async () => fetchStorefrontCouponDiscountPercentByProductId(publicSupabase()),
+  ["storefront-coupon-discounts"],
+  { revalidate: STORE_CACHE_REVALIDATE_SEC, tags: ["store-coupons"] },
+);
+
+const HOME_PRODUCTS_LIMIT = 8;
+
+export const getCachedHomeFeaturedProducts = unstable_cache(
+  async () => {
+    const { data } = await publicSupabase()
+      .from("products")
+      .select(
+        "id,name,brand,description,price_cents,has_vat,image_path,stock_quantity,fragrance_options,created_at",
+      )
+      .eq("is_published", true)
+      .order("created_at", { ascending: false })
+      .limit(HOME_PRODUCTS_LIMIT);
+    return data ?? [];
+  },
+  ["store-home-featured-products"],
+  { revalidate: STORE_CACHE_REVALIDATE_SEC, tags: ["store-products"] },
+);

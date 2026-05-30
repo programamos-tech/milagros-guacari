@@ -22,7 +22,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { adminProductCardClass, adminTableWrapClass } from "@/lib/admin-ui";
 import { unitPriceGrossCents } from "@/lib/product-vat-price";
 import { AdminProductsFlashToast } from "@/components/admin/AdminProductsFlashToast";
-import { AnimatedCopCents, AnimatedInteger } from "@/components/admin/ReportsAnimatedFigures";
+import { StaticCopCents, StaticInteger } from "@/components/admin/ReportsAnimatedFigures";
 
 export const dynamic = "force-dynamic";
 
@@ -320,10 +320,10 @@ export default async function AdminProductsPage({
             style={{ ["--reports-stagger" as string]: "40ms" }}
           >
             <p className="text-zinc-600 dark:text-zinc-300">
-              <AnimatedInteger
+              <StaticInteger
                 value={totalCount}
-                duration={920}
-                delay={50}
+
+
                 className="font-semibold tabular-nums text-zinc-900 dark:text-zinc-50"
               />{" "}
               {totalCount === 1 ? "producto" : "productos"}
@@ -384,20 +384,20 @@ export default async function AdminProductsPage({
                   <div>
                     <span className="text-zinc-400 dark:text-zinc-500">Local</span>
                     <p className="tabular-nums font-semibold text-zinc-900 dark:text-zinc-100">
-                      <AnimatedInteger
+                      <StaticInteger
                         value={p.stock_local}
-                        duration={650}
-                        delay={Math.min(pi * 18, 280)}
+
+
                       />
                     </p>
                   </div>
                   <div>
                     <span className="text-zinc-400 dark:text-zinc-500">Bodega</span>
                     <p className="tabular-nums font-semibold text-zinc-900 dark:text-zinc-100">
-                      <AnimatedInteger
+                      <StaticInteger
                         value={p.stock_warehouse}
-                        duration={650}
-                        delay={Math.min(pi * 18 + 25, 300)}
+
+
                       />
                     </p>
                   </div>
@@ -410,10 +410,10 @@ export default async function AdminProductsPage({
                   </span>
                 </div>
                 <p className="mt-auto pt-4 text-lg font-bold tabular-nums text-zinc-900 dark:text-zinc-50">
-                  <AnimatedCopCents
+                  <StaticCopCents
                     cents={p.publicPriceCents}
-                    duration={720}
-                    delay={Math.min(pi * 20, 320)}
+
+
                   />
                 </p>
               </article>
@@ -489,19 +489,19 @@ export default async function AdminProductsPage({
                     <td
                       className={`${tdCell} whitespace-nowrap text-right tabular-nums text-zinc-800 dark:text-zinc-200`}
                     >
-                      <AnimatedInteger
+                      <StaticInteger
                         value={p.stock_local}
-                        duration={620}
-                        delay={Math.min(pi * 16, 300)}
+
+
                       />
                     </td>
                     <td
                       className={`${tdCell} whitespace-nowrap text-right tabular-nums text-zinc-800 dark:text-zinc-200`}
                     >
-                      <AnimatedInteger
+                      <StaticInteger
                         value={p.stock_warehouse}
-                        duration={620}
-                        delay={Math.min(pi * 16 + 24, 320)}
+
+
                       />
                     </td>
                     <td className={`${tdCell} whitespace-nowrap`}>
@@ -513,10 +513,10 @@ export default async function AdminProductsPage({
                     </td>
                     <td className={`${tdCell} text-right`}>
                       <span className="inline-block whitespace-nowrap text-sm font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
-                        <AnimatedCopCents
+                        <StaticCopCents
                           cents={p.publicPriceCents}
-                          duration={700}
-                          delay={Math.min(pi * 18, 340)}
+
+
                         />
                       </span>
                     </td>

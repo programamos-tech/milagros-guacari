@@ -4,13 +4,10 @@ import { ProductListingCard } from "@/components/store/ProductListingCard";
 import { RevealOnScroll } from "@/components/store/RevealOnScroll";
 import { storeBrand } from "@/lib/brand";
 import { StoreBannerCarousel } from "@/components/store/StoreBannerCarousel";
-import { fetchPublishedBanners } from "@/lib/store-banners";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { fetchStorefrontCouponDiscountPercentByProductId } from "@/lib/store-coupons";
+import { getCachedPublishedBanners, getCachedStorefrontCouponDiscounts, getCachedHomeFeaturedProducts } from "@/lib/store-public-cache";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 120;
 
-const HOME_PRODUCTS_LIMIT = 8;
 const STORE_HIGHLIGHTS = [
   {
     title: "Productos 100% originales de la más alta calidad",
@@ -27,20 +24,10 @@ const STORE_HIGHLIGHTS = [
 ] as const;
 
 export default async function HomePage() {
-  const supabase = await createSupabaseServerClient();
-  const heroBanners = await fetchPublishedBanners(supabase, "hero");
-  const { data: homeProducts } = await supabase
-    .from("products")
-    .select(
-      "id,name,brand,description,price_cents,has_vat,image_path,stock_quantity,fragrance_options,created_at",
-    )
-    .eq("is_published", true)
-    .order("created_at", { ascending: false })
-    .limit(HOME_PRODUCTS_LIMIT);
-
-  const featuredProducts = homeProducts ?? [];
-  const couponPctByProductId =
-    await fetchStorefrontCouponDiscountPercentByProductId(supabase);
+  const heroBanners = await getCachedPublishedBanners("hero");
+  const homeProducts = await getCachedHomeFeaturedProducts();
+  const featuredProducts = homeProducts;
+  const couponPctByProductId = await getCachedStorefrontCouponDiscounts();
 
   return (
     <div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useState } from "react";
 import { Info, X } from "lucide-react";
-import { AnimatedCopCents } from "@/components/admin/ReportsAnimatedFigures";
+import { StaticCopCents } from "@/components/admin/ReportsAnimatedFigures";
 import { formatCop } from "@/lib/money";
 import { prettyReportDayShortLabel } from "@/lib/admin-report-range";
 
@@ -217,9 +217,8 @@ export function ReportLiquidityMetricCards({
           </button>
         </dt>
         <dd className="mt-1 text-2xl font-normal tabular-nums text-stone-900 dark:text-zinc-100">
-          <AnimatedCopCents
+          <StaticCopCents
             cents={efectivoNetoCaja}
-            delay={120}
             className={efectivoNetoCaja < 0 ? "text-red-700 dark:text-red-300" : undefined}
           />
         </dd>
@@ -243,9 +242,8 @@ export function ReportLiquidityMetricCards({
           </button>
         </dt>
         <dd className="mt-1 text-2xl font-normal tabular-nums text-stone-900 dark:text-zinc-100">
-          <AnimatedCopCents
+          <StaticCopCents
             cents={transferenciaNeta}
-            delay={185}
             className={transferenciaNeta < 0 ? "text-red-700 dark:text-red-300" : undefined}
           />
         </dd>

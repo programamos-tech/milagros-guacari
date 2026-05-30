@@ -1,6 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
+const SEARCH_CACHE_CONTROL = "public, s-maxage=60, stale-while-revalidate=30";
+
 /** Evita metacaracteres en ILIKE. */
 function sanitizeIlikeQuery(q: string) {
   return q.replace(/[%_\\]/g, "").slice(0, 80);
@@ -40,5 +42,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ products: data ?? [] });
+  return NextResponse.json(
+    { products: data ?? [] },
+    { headers: { "Cache-Control": SEARCH_CACHE_CONTROL } },
+  );
 }

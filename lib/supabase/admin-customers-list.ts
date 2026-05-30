@@ -1,18 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-const ORDERS_SELECT_FULL =
-  "id,customer_id,customer_email,customer_name,total_cents,created_at,shipping_phone,shipping_address,shipping_city,shipping_postal_code";
-
-const ORDERS_SELECT_MIN =
-  "id,customer_id,customer_email,customer_name,total_cents,created_at";
-
-/** Pedidos sin columna `customer_id` (previo a migración de clientes). */
-const ORDERS_LEGACY_SHIP =
-  "id,customer_email,customer_name,total_cents,created_at,shipping_phone,shipping_address,shipping_city,shipping_postal_code";
-
-const ORDERS_LEGACY_MIN =
-  "id,customer_email,customer_name,total_cents,created_at";
-
 export type AdminCustomerListRow = {
   id: string;
   name: string;
@@ -30,77 +17,6 @@ export type AdminCustomerListRow = {
   lastOrderId: string | null;
 };
 
-type OrderAgg = {
-  customer_id?: string | null;
-  customer_email: string | null;
-  customer_name?: string | null;
-  total_cents: number | null;
-  created_at: string | null;
-  id: string;
-};
-
-function looksLikeMissingShippingColumn(message: string): boolean {
-  const m = message.toLowerCase();
-  return (
-    m.includes("does not exist") ||
-    (/column/i.test(m) && /shipping/i.test(m)) ||
-    /shipping_phone|shipping_address|shipping_city|shipping_postal/i.test(m)
-  );
-}
-
-function looksLikeMissingCustomerIdColumn(message: string): boolean {
-  const m = message.toLowerCase();
-  return /customer_id/i.test(m) && (m.includes("does not exist") || /column/i.test(m));
-}
-
-async function fetchOrdersForStats(supabase: SupabaseClient): Promise<{
-  orders: OrderAgg[];
-  error: { message: string } | null;
-  withoutShippingFields: boolean;
-}> {
-  const attempts: { sel: string; shipping: boolean }[] = [
-    { sel: ORDERS_SELECT_FULL, shipping: true },
-    { sel: ORDERS_SELECT_MIN, shipping: false },
-    { sel: ORDERS_LEGACY_SHIP, shipping: true },
-    { sel: ORDERS_LEGACY_MIN, shipping: false },
-  ];
-
-  let lastErr: { message: string } | null = null;
-
-  for (const { sel, shipping } of attempts) {
-    const res = await supabase
-      .from("orders")
-      .select(sel)
-      .order("created_at", { ascending: false })
-      .limit(8000);
-
-    if (!res.error) {
-      return {
-        orders: (res.data ?? []) as unknown as OrderAgg[],
-        error: null,
-        withoutShippingFields: !shipping,
-      };
-    }
-
-    lastErr = res.error;
-    const msg = res.error.message ?? "";
-
-    if (looksLikeMissingCustomerIdColumn(msg) && sel.includes("customer_id")) {
-      continue;
-    }
-    if (looksLikeMissingShippingColumn(msg) && sel.includes("shipping_phone")) {
-      continue;
-    }
-    return { orders: [], error: res.error, withoutShippingFields: false };
-  }
-
-  return {
-    orders: [],
-    error: lastErr ?? { message: "No se pudieron cargar pedidos" },
-    withoutShippingFields: false,
-  };
-}
-
 type StatBucket = {
   purchases: number;
   totalSpent: number;
@@ -108,14 +24,97 @@ type StatBucket = {
   lastOrderId: string;
 };
 
-function buildStatsMaps(orders: OrderAgg[]): {
+const CUSTOMER_SELECT =
+  "id,name,email,phone,document_id,shipping_address,shipping_city,shipping_postal_code,source,customer_kind,wholesale_discount_percent";
+
+function sanitizeIlikeQuery(q: string): string {
+  return q.replace(/[%_\\,]/g, "").trim().slice(0, 80);
+}
+
+function linesFromCustomerRow(r: {
+  shipping_address: string | null;
+  shipping_city: string | null;
+  shipping_postal_code: string | null;
+}): { addressLine: string | null; cityLine: string | null } {
+  const addr = String(r.shipping_address ?? "").trim();
+  const city = String(r.shipping_city ?? "").trim();
+  const postal = String(r.shipping_postal_code ?? "").trim();
+  const cityLine =
+    [city, postal].filter(Boolean).join(city && postal ? " · " : "") || null;
+  return {
+    addressLine: addr || null,
+    cityLine,
+  };
+}
+
+function mapCustomerRow(
+  raw: Record<string, unknown>,
+  statsById: Map<string, StatBucket>,
+  statsByEmail: Map<string, StatBucket>,
+): AdminCustomerListRow {
+  const r = raw as {
+    id: string;
+    name: string;
+    email: string | null;
+    phone: string | null;
+    document_id: string | null;
+    shipping_address: string | null;
+    shipping_city: string | null;
+    shipping_postal_code: string | null;
+    source: string;
+    customer_kind?: string | null;
+    wholesale_discount_percent?: number | null;
+  };
+
+  const emailKey = r.email ? r.email.trim().toLowerCase() : "";
+  let st = statsById.get(r.id);
+  if (!st && emailKey) st = statsByEmail.get(emailKey);
+
+  const { addressLine, cityLine } = linesFromCustomerRow(r);
+
+  return {
+    id: r.id,
+    name: r.name,
+    email: r.email,
+    phone: r.phone?.trim() || "—",
+    documentId: r.document_id,
+    source: r.source,
+    customerKind: String(r.customer_kind ?? "retail"),
+    wholesaleDiscountPercent: Math.max(
+      0,
+      Math.min(100, Math.floor(Number(r.wholesale_discount_percent ?? 0))),
+    ),
+    addressLine,
+    cityLine,
+    purchases: st?.purchases ?? 0,
+    totalSpent: st?.totalSpent ?? 0,
+    lastPurchaseAt: st?.lastPurchaseAt ?? null,
+    lastOrderId: st?.lastOrderId ?? null,
+  };
+}
+
+type OrderStatRow = {
+  customer_id?: string | null;
+  customer_email?: string | null;
+  total_cents: number | null;
+  created_at: string | null;
+  id: string;
+};
+
+function buildStatsMapsFromOrders(orders: OrderStatRow[]): {
   byCustomerId: Map<string, StatBucket>;
   byEmail: Map<string, StatBucket>;
 } {
   const byCustomerId = new Map<string, StatBucket>();
   const byEmail = new Map<string, StatBucket>();
 
-  const bump = (map: Map<string, StatBucket>, key: string, cents: number, when: string, orderId: string) => {
+  const bump = (
+    map: Map<string, StatBucket>,
+    key: string,
+    cents: number,
+    when: string,
+    orderId: string,
+  ) => {
     const cur = map.get(key);
     if (!cur) {
       map.set(key, {
@@ -151,91 +150,133 @@ function buildStatsMaps(orders: OrderAgg[]): {
   return { byCustomerId, byEmail };
 }
 
-function linesFromCustomerRow(r: {
-  shipping_address: string | null;
-  shipping_city: string | null;
-  shipping_postal_code: string | null;
-}): { addressLine: string | null; cityLine: string | null } {
-  const addr = String(r.shipping_address ?? "").trim();
-  const city = String(r.shipping_city ?? "").trim();
-  const postal = String(r.shipping_postal_code ?? "").trim();
-  const cityLine =
-    [city, postal].filter(Boolean).join(city && postal ? " · " : "") || null;
-  return {
-    addressLine: addr || null,
-    cityLine,
-  };
+async function fetchOrderStatsForCustomers(
+  supabase: SupabaseClient,
+  pageCustomers: { id: string; email: string | null }[],
+): Promise<{
+  byCustomerId: Map<string, StatBucket>;
+  byEmail: Map<string, StatBucket>;
+}> {
+  const byCustomerId = new Map<string, StatBucket>();
+  const byEmail = new Map<string, StatBucket>();
+  const customerIds = pageCustomers.map((c) => c.id);
+
+  if (customerIds.length > 0) {
+    const { data, error } = await supabase
+      .from("orders")
+      .select("id,customer_id,customer_email,total_cents,created_at")
+      .in("customer_id", customerIds);
+
+    if (!error && data?.length) {
+      const maps = buildStatsMapsFromOrders(data as OrderStatRow[]);
+      for (const [k, v] of maps.byCustomerId) byCustomerId.set(k, v);
+    }
+  }
+
+  const emailsForFallback: string[] = [];
+  for (const c of pageCustomers) {
+    if (byCustomerId.has(c.id)) continue;
+    const email = c.email?.trim();
+    if (email) emailsForFallback.push(email);
+  }
+
+  if (emailsForFallback.length > 0) {
+    const { data, error } = await supabase
+      .from("orders")
+      .select("id,customer_id,customer_email,total_cents,created_at")
+      .is("customer_id", null)
+      .in("customer_email", emailsForFallback);
+
+    if (!error && data?.length) {
+      const maps = buildStatsMapsFromOrders(data as OrderStatRow[]);
+      for (const [k, v] of maps.byEmail) byEmail.set(k, v);
+    }
+  }
+
+  return { byCustomerId, byEmail };
 }
 
-/**
- * Listado admin: filas de `customers` + totales desde `orders`.
- */
-export async function fetchAdminCustomersWithStats(supabase: SupabaseClient): Promise<{
+export type FetchAdminCustomersPageOpts = {
+  q?: string;
+  page: number;
+  pageSize: number;
+};
+
+export type FetchAdminCustomersPageResult = {
   rows: AdminCustomerListRow[];
+  total: number;
   error: { message: string } | null;
   withoutShippingFields: boolean;
-}> {
-  const { data: customerRows, error: cErr } = await supabase
+};
+
+/**
+ * Listado admin paginado: clientes en SQL + stats de pedidos solo para la página actual.
+ */
+export async function fetchAdminCustomersPage(
+  supabase: SupabaseClient,
+  opts: FetchAdminCustomersPageOpts,
+): Promise<FetchAdminCustomersPageResult> {
+  const qRaw = opts.q?.trim() ?? "";
+  const q = qRaw ? sanitizeIlikeQuery(qRaw) : "";
+  const safePage = Math.max(1, Math.floor(opts.page));
+  const safeSize = Math.min(100, Math.max(1, Math.floor(opts.pageSize)));
+  const from = (safePage - 1) * safeSize;
+  const to = from + safeSize - 1;
+
+  let query = supabase
     .from("customers")
-    .select(
-      "id,name,email,phone,document_id,shipping_address,shipping_city,shipping_postal_code,source,created_at,customer_kind,wholesale_discount_percent",
-    )
-    .order("name", { ascending: true });
+    .select(CUSTOMER_SELECT, { count: "exact" })
+    .order("name", { ascending: true })
+    .range(from, to);
+
+  if (q) {
+    const pattern = `%${q}%`;
+    query = query.or(
+      [
+        `name.ilike.${pattern}`,
+        `email.ilike.${pattern}`,
+        `phone.ilike.${pattern}`,
+        `document_id.ilike.${pattern}`,
+        `shipping_address.ilike.${pattern}`,
+        `shipping_city.ilike.${pattern}`,
+      ].join(","),
+    );
+  }
+
+  const { data: customerRows, error: cErr, count } = await query;
 
   if (cErr) {
-    return { rows: [], error: cErr, withoutShippingFields: false };
-  }
-
-  const { orders, error: oErr, withoutShippingFields } =
-    await fetchOrdersForStats(supabase);
-
-  if (oErr) {
-    return { rows: [], error: oErr, withoutShippingFields: false };
-  }
-
-  const { byCustomerId, byEmail } = buildStatsMaps(orders);
-
-  const rows: AdminCustomerListRow[] = (customerRows ?? []).map((raw) => {
-    const r = raw as {
-      id: string;
-      name: string;
-      email: string | null;
-      phone: string | null;
-      document_id: string | null;
-      shipping_address: string | null;
-      shipping_city: string | null;
-      shipping_postal_code: string | null;
-      source: string;
-      customer_kind?: string | null;
-      wholesale_discount_percent?: number | null;
-    };
-
-    const emailKey = r.email ? r.email.trim().toLowerCase() : "";
-    let st = byCustomerId.get(r.id);
-    if (!st && emailKey) st = byEmail.get(emailKey);
-
-    const { addressLine, cityLine } = linesFromCustomerRow(r);
-
     return {
-      id: r.id,
-      name: r.name,
-      email: r.email,
-      phone: r.phone?.trim() || "—",
-      documentId: r.document_id,
-      source: r.source,
-      customerKind: String(r.customer_kind ?? "retail"),
-      wholesaleDiscountPercent: Math.max(
-        0,
-        Math.min(100, Math.floor(Number(r.wholesale_discount_percent ?? 0))),
-      ),
-      addressLine,
-      cityLine,
-      purchases: st?.purchases ?? 0,
-      totalSpent: st?.totalSpent ?? 0,
-      lastPurchaseAt: st?.lastPurchaseAt ?? null,
-      lastOrderId: st?.lastOrderId ?? null,
+      rows: [],
+      total: 0,
+      error: cErr,
+      withoutShippingFields: false,
     };
+  }
+
+  const rawRows = customerRows ?? [];
+  const pageCustomers = rawRows.map((r) => {
+    const row = r as { id: string; email?: string | null };
+    return { id: String(row.id), email: row.email ?? null };
   });
 
-  return { rows, error: null, withoutShippingFields };
+  const { byCustomerId, byEmail } = await fetchOrderStatsForCustomers(
+    supabase,
+    pageCustomers,
+  );
+
+  const rows = rawRows.map((raw) =>
+    mapCustomerRow(
+      raw as Record<string, unknown>,
+      byCustomerId,
+      byEmail,
+    ),
+  );
+
+  return {
+    rows,
+    total: count ?? rows.length,
+    error: null,
+    withoutShippingFields: false,
+  };
 }

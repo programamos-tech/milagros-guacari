@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CustomerAvatar } from "@/components/admin/CustomerAvatar";
-import { AnimatedCopCents, AnimatedInteger } from "@/components/admin/ReportsAnimatedFigures";
+import { StaticCopCents, StaticInteger } from "@/components/admin/ReportsAnimatedFigures";
 import { customerAvatarSeed } from "@/lib/customer-avatar-seed";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { buildSupplierHubRows } from "@/lib/supplier-hub-aggregate";
@@ -92,7 +92,7 @@ export default async function AdminProveedoresPage({
               Total por pagar
             </p>
             <p className="text-lg font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
-              <AnimatedCopCents cents={totalPorPagar} duration={1100} delay={70} />
+              <StaticCopCents cents={totalPorPagar} />
             </p>
           </div>
           <Link
@@ -219,31 +219,31 @@ export default async function AdminProveedoresPage({
                         </div>
                       </td>
                       <td className="px-3 py-2 tabular-nums text-zinc-700 dark:text-zinc-300">
-                        <AnimatedInteger
+                        <StaticInteger
                           value={row.invoiceCount}
-                          duration={700}
-                          delay={Math.min(rowIndex * 28, 360)}
+
+
                         />
                       </td>
                       <td className="px-3 py-2 tabular-nums text-zinc-900 dark:text-zinc-100">
-                        <AnimatedCopCents
+                        <StaticCopCents
                           cents={row.totalCents}
-                          duration={720}
-                          delay={Math.min(rowIndex * 28 + 20, 380)}
+
+
                         />
                       </td>
                       <td className="px-3 py-2 tabular-nums text-emerald-700 dark:text-emerald-400">
-                        <AnimatedCopCents
+                        <StaticCopCents
                           cents={row.paidCents}
-                          duration={720}
-                          delay={Math.min(rowIndex * 28 + 40, 400)}
+
+
                         />
                       </td>
                       <td className="px-3 py-2 tabular-nums text-amber-800 dark:text-amber-400">
-                        <AnimatedCopCents
+                        <StaticCopCents
                           cents={row.pendingCents}
-                          duration={720}
-                          delay={Math.min(rowIndex * 28 + 60, 420)}
+
+
                         />
                       </td>
                       <td className="px-3 py-2">

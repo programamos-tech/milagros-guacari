@@ -6,7 +6,7 @@ import {
   clampAdminProductsPageSize,
   type AdminProductsListQuery,
 } from "@/lib/admin-products-url";
-import { AnimatedInteger } from "@/components/admin/ReportsAnimatedFigures";
+import { StaticInteger } from "@/components/admin/ReportsAnimatedFigures";
 
 type Props = {
   page: number;
@@ -81,13 +81,13 @@ export function AdminProductsPagination({
       <p className="text-sm text-zinc-600">
         Mostrando{" "}
         <span className="font-semibold tabular-nums text-zinc-900">
-          <AnimatedInteger value={from} duration={700} delay={80} />
+          <StaticInteger value={from} />
           -
-          <AnimatedInteger value={to} duration={700} delay={110} />
+          <StaticInteger value={to} />
         </span>{" "}
         de{" "}
         <span className="font-semibold tabular-nums text-zinc-900">
-          <AnimatedInteger value={totalCount} duration={850} delay={150} />
+          <StaticInteger value={totalCount} />
         </span>
       </p>
 

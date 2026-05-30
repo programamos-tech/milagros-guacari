@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { fetchOrderItemsInChunks } from "@/lib/admin-fetch-orders-for-report";
 
 export type CustomerAddressRow = {
   id: string;
@@ -201,10 +202,12 @@ export async function fetchAdminCustomerDetail(
   const lineCountByOrder = new Map<string, number>();
   if (ordersPaid.length > 0) {
     const ids = ordersPaid.map((o) => o.id);
-    const { data: items } = await supabase
-      .from("order_items")
-      .select("order_id,product_name_snapshot,quantity,unit_price_cents")
-      .in("order_id", ids);
+    const { rows: itemRows } = await fetchOrderItemsInChunks(
+      supabase,
+      ids,
+      "order_id,product_name_snapshot,quantity,unit_price_cents",
+    );
+    const items = itemRows;
 
     const map = new Map<string, { quantity: number; totalCents: number }>();
     for (const it of items ?? []) {

@@ -1,24 +1,17 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { VentasFilteredSummary } from "@/components/admin/VentasFilteredSummary";
-import { computeVentasFilterStats } from "@/lib/ventas-filter-stats";
 import {
   VentasFiltersBar,
   VentasRefreshButton,
 } from "@/components/admin/VentasFiltersBar";
 import { VentasPagination } from "@/components/admin/VentasPagination";
-import { VentasSalesTable, type VentaOrderRow } from "@/components/admin/VentasSalesTable";
+import { VentasSalesTable } from "@/components/admin/VentasSalesTable";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { adminPanelClass } from "@/lib/admin-ui";
-import { fetchOrdersCreatedInReportYmdWindow } from "@/lib/admin-fetch-orders-for-report";
+import { fetchAdminVentasPage } from "@/lib/supabase/admin-ventas-list";
 import { buildAdminVentasListHref } from "@/lib/admin-ventas-list-url";
-import { todayYmdInReportStore } from "@/lib/admin-report-range";
-import {
-  matchesVentaPagoFilter,
-  ventaNumeroReferencia,
-  type VentaEstadoFilter,
-  type VentaPagoFilter,
-} from "@/lib/ventas-sales";
+import type { VentaEstadoFilter, VentaPagoFilter } from "@/lib/ventas-sales";
 
 export const dynamic = "force-dynamic";
 
@@ -62,7 +55,6 @@ function FiltersFallback() {
 export default async function AdminVentasPage({ searchParams }: Props) {
   const sp = await searchParams;
   const qRaw = typeof sp.q === "string" ? sp.q : "";
-  const q = qRaw.trim().toLowerCase();
   const status = (typeof sp.status === "string" ? sp.status : "all") as VentaEstadoFilter;
   const payment = (typeof sp.payment === "string" ? sp.payment : "all") as VentaPagoFilter;
   const { from: dateFrom, to: dateTo } = normalizeDateRange(
@@ -75,87 +67,40 @@ export default async function AdminVentasPage({ searchParams }: Props) {
 
   const supabase = await createSupabaseServerClient();
 
-  let rows: VentaOrderRow[];
-
-  if (dateFrom || dateTo) {
-    const today = todayYmdInReportStore();
-    let lo: string;
-    let hi: string;
-    if (dateFrom && dateTo) {
-      lo = dateFrom <= dateTo ? dateFrom : dateTo;
-      hi = dateFrom <= dateTo ? dateTo : dateFrom;
-    } else if (dateFrom) {
-      lo = dateFrom;
-      hi = today;
-    } else {
-      lo = "1970-01-01";
-      hi = dateTo as string;
-    }
-    const { rows: fetched, error: rangeErr } = await fetchOrdersCreatedInReportYmdWindow(
-      supabase,
-      lo,
-      hi,
-      "id,status,customer_name,total_cents,created_at,wompi_reference,customer_email,checkout_payment_method",
-    );
-    if (rangeErr) {
-      return (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800/80 dark:bg-amber-950/35 dark:text-amber-100">
-          No se pudieron cargar las ventas del periodo: {rangeErr}
-        </div>
-      );
-    }
-    rows = fetched as VentaOrderRow[];
-  } else {
-    const { data, error } = await supabase
-      .from("orders")
-      .select(
-        "id,status,customer_name,total_cents,created_at,wompi_reference,customer_email,checkout_payment_method",
-      )
-      .order("created_at", { ascending: false })
-      .limit(500);
-
-    if (error) {
-      return (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800/80 dark:bg-amber-950/35 dark:text-amber-100">
-          No se pudieron cargar las ventas. Revisa permisos y conexión.
-        </div>
-      );
-    }
-    rows = (data ?? []) as VentaOrderRow[];
-  }
-
-  if (status !== "all") {
-    rows = rows.filter((r) => r.status === status);
-  }
-  if (payment !== "all") {
-    rows = rows.filter((r) =>
-      matchesVentaPagoFilter(r.wompi_reference, payment, {
-        checkoutPaymentMethod: r.checkout_payment_method,
-      }),
-    );
-  }
-  if (q.length > 0) {
-    const qCompact = q.replace(/-/g, "");
-    rows = rows.filter((r) => {
-      const name = (r.customer_name ?? "").toLowerCase();
-      const email = (r.customer_email ?? "").toLowerCase();
-      const id = (r.id ?? "").toLowerCase().replace(/-/g, "");
-      const ref = ventaNumeroReferencia(r.id).toLowerCase();
-      return (
-        name.includes(q) ||
-        email.includes(q) ||
-        id.includes(qCompact) ||
-        ref.includes(q)
-      );
+  let page = pageRequested;
+  let { rows: pageRows, total: totalFiltered, filterStats, error } =
+    await fetchAdminVentasPage(supabase, {
+      q: qRaw,
+      status,
+      payment,
+      dateFrom,
+      dateTo,
+      page,
+      pageSize: VENTAS_PAGE_SIZE,
     });
+
+  if (error) {
+    return (
+      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800/80 dark:bg-amber-950/35 dark:text-amber-100">
+        No se pudieron cargar las ventas: {error}
+      </div>
+    );
   }
 
-  const totalFiltered = rows.length;
   const totalPages = Math.max(1, Math.ceil(totalFiltered / VENTAS_PAGE_SIZE));
-  const page = Math.min(pageRequested, totalPages);
-  const offset = (page - 1) * VENTAS_PAGE_SIZE;
-  const pageRows = rows.slice(offset, offset + VENTAS_PAGE_SIZE);
-  const filterStats = computeVentasFilterStats(rows);
+  if (page > totalPages && totalFiltered > 0) {
+    page = totalPages;
+    ({ rows: pageRows, total: totalFiltered, filterStats } =
+      await fetchAdminVentasPage(supabase, {
+        q: qRaw,
+        status,
+        payment,
+        dateFrom,
+        dateTo,
+        page,
+        pageSize: VENTAS_PAGE_SIZE,
+      }));
+  }
 
   const buildPageHref = (p: number) =>
     buildAdminVentasListHref({
@@ -220,4 +165,3 @@ export default async function AdminVentasPage({ searchParams }: Props) {
     </div>
   );
 }
-

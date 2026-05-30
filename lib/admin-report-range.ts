@@ -62,6 +62,9 @@ function addOneCalendarDayYmd(ymd: string): string {
 /** Cantidad de días calendario (inclusivos) del reporte por defecto sin `from`/`to` en la URL. */
 export const REPORT_DEFAULT_RANGE_DAY_COUNT = 7;
 
+/** Por encima de este span no se cargan líneas de pedido para ingresos/ganancia del periodo (solo totales). */
+export const REPORT_LINE_DETAIL_MAX_DAYS = 31;
+
 /** Suma o resta días calendario en la zona de la tienda (mismo ancla que el resto de reportes). */
 export function addCalendarDaysReport(ymd: string, deltaDays: number): string {
   if (!isValidYmd(ymd)) return ymd;
@@ -137,6 +140,11 @@ export function dayKeysInclusiveReport(from: string, to: string): string[] {
     cur = addOneCalendarDayYmd(cur);
   }
   return out;
+}
+
+/** Días inclusivos entre dos YMD de calendario tienda. */
+export function reportRangeDayCountInclusive(from: string, to: string): number {
+  return dayKeysInclusiveReport(from, to).length;
 }
 
 /** @deprecated Usar `dayKeysInclusiveReport`; se mantiene alias para no romper imports viejos. */

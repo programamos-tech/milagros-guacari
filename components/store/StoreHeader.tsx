@@ -13,7 +13,7 @@ import { StoreAnnouncementBar } from "@/components/store/StoreAnnouncementBar";
 import { StoreHeaderActions } from "@/components/store/StoreHeaderActions";
 import { StoreNavDropdowns } from "@/components/store/StoreNavDropdowns";
 import { StoreSearch } from "@/components/store/StoreSearch";
-import { fetchStoreCategoriesWithCounts } from "@/lib/fetch-store-categories";
+import { getCachedStoreCategoriesWithCounts } from "@/lib/store-public-cache";
 
 function accountFirstNameFromUser(user: User | null): string | null {
   if (!user) return null;
@@ -33,7 +33,7 @@ function accountFirstNameFromUser(user: User | null): string | null {
 
 export async function StoreHeader() {
   const supabase = await createSupabaseServerClient();
-  const menuCategories = await fetchStoreCategoriesWithCounts(supabase);
+  const menuCategories = await getCachedStoreCategoriesWithCounts();
   const cartItemCount = await getStorefrontCartItemCount();
 
   const {

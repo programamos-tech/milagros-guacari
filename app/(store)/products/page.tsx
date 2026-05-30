@@ -6,9 +6,7 @@ import { StoreBannerCarousel } from "@/components/store/StoreBannerCarousel";
 import { ProductListingCard } from "@/components/store/ProductListingCard";
 import { ProductsListingControls } from "@/components/store/ProductsListingControls";
 import { RevealOnScroll } from "@/components/store/RevealOnScroll";
-import { fetchPublishedBanners } from "@/lib/store-banners";
 import {
-  fetchListingFacets,
   mergeCategoryRowsForFilterMenu,
 } from "@/lib/product-listing-facets";
 import {
@@ -27,11 +25,19 @@ import {
   parseProductsSizesParam,
 } from "@/lib/product-list-query";
 import { getStorefrontCartQuantityByProductId } from "@/lib/storefront-cart";
-import { fetchStorefrontCouponDiscountPercentByProductId } from "@/lib/store-coupons";
-import { fetchCatalogBrowseSections } from "@/lib/catalog-browse-rows";
+import { getCachedStorefrontCouponDiscounts } from "@/lib/store-public-cache";
 import { resolveCategoryListingHeroSrc } from "@/lib/category-listing-hero-url";
+import {
+  getCachedAllCategoryRows,
+  getCachedCatalogBrowseSections,
+  getCachedListingFacets,
+  getCachedPublishedBanners,
+} from "@/lib/store-public-cache";
 
 export const dynamic = "force-dynamic";
+
+/** Tope de filas en listado filtrado (evita respuestas enormes). */
+const CATALOG_FILTERED_LIST_MAX = 300;
 
 /** Legacy (`size_value`/`size_unit`) o cualquier entrada en `size_options`. */
 function productMatchesSizeFilterClause(s: {
@@ -132,11 +138,7 @@ export default async function ProductsPage({ searchParams }: Props) {
     categoryView && categoryHeroResolvedSrc,
   );
 
-  const { data: allCategoryRows } = await supabase
-    .from("categories")
-    .select("id,name,sort_order")
-    .order("sort_order", { ascending: true })
-    .order("name", { ascending: true });
+  const allCategoryRows = await getCachedAllCategoryRows();
 
   const filterCategoryIds = categoryFilterId
     ? []
@@ -145,7 +147,7 @@ export default async function ProductsPage({ searchParams }: Props) {
   let expandedCategoryIds: string[] | null = null;
   if (categoryFilterId) {
     expandedCategoryIds =
-      allCategoryRows?.length ?
+      allCategoryRows.length ?
         expandCategoryIdsFromRows(allCategoryRows, categoryFilterId)
       : await fetchExpandedCategoryIds(supabase, categoryFilterId);
   }
@@ -154,7 +156,7 @@ export default async function ProductsPage({ searchParams }: Props) {
   if (
     !categoryFilterId &&
     filterCategoryIds.length > 0 &&
-    allCategoryRows?.length
+    allCategoryRows.length
   ) {
     facetCategoryIds = expandManyCategoryIdsFromRows(
       allCategoryRows,
@@ -163,17 +165,15 @@ export default async function ProductsPage({ searchParams }: Props) {
   }
   if (!facetCategoryIds?.length) facetCategoryIds = null;
 
-  const listingFacets = await fetchListingFacets(supabase, {
-    categoryIds: facetCategoryIds,
-  });
+  const listingFacets = await getCachedListingFacets(facetCategoryIds);
 
   const categoriesForFilterMenu = categoryFilterId
     ? []
-    : mergeCategoryRowsForFilterMenu(allCategoryRows ?? []);
+    : mergeCategoryRowsForFilterMenu(allCategoryRows);
 
   const productsBanners = categoryView
     ? []
-    : await fetchPublishedBanners(supabase, "products");
+    : await getCachedPublishedBanners("products");
 
   const hasListingFilters =
     q.length > 0 ||
@@ -188,7 +188,7 @@ export default async function ProductsPage({ searchParams }: Props) {
   const catalogBrowseMode = !categoryView && !hasListingFilters;
 
   let catalogSections: Awaited<
-    ReturnType<typeof fetchCatalogBrowseSections>
+    ReturnType<typeof getCachedCatalogBrowseSections>
   > | null = null;
 
   let list: Array<{
@@ -209,8 +209,8 @@ export default async function ProductsPage({ searchParams }: Props) {
 
   if (catalogBrowseMode) {
     catalogSections =
-      allCategoryRows?.length ?
-        await fetchCatalogBrowseSections(supabase, allCategoryRows)
+      allCategoryRows.length ?
+        await getCachedCatalogBrowseSections(allCategoryRows)
       : [];
   } else {
     let query = supabase
@@ -225,7 +225,7 @@ export default async function ProductsPage({ searchParams }: Props) {
     } else if (
       !categoryFilterId &&
       filterCategoryIds.length > 0 &&
-      allCategoryRows?.length
+      allCategoryRows.length
     ) {
       const expandedFilter = expandManyCategoryIdsFromRows(
         allCategoryRows,
@@ -277,13 +277,14 @@ export default async function ProductsPage({ searchParams }: Props) {
         query = query.order("created_at", { ascending: false });
     }
 
+    query = query.limit(CATALOG_FILTERED_LIST_MAX);
+
     const { data: products } = await query;
     list = products ?? [];
   }
 
   const cartQtyByProductId = await getStorefrontCartQuantityByProductId();
-  const couponPctByProductId =
-    await fetchStorefrontCouponDiscountPercentByProductId(supabase);
+  const couponPctByProductId = await getCachedStorefrontCouponDiscounts();
 
   const invalidCategory = Boolean(categoryId && !categoryName);
 

@@ -1,11 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-import { fetchStorefrontCouponDiscountPercentByProductId } from "@/lib/store-coupons";
+import { getCachedStorefrontCouponDiscounts } from "@/lib/store-public-cache";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const MAX_IDS = 48;
+const FAVORITES_CACHE_CONTROL = "public, s-maxage=120, stale-while-revalidate=60";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -48,8 +49,7 @@ export async function GET(request: Request) {
   }
 
   const byId = new Map((data ?? []).map((p) => [p.id as string, p]));
-  const couponPctByProductId =
-    await fetchStorefrontCouponDiscountPercentByProductId(supabase);
+  const couponPctByProductId = await getCachedStorefrontCouponDiscounts();
   const products = ids
     .map((id) => byId.get(id))
     .filter((p): p is NonNullable<typeof p> => p != null)
@@ -58,5 +58,8 @@ export async function GET(request: Request) {
       coupon_discount_percent: couponPctByProductId[p.id as string] ?? 0,
     }));
 
-  return NextResponse.json({ products });
+  return NextResponse.json(
+    { products },
+    { headers: { "Cache-Control": FAVORITES_CACHE_CONTROL } },
+  );
 }

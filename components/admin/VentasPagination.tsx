@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AnimatedInteger } from "@/components/admin/ReportsAnimatedFigures";
+import { StaticInteger } from "@/components/admin/ReportsAnimatedFigures";
 
 type VentasPaginationProps = {
   page: number;
@@ -76,12 +76,12 @@ export function VentasPagination({
     >
       <p className="text-[13px] tabular-nums tracking-tight text-zinc-500 dark:text-zinc-500">
         <span className="font-medium text-zinc-700 dark:text-zinc-300">
-          <AnimatedInteger value={from} duration={700} delay={90} className="tabular-nums" />
+          <StaticInteger value={from} className="tabular-nums" />
           <span className="mx-0.5 font-normal text-zinc-300 dark:text-zinc-600">–</span>
-          <AnimatedInteger value={to} duration={700} delay={130} className="tabular-nums" />
+          <StaticInteger value={to} className="tabular-nums" />
         </span>
         <span className="mx-1.5 text-zinc-300 dark:text-zinc-600">·</span>
-        <AnimatedInteger value={total} duration={800} delay={170} className="tabular-nums text-zinc-500 dark:text-zinc-500" />
+        <StaticInteger value={total} className="tabular-nums text-zinc-500 dark:text-zinc-500" />
       </p>
 
       <nav

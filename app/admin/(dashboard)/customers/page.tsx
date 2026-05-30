@@ -3,12 +3,11 @@ import { Suspense } from "react";
 import { CustomerAvatar } from "@/components/admin/CustomerAvatar";
 import { CustomersSearchBar } from "@/components/admin/CustomersSearchBar";
 import { CustomersPagination } from "@/components/admin/CustomersPagination";
-import { AnimatedCopCents, AnimatedInteger } from "@/components/admin/ReportsAnimatedFigures";
+import { StaticCopCents, StaticInteger } from "@/components/admin/ReportsAnimatedFigures";
 import { customerAvatarSeed } from "@/lib/customer-avatar-seed";
 import { CustomerRowActions } from "@/components/admin/CustomerRowActions";
 import {
-  fetchAdminCustomersWithStats,
-  type AdminCustomerListRow,
+  fetchAdminCustomersPage,
 } from "@/lib/supabase/admin-customers-list";
 import { loadAdminPermissions } from "@/lib/load-admin-permissions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -26,20 +25,6 @@ function searchParamFirst(
   if (typeof v === "string") return v;
   if (Array.isArray(v) && typeof v[0] === "string") return v[0];
   return undefined;
-}
-
-function matchesSearch(row: AdminCustomerListRow, q: string): boolean {
-  if (!q) return true;
-  const n = q.toLowerCase();
-  const doc = row.documentId?.toLowerCase() ?? "";
-  return (
-    row.name.toLowerCase().includes(n) ||
-    (row.email?.toLowerCase().includes(n) ?? false) ||
-    (row.phone ?? "").toLowerCase().includes(n) ||
-    doc.includes(n) ||
-    (row.addressLine?.toLowerCase().includes(n) ?? false) ||
-    (row.cityLine?.toLowerCase().includes(n) ?? false)
-  );
 }
 
 export default async function AdminCustomersPage({
@@ -60,15 +45,35 @@ export default async function AdminCustomersPage({
   const canCreateCustomer = Boolean(authPerm?.permissions.clientes_crear);
 
   const supabase = await createSupabaseServerClient();
-  const { rows: allRows, error, withoutShippingFields } =
-    await fetchAdminCustomersWithStats(supabase);
+  let page = pageRequested;
+  let {
+    rows,
+    total: totalFiltered,
+    error,
+    withoutShippingFields,
+  } = await fetchAdminCustomersPage(supabase, {
+    q,
+    page,
+    pageSize: CUSTOMERS_PAGE_SIZE,
+  });
 
-  const filteredRows = q ? allRows.filter((r) => matchesSearch(r, q)) : allRows;
-  const totalFiltered = filteredRows.length;
-  const totalPages = Math.max(1, Math.ceil(totalFiltered / CUSTOMERS_PAGE_SIZE));
-  const page = Math.min(pageRequested, totalPages);
-  const offset = (page - 1) * CUSTOMERS_PAGE_SIZE;
-  const rows = filteredRows.slice(offset, offset + CUSTOMERS_PAGE_SIZE);
+  const totalPages = Math.max(
+    1,
+    Math.ceil(totalFiltered / CUSTOMERS_PAGE_SIZE),
+  );
+  if (page > totalPages && totalFiltered > 0) {
+    page = totalPages;
+    ({
+      rows,
+      total: totalFiltered,
+      error,
+      withoutShippingFields,
+    } = await fetchAdminCustomersPage(supabase, {
+      q,
+      page,
+      pageSize: CUSTOMERS_PAGE_SIZE,
+    }));
+  }
 
   const buildPageHref = (p: number) => {
     const params = new URLSearchParams();
@@ -179,11 +184,11 @@ export default async function AdminCustomersPage({
         {!error && totalFiltered === 0 ? (
           <div className="border-t border-zinc-100 py-12 text-center dark:border-zinc-800">
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              {allRows.length === 0
+              {totalFiltered === 0 && !q
                 ? "Todavía no hay clientes. Crea uno para la tienda física o espera la primera venta online."
                 : "No hay resultados para esta búsqueda."}
             </p>
-            {allRows.length === 0 ? (
+            {totalFiltered === 0 && !q ? (
               <Link
                 href="/admin/customers/new"
                 className="mt-4 inline-block text-sm font-semibold text-zinc-900 underline decoration-zinc-300 dark:text-zinc-100 dark:decoration-zinc-600"
@@ -203,10 +208,8 @@ export default async function AdminCustomersPage({
           <>
             {q && totalFiltered > 0 ? (
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                <AnimatedInteger
+                <StaticInteger
                   value={totalFiltered}
-                  duration={800}
-                  delay={60}
                   className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-200"
                 />{" "}
                 {totalFiltered === 1 ? "cliente coincide" : "clientes coinciden"} con «{q}»
@@ -220,10 +223,8 @@ export default async function AdminCustomersPage({
             ) : null}
             {!q && totalFiltered > CUSTOMERS_PAGE_SIZE ? (
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                <AnimatedInteger
+                <StaticInteger
                   value={totalFiltered}
-                  duration={850}
-                  delay={50}
                   className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-200"
                 />{" "}
                 clientes en total
@@ -303,17 +304,13 @@ export default async function AdminCustomersPage({
                       </div>
                       <p className="mt-auto pt-3 text-xs text-zinc-400 dark:text-zinc-500">
                         <span className="tabular-nums">
-                          <AnimatedInteger
+                          <StaticInteger
                             value={r.purchases}
-                            duration={650}
-                            delay={Math.min(ri * 24, 320)}
                             className="font-medium text-zinc-600 dark:text-zinc-300"
                           />{" "}
                           {r.purchases === 1 ? "compra" : "compras"} ·{" "}
-                          <AnimatedCopCents
+                          <StaticCopCents
                             cents={r.totalSpent}
-                            duration={720}
-                            delay={Math.min(ri * 24 + 40, 360)}
                             className="font-medium text-zinc-700 dark:text-zinc-200"
                           />
                         </span>
@@ -391,17 +388,13 @@ export default async function AdminCustomersPage({
                                 </p>
                               ) : null}
                               <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">
-                                <AnimatedInteger
+                                <StaticInteger
                                   value={r.purchases}
-                                  duration={650}
-                                  delay={Math.min(index * 22, 300)}
                                   className="font-medium text-zinc-500 dark:text-zinc-400"
                                 />{" "}
                                 {r.purchases === 1 ? "compra" : "compras"} ·{" "}
-                                <AnimatedCopCents
+                                <StaticCopCents
                                   cents={r.totalSpent}
-                                  duration={720}
-                                  delay={Math.min(index * 22 + 35, 340)}
                                   className="font-medium text-zinc-500 dark:text-zinc-400"
                                 />
                                 {r.source === "manual" && r.purchases === 0 ? (
@@ -462,7 +455,7 @@ export default async function AdminCustomersPage({
         ) : null}
       </div>
 
-      {!error && allRows.length > 0 ? (
+      {!error && totalFiltered > 0 ? (
         <p className="border-t border-zinc-100 py-4 text-xs text-zinc-400 dark:border-zinc-800 dark:text-zinc-500">
           Teléfono y dirección en la ficha son los guardados en el cliente. La última venta
           enlaza desde Acciones.

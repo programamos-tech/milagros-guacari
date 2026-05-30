@@ -74,14 +74,18 @@ export async function fetchCatalogBrowseSections(
     .select(PRODUCT_SELECT)
     .eq("is_published", true)
     .is("category_id", null)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(CATALOG_ROW_PREVIEW_LIMIT + 1);
 
   if (!orphanErr && uncategorized?.length) {
     sections.push({
       categoryId: null,
       categoryName: "Otros productos",
-      products: uncategorized as CatalogBrowseProductRow[],
-      showSeeAll: false,
+      products: (uncategorized as CatalogBrowseProductRow[]).slice(
+        0,
+        CATALOG_ROW_PREVIEW_LIMIT,
+      ),
+      showSeeAll: uncategorized.length > CATALOG_ROW_PREVIEW_LIMIT,
       layout: "grid",
     });
   }

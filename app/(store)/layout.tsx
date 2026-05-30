@@ -8,22 +8,22 @@ import { StoreWelcomeSignupModal } from "@/components/store/StoreWelcomeSignupMo
 import { StoreWelcomeDiscountBanner } from "@/components/store/StoreWelcomeDiscountBanner";
 import { StoreWhatsAppFloatingButton } from "@/components/store/StoreWhatsAppFloatingButton";
 import { StoreCartDrawerProvider } from "@/components/store/StoreCartDrawerProvider";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { resolveWelcomeModalCtaHref } from "@/lib/store-welcome-modal";
 import { STORE_HEADER_BG, STORE_HEADER_FG } from "@/lib/store-theme";
-import { fetchBannerStoreCoupon } from "@/lib/store-coupons";
 import {
-  fetchActiveWelcomeModal,
-  resolveWelcomeModalCtaHref,
-} from "@/lib/store-welcome-modal";
+  getCachedBannerStoreCoupon,
+  getCachedActiveWelcomeModal,
+} from "@/lib/store-public-cache";
 
 export default async function StoreLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createSupabaseServerClient();
-  const welcomeModal = await fetchActiveWelcomeModal(supabase);
-  const promoBanner = await fetchBannerStoreCoupon(supabase);
+  const [welcomeModal, promoBanner] = await Promise.all([
+    getCachedActiveWelcomeModal(),
+    getCachedBannerStoreCoupon(),
+  ]);
 
   return (
     <StoreFavoritesProvider>

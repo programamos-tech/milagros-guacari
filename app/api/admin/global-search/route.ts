@@ -57,46 +57,66 @@ export async function GET(request: Request) {
   const uuidRe =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-  /** Solo hace falta barrer pedidos recientes para n.º de factura / trozo de UUID. */
-  const needsOrderIdScan =
-    qDigits.length >= 2 || (qCompact.length >= 6 && /^[0-9a-f-]+$/i.test(q));
-
   const orderSelect =
     "id,status,customer_name,total_cents,created_at,wompi_reference,checkout_payment_method" as const;
 
-  const [productsRes, customersRes, ordersByTextRes, ordersRecentRes, orderByIdRes] =
-    await Promise.all([
-      supabase
-        .from("products")
-        .select("id,name,reference,price_cents,stock_quantity,stock_local,has_vat,vat_percent")
-        .or(`name.ilike.${pattern},reference.ilike.${pattern}`)
-        .order("name")
-        .limit(8),
-      supabase
-        .from("customers")
-        .select("id,name,email,phone,document_id")
-        .or(
-          `name.ilike.${pattern},email.ilike.${pattern},phone.ilike.${pattern},document_id.ilike.${pattern}`,
-        )
-        .order("name")
-        .limit(8),
+  const canSearchIdFragment =
+    qCompact.length >= 6 && /^[0-9a-f-]+$/i.test(qCompact);
+  const needsInvoiceRefScan =
+    qDigits.length >= 2 && qDigits.length <= 6 && !canSearchIdFragment;
+
+  const orderLookups: PromiseLike<{
+    data: OrderRow[] | OrderRow | null;
+    error: { message: string } | null;
+  }>[] = [
+    supabase
+      .from("orders")
+      .select(orderSelect)
+      .or(`customer_name.ilike.${pattern},customer_email.ilike.${pattern}`)
+      .order("created_at", { ascending: false })
+      .limit(12),
+  ];
+
+  if (uuidRe.test(q)) {
+    orderLookups.push(
+      supabase.from("orders").select(orderSelect).eq("id", q).maybeSingle(),
+    );
+  } else if (canSearchIdFragment) {
+    orderLookups.push(
       supabase
         .from("orders")
         .select(orderSelect)
-        .or(`customer_name.ilike.${pattern},customer_email.ilike.${pattern}`)
+        .ilike("id", `%${qCompact}%`)
         .order("created_at", { ascending: false })
         .limit(12),
-      needsOrderIdScan
-        ? supabase
-            .from("orders")
-            .select(orderSelect)
-            .order("created_at", { ascending: false })
-            .limit(320)
-        : Promise.resolve({ data: [] as OrderRow[], error: null }),
-      uuidRe.test(q)
-        ? supabase.from("orders").select(orderSelect).eq("id", q).maybeSingle()
-        : Promise.resolve({ data: null, error: null }),
-    ]);
+    );
+  } else if (needsInvoiceRefScan) {
+    orderLookups.push(
+      supabase
+        .from("orders")
+        .select(orderSelect)
+        .order("created_at", { ascending: false })
+        .limit(64),
+    );
+  }
+
+  const [productsRes, customersRes, ...orderResults] = await Promise.all([
+    supabase
+      .from("products")
+      .select("id,name,reference,price_cents,stock_quantity,stock_local,has_vat,vat_percent")
+      .or(`name.ilike.${pattern},reference.ilike.${pattern}`)
+      .order("name")
+      .limit(8),
+    supabase
+      .from("customers")
+      .select("id,name,email,phone,document_id")
+      .or(
+        `name.ilike.${pattern},email.ilike.${pattern},phone.ilike.${pattern},document_id.ilike.${pattern}`,
+      )
+      .order("name")
+      .limit(8),
+    ...orderLookups,
+  ]);
 
   if (productsRes.error) {
     return NextResponse.json({ error: productsRes.error.message }, { status: 500 });
@@ -104,33 +124,29 @@ export async function GET(request: Request) {
   if (customersRes.error) {
     return NextResponse.json({ error: customersRes.error.message }, { status: 500 });
   }
-  if (ordersByTextRes.error) {
-    return NextResponse.json({ error: ordersByTextRes.error.message }, { status: 500 });
-  }
-  if (ordersRecentRes.error) {
-    return NextResponse.json({ error: ordersRecentRes.error.message }, { status: 500 });
-  }
-  if (orderByIdRes.error) {
-    return NextResponse.json({ error: orderByIdRes.error.message }, { status: 500 });
-  }
 
   const orderMap = new Map<string, OrderRow>();
-
   const pushOrder = (row: OrderRow | null | undefined) => {
     if (row?.id) orderMap.set(row.id, row);
   };
 
-  for (const o of ordersByTextRes.data ?? []) {
-    pushOrder(o as OrderRow);
-  }
-
-  if (orderByIdRes && "data" in orderByIdRes && orderByIdRes.data) {
-    pushOrder(orderByIdRes.data as OrderRow);
-  }
-
-  for (const o of ordersRecentRes.data ?? []) {
-    if (orderMatchesQuery(o as OrderRow, q, qCompact)) {
-      pushOrder(o as OrderRow);
+  for (const res of orderResults) {
+    if (res.error) {
+      return NextResponse.json({ error: res.error.message }, { status: 500 });
+    }
+    const data = res.data;
+    if (Array.isArray(data)) {
+      for (const o of data) {
+        if (needsInvoiceRefScan) {
+          if (orderMatchesQuery(o as OrderRow, q, qCompact)) {
+            pushOrder(o as OrderRow);
+          }
+        } else {
+          pushOrder(o as OrderRow);
+        }
+      }
+    } else {
+      pushOrder(data as OrderRow | null);
     }
   }
 

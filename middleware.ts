@@ -4,11 +4,26 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const cuentaPublicPaths = new Set(["/cuenta/entrar", "/cuenta/registro"]);
 
+/** Rutas públicas sin sesión Supabase en middleware (menos latencia). */
+function skipsMiddlewareAuth(path: string): boolean {
+  return (
+    path.startsWith("/api/products/") ||
+    path.startsWith("/api/webhooks/") ||
+    path === "/icon.svg"
+  );
+}
+
 function isCuentaPath(path: string) {
   return path === "/cuenta" || path.startsWith("/cuenta/");
 }
 
 export async function middleware(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+
+  if (skipsMiddlewareAuth(path)) {
+    return NextResponse.next({ request });
+  }
+
   let response = NextResponse.next({ request });
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
@@ -52,8 +67,6 @@ export async function middleware(request: NextRequest) {
         "Define them in Vercel → Settings → Environment Variables (all environments) and redeploy.",
     );
   }
-
-  const path = request.nextUrl.pathname;
 
   if (isCuentaPath(path)) {
     const { data: profile } =

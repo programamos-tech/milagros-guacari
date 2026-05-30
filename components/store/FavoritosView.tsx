@@ -176,7 +176,7 @@ export function FavoritosView() {
             <li key={p.id}>
               <RevealOnScroll
                 className="h-full"
-                delayMs={Math.min(index * 65, 400)}
+                delayMs={Math.min(index * 30, 180)}
               >
                 <ProductListingCard
                   accentImageBg={index % 4 === 3}

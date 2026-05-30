@@ -9,7 +9,7 @@ import {
   ventaFormaPagoBadge,
   ventaNumeroReferencia,
 } from "@/lib/ventas-sales";
-import { AnimatedCopCents } from "@/components/admin/ReportsAnimatedFigures";
+import { StaticCopCents } from "@/components/admin/ReportsAnimatedFigures";
 
 export type VentaOrderRow = {
   id: string;
@@ -167,11 +167,7 @@ export function VentasSalesTable({
                     </div>
                   </div>
                   <p className="mt-3 text-xl tabular-nums tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-2xl">
-                    <AnimatedCopCents
-                      cents={Number(row.total_cents ?? 0)}
-                      duration={780}
-                      delay={Math.min(i * 18, 320)}
-                    />
+                    <StaticCopCents cents={Number(row.total_cents ?? 0)} />
                   </p>
                 </article>
               </Link>
@@ -252,11 +248,7 @@ export function VentasSalesTable({
                     </span>
                   </td>
                   <td className="whitespace-nowrap px-3 py-3.5 text-right text-sm tabular-nums text-zinc-900 dark:text-zinc-50 sm:px-4 md:px-5">
-                    <AnimatedCopCents
-                      cents={Number(row.total_cents ?? 0)}
-                      duration={780}
-                      delay={Math.min(i * 16, 300)}
-                    />
+                    <StaticCopCents cents={Number(row.total_cents ?? 0)} />
                   </td>
                   <td className="px-3 py-3.5 text-center sm:px-4 md:px-5">
                     <Link

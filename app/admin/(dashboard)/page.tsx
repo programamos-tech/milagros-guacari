@@ -1,69 +1,32 @@
 import { ReportsPeriodFilter } from "@/components/admin/ReportsPeriodFilter";
 import { ReportLiquidityMetricCards } from "@/components/admin/ReportLiquidityMetricCards";
-import type { ReportExpenseDetailLine } from "@/components/admin/ReportLiquidityMetricCards";
 import { CustomerTicketTrendChart } from "@/components/admin/CustomerTicketTrendChart";
 import {
-  AnimatedCopCents,
-  AnimatedInteger,
+  StaticCopCents,
+  StaticInteger,
 } from "@/components/admin/ReportsAnimatedFigures";
 import {
-  dayInRange,
-  dayKeysInclusiveReport,
   parseReportRangeFromSearchParams,
   prettyReportDayShortLabel,
   prettyReportPeriodLabel,
-  reportCalendarDayKeyFromIso,
   reportChartDayRange,
   reportDataFetchYmdRange,
   todayYmdInReportStore,
 } from "@/lib/admin-report-range";
+import { fetchAdminReportDashboardData } from "@/lib/admin-reports-data";
 import { adminPanelLgClass } from "@/lib/admin-ui";
 import { adminLandingPath } from "@/lib/admin-landing";
 import { loadAdminPermissions } from "@/lib/load-admin-permissions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { formatCop } from "@/lib/money";
-import type { TicketTrendPoint } from "@/lib/customer-ticket-trend";
-import {
-  revenueNetGrossFromLines,
-  sumGrossProfitNetOnLinesForPaidOrders,
-  sumRevenueNetGrossForOrders,
-  type OrderItemRow,
-  type OrderRowRef,
-  type ProductVatRow,
-} from "@/lib/order-revenue-vat";
-import {
-  fetchOrderItemsInChunks,
-  fetchOrdersCreatedInReportYmdWindow,
-} from "@/lib/admin-fetch-orders-for-report";
 
 export const dynamic = "force-dynamic";
-
-async function fetchProductsForStockInvestment(supabase: SupabaseClient) {
-  const full = await supabase
-    .from("products")
-    .select("stock_quantity,cost_cents,cost_gross_cents");
-  if (!full.error) {
-    return (full.data ?? []) as {
-      stock_quantity?: number | null;
-      cost_cents?: number | null;
-      cost_gross_cents?: number | null;
-    }[];
-  }
-  const basic = await supabase.from("products").select("stock_quantity,cost_cents");
-  return (basic.data ?? []) as {
-    stock_quantity?: number | null;
-    cost_cents?: number | null;
-    cost_gross_cents?: number | null;
-  }[];
-}
 
 const cardLabelClass =
   "text-[10px] font-semibold uppercase tracking-[0.18em] text-rose-900/40 dark:text-zinc-500";
 
-/** Títulos de sección alineados al detalle de cliente (tracking + zinc). */
 const sectionTitleClass =
   "text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400";
 
@@ -94,238 +57,49 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
   );
 
   const supabase = await createSupabaseServerClient();
-  const [products, expensesRes] = await Promise.all([
-    fetchProductsForStockInvestment(supabase),
-    supabase
-      .from("store_expenses")
-      .select(
-        "id,concept,category,amount_cents,payment_method,notes,expense_date,created_at,is_cancelled",
-      )
-      .gte("expense_date", fetchFrom)
-      .lte("expense_date", fetchTo)
-      .order("expense_date", { ascending: false })
-      .order("created_at", { ascending: false })
-      .limit(1500),
-  ]);
-
-  const { rows: ordersRaw, error: ordersRangeError } =
-    await fetchOrdersCreatedInReportYmdWindow(
-      supabase,
-      fetchFrom,
-      fetchTo,
-      "id,status,total_cents,created_at,wompi_reference",
-    );
-  if (ordersRangeError) {
-    console.error("[admin reportes] orders:", ordersRangeError);
-  }
-  const expenses = expensesRes.data ?? [];
-
-  const orders = ordersRaw as OrderRowRef[];
-
-  let totalCobradoPedidos = 0;
-  let efectivo = 0;
-  let transferencia = 0;
-  let anuladas = 0;
-  let ventasVirtuales = 0;
-  let ventasPagadasPeriod = 0;
-  let egresosPeriod = 0;
-  /** Egresos cuyo medio de pago es efectivo: se restan del total efectivo del periodo. */
-  let egresosEfectivoCents = 0;
-  /** Egresos en transferencia, tarjeta u otro: se restan del total transferencia/web/mixto. */
-  let egresosTransferenciaBucketCents = 0;
-  let cantidadEgresosPeriod = 0;
-  const expensesByDayCents = new Map<string, number>();
-  const reportExpensesEfectivoLines: ReportExpenseDetailLine[] = [];
-  const reportExpensesOtrosLines: ReportExpenseDetailLine[] = [];
-
-  for (const o of orders) {
-    const createdAt = typeof o.created_at === "string" ? o.created_at : null;
-    const dk = createdAt ? reportCalendarDayKeyFromIso(createdAt) : "";
-    if (!createdAt || !dayInRange(dk, rangeFrom, rangeTo)) continue;
-    const total = Number(o.total_cents ?? 0);
-    if (o.status === "paid") {
-      ventasPagadasPeriod += 1;
-      totalCobradoPedidos += total;
-      const ref = String(o.wompi_reference ?? "");
-      if (!ref.startsWith("POS:")) {
-        ventasVirtuales += total;
-      }
-      if (ref === "POS:cash") efectivo += total;
-      else if (ref === "POS:transfer" || ref === "POS:mixed" || !ref.startsWith("POS:")) {
-        transferencia += total;
-      }
-    } else if (o.status === "cancelled") {
-      anuladas += 1;
-    }
-  }
-
-  const paidPeriodOrders = orders.filter(
-    (o) =>
-      o.status === "paid" &&
-      typeof o.created_at === "string" &&
-      dayInRange(reportCalendarDayKeyFromIso(o.created_at), rangeFrom, rangeTo),
-  );
-  const paidOrderIdsForItems = orders
-    .filter((o) => o.status === "paid" && typeof o.created_at === "string")
-    .map((o) => o.id)
-    .filter(Boolean);
-
-  let orderItems: OrderItemRow[] = [];
-  const productsById = new Map<string, ProductVatRow>();
-
-  if (paidOrderIdsForItems.length > 0) {
-    const { rows: itemRows, error: itemsErr } = await fetchOrderItemsInChunks(
-      supabase,
-      paidOrderIdsForItems,
-      "order_id,product_id,quantity,unit_price_cents",
-    );
-    if (itemsErr) console.error("[admin reportes] order_items:", itemsErr);
-    orderItems = itemRows as OrderItemRow[];
-    const pids = [
-      ...new Set(
-        orderItems.map((i) => i.product_id).filter((id): id is string => Boolean(id)),
-      ),
-    ];
-    if (pids.length > 0) {
-      const { data: prodData } = await supabase
-        .from("products")
-        .select("id,price_cents,has_vat,vat_percent,cost_cents")
-        .in("id", pids);
-      for (const p of prodData ?? []) {
-        productsById.set(p.id as string, p as ProductVatRow);
-      }
-    }
-  }
-
-  const { net: ingresosSinIvaPeriod, gross: ingresosConIvaPeriod } =
-    sumRevenueNetGrossForOrders(paidPeriodOrders, orderItems, productsById);
-  const ivaRecaudadoPeriod = Math.max(
-    0,
-    ingresosConIvaPeriod - ingresosSinIvaPeriod,
-  );
-  const gananciaBruta = sumGrossProfitNetOnLinesForPaidOrders(
-    paidPeriodOrders,
-    orderItems,
-    productsById,
-  );
-
-  for (const e of expenses) {
-    if ((e as { is_cancelled?: boolean }).is_cancelled === true) continue;
-    const raw =
-      typeof e.expense_date === "string" && String(e.expense_date).length >= 10
-        ? String(e.expense_date).slice(0, 10)
-        : typeof e.created_at === "string" && e.created_at
-          ? reportCalendarDayKeyFromIso(e.created_at)
-          : null;
-    if (!raw) continue;
-    const amount = Number(e.amount_cents ?? 0);
-    if (dayInRange(raw, chartFrom, chartTo)) {
-      expensesByDayCents.set(raw, (expensesByDayCents.get(raw) ?? 0) + amount);
-    }
-    if (!dayInRange(raw, rangeFrom, rangeTo)) continue;
-    egresosPeriod += amount;
-    cantidadEgresosPeriod += 1;
-    const pm = String(e.payment_method ?? "").trim().toLowerCase();
-    const line: ReportExpenseDetailLine = {
-      id: String(e.id),
-      concept: String((e as { concept?: string }).concept ?? ""),
-      amount_cents: amount,
-      expense_date: raw,
-      payment_method: String((e as { payment_method?: string }).payment_method ?? ""),
-      category:
-        (e as { category?: string | null }).category != null
-          ? String((e as { category?: string | null }).category)
-          : null,
-      created_at: typeof (e as { created_at?: string }).created_at === "string"
-        ? (e as { created_at: string }).created_at
-        : null,
-    };
-    if (pm === "efectivo") {
-      egresosEfectivoCents += amount;
-      reportExpensesEfectivoLines.push(line);
-    } else {
-      egresosTransferenciaBucketCents += amount;
-      reportExpensesOtrosLines.push(line);
-    }
-  }
-
-  function compareReportExpenseLines(
-    a: ReportExpenseDetailLine,
-    b: ReportExpenseDetailLine,
-  ): number {
-    const byDate = b.expense_date.localeCompare(a.expense_date);
-    if (byDate !== 0) return byDate;
-    return (b.created_at ?? "").localeCompare(a.created_at ?? "");
-  }
-  reportExpensesEfectivoLines.sort(compareReportExpenseLines);
-  reportExpensesOtrosLines.sort(compareReportExpenseLines);
-
-  const gananciaNeta = gananciaBruta - egresosPeriod;
-
-  const efectivoNetoCaja = efectivo - egresosEfectivoCents;
-  const transferenciaNeta = transferencia - egresosTransferenciaBucketCents;
-
-  const stockInversionNet = products.reduce((sum, p) => {
-    const cost = Number((p as { cost_cents?: number | null }).cost_cents ?? 0);
-    const stock = Number((p as { stock_quantity?: number | null }).stock_quantity ?? 0);
-    return sum + cost * stock;
-  }, 0);
-  const stockInversionGross = products.reduce((sum, p) => {
-    const gross = Number((p as { cost_gross_cents?: number | null }).cost_gross_cents ?? 0);
-    const stock = Number((p as { stock_quantity?: number | null }).stock_quantity ?? 0);
-    return sum + gross * stock;
-  }, 0);
-  const trendDayKeys = dayKeysInclusiveReport(chartFrom, chartTo);
-  const trendDays: { key: string; value: number }[] = trendDayKeys.map((key) => ({
-    key,
-    value: 0,
-  }));
-
-  const trendByDay = new Map(trendDays.map((d) => [d.key, 0]));
-  const paidOrdersPerTrendDay = new Map<string, number>();
-  const paidOrdersForChart = orders.filter(
-    (o) =>
-      o.status === "paid" &&
-      typeof o.created_at === "string" &&
-      dayInRange(reportCalendarDayKeyFromIso(o.created_at), chartFrom, chartTo),
-  );
-  for (const o of paidOrdersForChart) {
-    const key = reportCalendarDayKeyFromIso(o.created_at);
-    if (!trendByDay.has(key)) continue;
-    paidOrdersPerTrendDay.set(key, (paidOrdersPerTrendDay.get(key) ?? 0) + 1);
-    const { gross } = revenueNetGrossFromLines(o, orderItems, productsById);
-    trendByDay.set(key, (trendByDay.get(key) ?? 0) + gross);
-  }
-
-  const trend = trendDays.map((d) => ({
-    ...d,
-    value: trendByDay.get(d.key) ?? 0,
-  }));
-
-  let peakIncomeDayKey: string | null = null;
-  let peakIncomeDayCents = 0;
-  for (const row of trend) {
-    if (row.value > peakIncomeDayCents) {
-      peakIncomeDayCents = row.value;
-      peakIncomeDayKey = row.key;
-    }
-  }
-
-  const reportIncomeChartPoints: TicketTrendPoint[] = trend.map((t) => {
-    const n = paidOrdersPerTrendDay.get(t.key) ?? 0;
-    const label = prettyReportDayShortLabel(t.key);
-    const eg = expensesByDayCents.get(t.key) ?? 0;
-    const detail = `${label}: ${formatCop(t.value)} ingresos (IVA, ventas pagadas) · ${formatCop(eg)} egresos`;
-    return {
-      monthKey: t.key,
-      labelX: label,
-      dayKey: t.key,
-      detail,
-      avgCents: t.value,
-      orderCount: n,
-      expenseCents: eg,
-    };
+  const report = await fetchAdminReportDashboardData(supabase, {
+    rangeFrom,
+    rangeTo,
+    chartFrom,
+    chartTo,
+    fetchFrom,
+    fetchTo,
+    periodLabel,
   });
+
+  if (report.ordersRangeError) {
+    console.error("[admin reportes] orders:", report.ordersRangeError);
+  }
+
+  const {
+    ingresosSinIvaPeriod,
+    ingresosConIvaPeriod,
+    ivaRecaudadoPeriod,
+    gananciaBruta,
+    gananciaNeta,
+    totalCobradoPedidos,
+    efectivo,
+    transferencia,
+    anuladas,
+    ventasVirtuales,
+    ventasPagadasPeriod,
+    egresosPeriod,
+    egresosEfectivoCents,
+    egresosTransferenciaBucketCents,
+    cantidadEgresosPeriod,
+    efectivoNetoCaja,
+    transferenciaNeta,
+    reportExpensesEfectivoLines,
+    reportExpensesOtrosLines,
+    reportIncomeChartPoints,
+    peakIncomeDayKey,
+    peakIncomeDayCents,
+    stockInversionNet,
+    stockInversionGross,
+    stockHasProducts,
+    stockHasGrossCost,
+    revenueApproxFromOrderTotals,
+  } = report;
 
   return (
     <div className="space-y-0">
@@ -353,6 +127,12 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
       >
         <p className={cardLabelClass}>Resumen del periodo</p>
         <p className="mt-1 text-sm text-stone-500 dark:text-zinc-400">{periodLabel}</p>
+        {revenueApproxFromOrderTotals ? (
+          <p className="mt-2 max-w-3xl text-[11px] leading-snug text-amber-900/85 dark:text-amber-100/85">
+            Periodo largo: ingresos, IVA y ganancia se calculan desde el total del pedido (más
+            rápido). Para desglose línea a línea, elegí un rango de hasta 31 días.
+          </p>
+        ) : null}
         <dl className="mt-6 grid grid-cols-1 gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
           <div
             className="reports-metric-card min-w-0"
@@ -360,7 +140,7 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
           >
             <dt className={cardLabelClass}>Total ingresos</dt>
             <dd className="mt-1 text-2xl font-normal tabular-nums text-stone-900 dark:text-zinc-100">
-              <AnimatedCopCents cents={ingresosConIvaPeriod} delay={40} />
+              <StaticCopCents cents={ingresosConIvaPeriod} />
             </dd>
             <p className="mt-1 text-xs text-stone-500 dark:text-zinc-400">
               {ventasPagadasPeriod} venta{ventasPagadasPeriod === 1 ? "" : "s"} · total con IVA
@@ -368,11 +148,11 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
             <div className="mt-3 space-y-1 border-t border-stone-100 pt-3 text-[11px] leading-snug text-stone-500 dark:border-zinc-800 dark:text-zinc-400">
               <p className="tabular-nums">
                 <span className="text-stone-400 dark:text-zinc-500">Total sin IVA (base): </span>
-                <AnimatedCopCents cents={ingresosSinIvaPeriod} delay={180} duration={750} />
+                <StaticCopCents cents={ingresosSinIvaPeriod} />
               </p>
               <p className="tabular-nums">
                 <span className="text-stone-400 dark:text-zinc-500">IVA recaudado: </span>
-                <AnimatedCopCents cents={ivaRecaudadoPeriod} delay={260} duration={750} />
+                <StaticCopCents cents={ivaRecaudadoPeriod} />
               </p>
             </div>
           </div>
@@ -395,13 +175,13 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
                 label: "Facturas anuladas",
                 count: anuladas,
                 hint: "Facturas anuladas",
-                staggerMs: 200,
+                staggerMs: 80,
               },
               {
                 label: "Egresos",
                 cents: egresosPeriod,
                 hint: `${cantidadEgresosPeriod} registrados en el periodo`,
-                staggerMs: 265,
+                staggerMs: 120,
               },
             ] as const
           ).map((item) => (
@@ -413,9 +193,9 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
               <dt className={cardLabelClass}>{item.label}</dt>
               <dd className="mt-1 text-2xl font-normal tabular-nums text-stone-900 dark:text-zinc-100">
                 {"cents" in item ? (
-                  <AnimatedCopCents cents={item.cents} delay={item.staggerMs + 50} />
+                  <StaticCopCents cents={item.cents} />
                 ) : (
-                  <AnimatedInteger value={item.count} delay={item.staggerMs + 50} />
+                  <StaticInteger value={item.count} />
                 )}
               </dd>
               <p className="mt-1 text-xs text-stone-500 dark:text-zinc-400">{item.hint}</p>
@@ -424,7 +204,7 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
 
           <div
             className="reports-metric-card min-w-0"
-            style={{ ["--reports-stagger" as string]: "330ms" }}
+            style={{ ["--reports-stagger" as string]: "160ms" }}
           >
             <dt className={cardLabelClass}>Ganancia</dt>
             <dd className="mt-1 flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -433,7 +213,7 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
                   Bruta
                 </span>
                 <span className="text-2xl font-normal tabular-nums text-stone-900 dark:text-zinc-100">
-                  <AnimatedCopCents cents={gananciaBruta} delay={380} />
+                  <StaticCopCents cents={gananciaBruta} />
                 </span>
               </span>
               <span className="inline-flex min-w-0 items-baseline gap-1.5">
@@ -441,7 +221,7 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
                   Neta
                 </span>
                 <span className="text-sm font-normal tabular-nums text-stone-500 dark:text-zinc-400">
-                  <AnimatedCopCents cents={gananciaNeta} delay={460} duration={850} />
+                  <StaticCopCents cents={gananciaNeta} />
                 </span>
               </span>
             </dd>
@@ -449,7 +229,7 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
 
           <div
             className="reports-metric-card min-w-0"
-            style={{ ["--reports-stagger" as string]: "395ms" }}
+            style={{ ["--reports-stagger" as string]: "200ms" }}
           >
             <dt className={cardLabelClass}>Stock (inversión)</dt>
             <dd className="mt-1 flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -458,7 +238,7 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
                   Sin IVA
                 </span>
                 <span className="text-2xl font-normal tabular-nums text-stone-900 dark:text-zinc-100">
-                  <AnimatedCopCents cents={stockInversionNet} delay={440} />
+                  <StaticCopCents cents={stockInversionNet} />
                 </span>
               </span>
               {stockInversionGross > 0 ? (
@@ -467,7 +247,7 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
                     Con IVA
                   </span>
                   <span className="text-sm font-normal tabular-nums text-stone-500 dark:text-zinc-400">
-                    <AnimatedCopCents cents={stockInversionGross} delay={520} duration={850} />
+                    <StaticCopCents cents={stockInversionGross} />
                   </span>
                 </span>
               ) : null}
@@ -480,23 +260,23 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
                 </code>{" "}
                 si venís del CSV.
               </p>
-            ) : stockInversionGross === 0 && stockInversionNet === 0 && products.length > 0 ? (
+            ) : stockInversionGross === 0 && stockInversionNet === 0 && stockHasProducts ? (
               <p className="mt-1 text-[11px] leading-snug text-stone-500 dark:text-zinc-400">
                 Con IVA sin monto hasta cargar costo bruto. Si el total sigue en $0, revisá costo
                 sin IVA e inventario (bodega + local).
               </p>
-            ) : stockInversionGross === 0 && stockInversionNet === 0 && products.length === 0 ? (
+            ) : stockInversionGross === 0 && stockInversionNet === 0 && !stockHasProducts ? (
               <p className="mt-1 text-[11px] text-stone-400 dark:text-zinc-500">—</p>
             ) : null}
           </div>
 
           <div
             className="reports-metric-card min-w-0"
-            style={{ ["--reports-stagger" as string]: "460ms" }}
+            style={{ ["--reports-stagger" as string]: "240ms" }}
           >
             <dt className={cardLabelClass}>Ventas virtuales</dt>
             <dd className="mt-1 text-2xl font-normal tabular-nums text-stone-900 dark:text-zinc-100">
-              <AnimatedCopCents cents={ventasVirtuales} delay={510} />
+              <StaticCopCents cents={ventasVirtuales} />
             </dd>
             <p className="mt-1 text-xs text-stone-500 dark:text-zinc-400">
               Checkout web (sin mostrador)

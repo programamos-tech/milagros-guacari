@@ -1,16 +1,20 @@
-"use client";
-
 import type { VentasFilterStats } from "@/lib/ventas-filter-stats";
 import {
-  AnimatedCopCents,
-  AnimatedCopCompactCents,
-  AnimatedInteger,
-  AnimatedPercentOneDecimal,
+  StaticCopCents,
+  StaticCopCompactCents,
+  StaticInteger,
 } from "@/components/admin/ReportsAnimatedFigures";
 
 function pctOf(part: number, total: number) {
   if (!Number.isFinite(part) || !Number.isFinite(total) || total <= 0) return 0;
   return Math.round((part / total) * 1000) / 10;
+}
+
+function pctLabel(value: number) {
+  return `${value.toLocaleString("es-CO", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  })}%`;
 }
 
 export function VentasFilteredSummary({ stats }: { stats: VentasFilterStats }) {
@@ -36,10 +40,8 @@ export function VentasFilteredSummary({ stats }: { stats: VentasFilterStats }) {
         <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
           Total filtrado
         </span>
-        <AnimatedCopCents
+        <StaticCopCents
           cents={totalCents}
-          duration={1100}
-          delay={40}
           className="text-sm font-semibold tabular-nums text-zinc-900 dark:text-zinc-50 sm:text-base"
         />
         <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
@@ -48,10 +50,8 @@ export function VentasFilteredSummary({ stats }: { stats: VentasFilterStats }) {
             "Sin ventas finalizadas"
           ) : (
             <>
-              <AnimatedInteger
+              <StaticInteger
                 value={paidCount}
-                duration={850}
-                delay={120}
                 className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-200"
               />{" "}
               {paidCount === 1 ? "finalizada" : "finalizadas"}
@@ -62,42 +62,27 @@ export function VentasFilteredSummary({ stats }: { stats: VentasFilterStats }) {
       <div className="flex min-w-0 flex-wrap items-center gap-1.5 sm:justify-end">
         <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-950 ring-1 ring-amber-200/70 dark:bg-amber-950/35 dark:text-amber-100 dark:ring-amber-800/45">
           <span className="text-amber-900/85 dark:text-amber-200/90">Efectivo</span>
-          <AnimatedPercentOneDecimal
-            value={pCash}
-            duration={900}
-            delay={180}
-            className="tabular-nums font-semibold"
-          />
+          <span className="tabular-nums font-semibold">{pctLabel(pCash)}</span>
           <span className="text-amber-900/65 dark:text-amber-200/75">
             (
-            <AnimatedCopCompactCents cents={cashCents} duration={1000} delay={200} />)
+            <StaticCopCompactCents cents={cashCents} />)
           </span>
         </span>
         <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-0.5 text-[11px] font-medium text-sky-950 ring-1 ring-sky-200/70 dark:bg-sky-950/35 dark:text-sky-100 dark:ring-sky-800/45">
           <span className="text-sky-900/85 dark:text-sky-200/90">Transferencia</span>
-          <AnimatedPercentOneDecimal
-            value={pTransfer}
-            duration={900}
-            delay={260}
-            className="tabular-nums font-semibold"
-          />
+          <span className="tabular-nums font-semibold">{pctLabel(pTransfer)}</span>
           <span className="text-sky-900/65 dark:text-sky-200/75">
             (
-            <AnimatedCopCompactCents cents={transferCents} duration={1000} delay={280} />)
+            <StaticCopCompactCents cents={transferCents} />)
           </span>
         </span>
         {(mixedCents > 0 || otherCents > 0) && (
           <span className="inline-flex items-center gap-1 rounded-md bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-950 ring-1 ring-violet-200/70 dark:bg-violet-950/30 dark:text-violet-100 dark:ring-violet-800/45">
             <span className="text-violet-900/85 dark:text-violet-200/90">Mixto / en línea</span>
-            <AnimatedPercentOneDecimal
-              value={pMixedOther}
-              duration={900}
-              delay={340}
-              className="tabular-nums font-semibold"
-            />
+            <span className="tabular-nums font-semibold">{pctLabel(pMixedOther)}</span>
             <span className="text-violet-900/65 dark:text-violet-200/75">
               (
-              <AnimatedCopCompactCents cents={mixedCents + otherCents} duration={1000} delay={360} />)
+              <StaticCopCompactCents cents={mixedCents + otherCents} />)
             </span>
           </span>
         )}

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { ExpenseRowActions } from "@/components/admin/ExpenseRowActions";
 import { ExpensesFiltersBar } from "@/components/admin/ExpensesFiltersBar";
-import { AnimatedCopCents, AnimatedInteger } from "@/components/admin/ReportsAnimatedFigures";
+import { StaticCopCents, StaticInteger } from "@/components/admin/ReportsAnimatedFigures";
 import {
   reportCalendarDayKeyFromIso,
   todayYmdInReportStore,
@@ -145,11 +145,11 @@ export default async function AdminEgresosPage({
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
               <p className="text-zinc-500 dark:text-zinc-400">Hoy (vista)</p>
               <p className="font-semibold text-zinc-900 dark:text-zinc-100">
-                <AnimatedCopCents cents={todayTotal} duration={1000} delay={60} />
+                <StaticCopCents cents={todayTotal} />
               </p>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 Total activo (vista):{" "}
-                <AnimatedCopCents cents={total} duration={1050} delay={100} className="font-medium text-zinc-700 dark:text-zinc-200" />
+                <StaticCopCents cents={total} className="font-medium text-zinc-700 dark:text-zinc-200" />
                 {cancelledCount > 0 ? (
                   <span className="ml-1">
                     · {cancelledCount} anulado{cancelledCount === 1 ? "" : "s"}
@@ -202,7 +202,7 @@ export default async function AdminEgresosPage({
             </h2>
             {hasFilters ? (
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                <AnimatedInteger value={rows.length} duration={750} delay={80} className="font-semibold tabular-nums text-zinc-600 dark:text-zinc-300" />{" "}
+                <StaticInteger value={rows.length} className="font-semibold tabular-nums text-zinc-600 dark:text-zinc-300" />{" "}
                 {rows.length === 1 ? "resultado" : "resultados"}
               </p>
             ) : null}
@@ -280,10 +280,8 @@ export default async function AdminEgresosPage({
                       </td>
                       <td className="whitespace-nowrap px-4 py-3.5 text-right font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
                         <span className={isCancelled ? "line-through decoration-zinc-400" : ""}>
-                          <AnimatedCopCents
+                          <StaticCopCents
                             cents={Number(e.amount_cents ?? 0)}
-                            duration={650}
-                            delay={Math.min(index * 22, 320)}
                           />
                         </span>
                       </td>

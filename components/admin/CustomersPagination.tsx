@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AnimatedInteger } from "@/components/admin/ReportsAnimatedFigures";
+import { StaticInteger } from "@/components/admin/ReportsAnimatedFigures";
 
 type CustomersPaginationProps = {
   page: number;
@@ -32,21 +32,21 @@ export function CustomersPagination({
       <p className="text-sm text-zinc-500 dark:text-zinc-400">
         Mostrando{" "}
         <span className="font-medium text-zinc-800 dark:text-zinc-200">
-          <AnimatedInteger value={from} duration={700} delay={80} className="tabular-nums" />
+          <StaticInteger value={from} className="tabular-nums" />
           –
-          <AnimatedInteger value={to} duration={700} delay={120} className="tabular-nums" />
+          <StaticInteger value={to} className="tabular-nums" />
         </span>{" "}
         de{" "}
         <span className="font-medium text-zinc-800 dark:text-zinc-200">
-          <AnimatedInteger value={total} duration={820} delay={160} className="tabular-nums" />
+          <StaticInteger value={total} className="tabular-nums" />
         </span>
       </p>
       <div className="flex flex-wrap items-center gap-2">
         <span className="mr-1 text-xs text-zinc-400 dark:text-zinc-500">
           Página{" "}
-          <AnimatedInteger value={page} duration={650} delay={200} className="tabular-nums font-medium text-zinc-600 dark:text-zinc-300" />{" "}
+          <StaticInteger value={page} className="tabular-nums font-medium text-zinc-600 dark:text-zinc-300" />{" "}
           de{" "}
-          <AnimatedInteger value={totalPages} duration={650} delay={230} className="tabular-nums font-medium text-zinc-600 dark:text-zinc-300" />
+          <StaticInteger value={totalPages} className="tabular-nums font-medium text-zinc-600 dark:text-zinc-300" />
         </span>
         {page > 1 ? (
           <Link href={buildHref(page - 1)} className={navLinkClass}>
