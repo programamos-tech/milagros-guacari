@@ -1,4 +1,8 @@
 import type { AdminActivityAction } from "@/lib/admin-activity-log";
+import {
+  parseActivityStockTrace,
+  stockTraceSummaryLabel,
+} from "@/lib/activity-log-stock";
 
 function num(v: unknown): number | null {
   if (typeof v === "number" && Number.isFinite(v)) return v;
@@ -144,12 +148,20 @@ export function getActivityDetailRows(
         value: cid.slice(0, 8) + "…",
       });
     }
+    const stockTrace = parseActivityStockTrace(m);
+    if (stockTrace) {
+      rows.push({ label: "Stock", value: stockTraceSummaryLabel(stockTrace) });
+    }
   }
 
   if (action === "sale_cancelled") {
     const reason = str(m.cancellation_reason);
     if (reason) {
       rows.push({ label: "Motivo", value: reason });
+    }
+    const stockTrace = parseActivityStockTrace(m);
+    if (stockTrace) {
+      rows.push({ label: "Stock", value: stockTraceSummaryLabel(stockTrace) });
     }
   }
 

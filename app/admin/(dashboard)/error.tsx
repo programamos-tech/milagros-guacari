@@ -11,12 +11,12 @@ export default function AdminDashboardError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("[admin reportes]", error);
+    console.error("[admin dashboard]", error);
   }, [error]);
 
   return (
     <div className="rounded-xl border border-red-200 bg-red-50/90 px-4 py-6 text-sm text-red-950 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-100">
-      <p className="font-semibold">No se pudieron cargar los reportes</p>
+      <p className="font-semibold">No se pudo cargar esta sección del panel</p>
       <p className="mt-2 text-red-900/90 dark:text-red-100/90">
         {error.message || "Ocurrió un error al consultar los datos."}
       </p>

@@ -15,7 +15,10 @@ type AdminFormSubmitButtonProps = {
   pendingLabel?: string;
   disabled?: boolean;
   className?: string;
-};
+} & Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  "type" | "disabled" | "className" | "children"
+>;
 
 /** Deshabilita el envío mientras la server action está en curso (evita duplicados). */
 export function AdminFormSubmitButton({
@@ -23,11 +26,17 @@ export function AdminFormSubmitButton({
   pendingLabel = "Guardando…",
   disabled = false,
   className = adminPrimarySubmitButtonFullWidthClass,
+  ...buttonProps
 }: AdminFormSubmitButtonProps) {
   const { pending } = useFormStatus();
 
   return (
-    <button type="submit" disabled={disabled || pending} className={className}>
+    <button
+      type="submit"
+      disabled={disabled || pending}
+      className={className}
+      {...buttonProps}
+    >
       {pending ? pendingLabel : children}
     </button>
   );

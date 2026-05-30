@@ -2,6 +2,8 @@ import Link from "next/link";
 import type { AdminActivityAction, AdminActivityLogRow } from "@/lib/admin-activity-log";
 import { actionTypeLabel } from "@/lib/admin-activity-log";
 import { getActivityDetailRows } from "@/lib/activity-log-details";
+import { parseActivityStockTrace } from "@/lib/activity-log-stock";
+import { ActivityLogStockTrace } from "@/components/admin/ActivityLogStockTrace";
 
 function IconUser({ className }: { className?: string }) {
   return (
@@ -102,6 +104,7 @@ type Props = {
 export function ActivityLogCard({ row, actorDisplay, formatWhen }: Props) {
   const link = entityLink(row);
   const details = getActivityDetailRows(row.action_type, row.metadata);
+  const stockTrace = parseActivityStockTrace(row.metadata);
   const Icon = actionIcon(row.action_type);
   const shortId = row.entity_id ? row.entity_id.slice(0, 8) : null;
 
@@ -135,6 +138,8 @@ export function ActivityLogCard({ row, actorDisplay, formatWhen }: Props) {
               ))}
             </p>
           ) : null}
+
+          {stockTrace ? <ActivityLogStockTrace trace={stockTrace} /> : null}
 
           <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[10px] text-zinc-500 dark:text-zinc-400">
             <span className="font-medium text-zinc-600 dark:text-zinc-300">{actorDisplay}</span>

@@ -1,6 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import type { User } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
+import { withTimeout } from "@/lib/async-timeout";
+import { hasSupabaseAuthCookie } from "@/lib/supabase-auth-cookie";
+
+const MIDDLEWARE_AUTH_TIMEOUT_MS = 8_000;
 
 const cuentaPublicPaths = new Set(["/cuenta/entrar", "/cuenta/registro"]);
 
@@ -71,11 +75,17 @@ export async function middleware(request: NextRequest) {
         },
       });
 
-      const { data, error } = await supabase.auth.getUser();
-      if (error) {
-        console.error("[middleware] auth.getUser:", error.message);
+      const authResult = (await withTimeout(
+        supabase.auth.getUser(),
+        MIDDLEWARE_AUTH_TIMEOUT_MS,
+      )) as Awaited<ReturnType<typeof supabase.auth.getUser>> | null;
+      if (!authResult) {
+        console.error("[middleware] auth.getUser: timeout");
+      } else if (authResult.error) {
+        console.error("[middleware] auth.getUser:", authResult.error.message);
+      } else {
+        user = authResult.data.user ?? null;
       }
-      user = data.user ?? null;
     } catch (e) {
       console.error("[middleware] Supabase client / getUser failed:", e);
       supabase = null;
@@ -136,25 +146,12 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  if (path.startsWith("/admin")) {
-    if (!user) {
+  if (path.startsWith("/admin") && !path.startsWith("/admin/login")) {
+    // Sin llamada a Supabase Auth en edge: el layout admin valida sesión y perfil.
+    if (!hasSupabaseAuthCookie(request)) {
       return NextResponse.redirect(new URL("/admin/login", request.url));
     }
-    if (!supabase) {
-      return NextResponse.redirect(new URL("/admin/login", request.url));
-    }
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("id", user.id)
-      .maybeSingle();
-    if (!profile) {
-      const next = new URL("/admin/login", request.url);
-      next.searchParams.set("error", "no_profile");
-      next.searchParams.set("uid", user.id);
-      if (user.email) next.searchParams.set("email", user.email);
-      return NextResponse.redirect(next);
-    }
+    return response;
   }
 
   return response;

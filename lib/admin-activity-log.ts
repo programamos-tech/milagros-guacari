@@ -27,6 +27,41 @@ export type AdminActivityLogRow = {
   metadata: Record<string, unknown> | null;
 };
 
+const ACTIVITY_LOG_SELECT =
+  "id, created_at, actor_id, action_type, entity_type, entity_id, summary, metadata";
+
+export type FetchAdminActivityLogPageResult = {
+  rows: AdminActivityLogRow[];
+  total: number;
+  error: string | null;
+};
+
+export async function fetchAdminActivityLogPage(
+  supabase: SupabaseClient,
+  opts: { page: number; pageSize: number },
+): Promise<FetchAdminActivityLogPageResult> {
+  const safePage = Math.max(1, Math.floor(opts.page));
+  const safeSize = Math.min(100, Math.max(1, Math.floor(opts.pageSize)));
+  const from = (safePage - 1) * safeSize;
+  const to = from + safeSize - 1;
+
+  const { data, error, count } = await supabase
+    .from("admin_activity_log")
+    .select(ACTIVITY_LOG_SELECT, { count: "exact" })
+    .order("created_at", { ascending: false })
+    .range(from, to);
+
+  if (error) {
+    return { rows: [], total: 0, error: error.message };
+  }
+
+  return {
+    rows: (data ?? []) as AdminActivityLogRow[],
+    total: count ?? 0,
+    error: null,
+  };
+}
+
 /**
  * Registra una actividad en panel. No lanza: fallos solo se loguean en consola
  * para no romper el flujo principal.

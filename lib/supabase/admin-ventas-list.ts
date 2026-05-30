@@ -148,8 +148,9 @@ async function fetchVentasFilterStatsFallback(
   supabase: SupabaseClient,
   opts: VentasFilterOpts,
 ): Promise<VentasFilterStats> {
-  const { data, error } = await applyVentasFilters(supabase.from("orders"), opts).select(
-    "status,total_cents,wompi_reference",
+  const { data, error } = await applyVentasFilters(
+    supabase.from("orders").select("status,total_cents,wompi_reference"),
+    opts,
   ).limit(5000);
 
   if (error) {
@@ -177,20 +178,24 @@ async function fetchVentasFilterStats(
   const { gte, lt } = ventasDateBounds(opts);
   const q = opts.q?.trim() ? sanitizeIlikeQuery(opts.q) : null;
 
-  const { data, error } = await supabase.rpc("admin_ventas_filter_stats", {
-    p_created_gte: gte,
-    p_created_lt: lt,
-    p_status: opts.status,
-    p_payment: opts.payment,
-    p_q: q,
-  });
+  try {
+    const { data, error } = await supabase.rpc("admin_ventas_filter_stats", {
+      p_created_gte: gte,
+      p_created_lt: lt,
+      p_status: opts.status,
+      p_payment: opts.payment,
+      p_q: q,
+    });
 
-  if (!error) {
-    const parsed = parseVentasFilterStatsRpc(data);
-    if (parsed) return parsed;
-    console.error("[ventas] admin_ventas_filter_stats: payload inválido");
-  } else {
-    console.error("[ventas] admin_ventas_filter_stats:", error.message);
+    if (!error) {
+      const parsed = parseVentasFilterStatsRpc(data);
+      if (parsed) return parsed;
+      console.error("[ventas] admin_ventas_filter_stats: payload inválido");
+    } else {
+      console.error("[ventas] admin_ventas_filter_stats:", error.message);
+    }
+  } catch (err) {
+    console.error("[ventas] admin_ventas_filter_stats exception:", err);
   }
 
   return fetchVentasFilterStatsFallback(supabase, opts);
@@ -217,8 +222,10 @@ export async function fetchAdminVentasPage(
   const from = (safePage - 1) * safeSize;
   const to = from + safeSize - 1;
 
-  const listQuery = applyVentasFilters(supabase.from("orders"), opts)
-    .select(VENTAS_SELECT, { count: "exact" })
+  const listQuery = applyVentasFilters(
+    supabase.from("orders").select(VENTAS_SELECT, { count: "exact" }),
+    opts,
+  )
     .order("created_at", { ascending: false })
     .range(from, to);
 

@@ -30,19 +30,10 @@ type Props = {
   expensesOtros: ReportExpenseDetailLine[];
 };
 
-function pmLabel(pm: string): string {
-  const p = pm.trim().toLowerCase();
-  if (p === "efectivo") return "Efectivo";
-  if (p === "transferencia") return "Transferencia";
-  if (p === "tarjeta") return "Tarjeta";
-  if (p === "otro") return "Otro";
-  return pm || "—";
-}
-
 function ExpenseRows({ rows }: { rows: ReportExpenseDetailLine[] }) {
   if (rows.length === 0) {
     return (
-      <li className="rounded-lg border border-dashed border-stone-200 px-3 py-2 text-xs text-stone-500 dark:border-zinc-700 dark:text-zinc-400">
+      <li className="py-6 text-center text-xs text-stone-400 dark:text-zinc-500">
         Ninguno en este periodo.
       </li>
     );
@@ -52,24 +43,123 @@ function ExpenseRows({ rows }: { rows: ReportExpenseDetailLine[] }) {
       {rows.map((row) => (
         <li
           key={row.id}
-          className="rounded-lg border border-stone-100 bg-stone-50/90 px-3 py-2 dark:border-zinc-700/80 dark:bg-zinc-800/60"
+          className="flex items-baseline justify-between gap-3 border-b border-stone-100 py-2.5 last:border-0 dark:border-zinc-800"
         >
-          <div className="flex items-start justify-between gap-2">
-            <p className="min-w-0 flex-1 font-medium leading-snug text-stone-900 dark:text-zinc-100">
+          <div className="min-w-0">
+            <p className="truncate text-sm text-stone-800 dark:text-zinc-200">
               {row.concept || "Sin concepto"}
             </p>
-            <p className="shrink-0 text-sm font-semibold tabular-nums text-stone-900 dark:text-zinc-100">
-              {formatCop(row.amount_cents)}
+            <p className="mt-0.5 text-[11px] text-stone-400 dark:text-zinc-500">
+              {prettyReportDayShortLabel(row.expense_date)}
+              {row.category ? ` · ${row.category}` : ""}
             </p>
           </div>
-          <p className="mt-1 text-[11px] leading-snug text-stone-500 dark:text-zinc-400">
-            {prettyReportDayShortLabel(row.expense_date)}
-            {row.category ? ` · ${row.category}` : ""}
-            {` · ${pmLabel(row.payment_method)}`}
+          <p className="shrink-0 text-sm tabular-nums text-red-600/90 dark:text-red-400/90">
+            −{formatCop(row.amount_cents)}
           </p>
         </li>
       ))}
     </>
+  );
+}
+
+function MiniEgresosBar({ cobrado, egresos }: { cobrado: number; egresos: number }) {
+  const base = Math.max(cobrado, egresos, 1);
+  const neto = cobrado - egresos;
+  const netoW = Math.max(0, (neto / base) * 100);
+  const egresoW = Math.min(100, (egresos / base) * 100);
+
+  return (
+    <div
+      className="flex h-1 w-full overflow-hidden rounded-full bg-stone-200/60 dark:bg-zinc-700/50"
+      aria-hidden
+    >
+      {netoW > 0 ? (
+        <div
+          className="h-full bg-emerald-500/55 dark:bg-emerald-600/45"
+          style={{ width: `${netoW}%` }}
+        />
+      ) : null}
+      <div
+        className="h-full bg-red-400/70 dark:bg-red-500/55"
+        style={{ width: `${egresoW}%` }}
+      />
+    </div>
+  );
+}
+
+function LiquidityBucketCard({
+  label,
+  cobrado,
+  neto,
+  egresos,
+  expenseCount,
+  hint,
+  staggerMs,
+  cardLabelClass,
+  infoBtnClass,
+  onOpenEgresos,
+}: {
+  label: string;
+  cobrado: number;
+  neto: number;
+  egresos: number;
+  expenseCount: number;
+  hint: string;
+  staggerMs: number;
+  cardLabelClass: string;
+  infoBtnClass: string;
+  onOpenEgresos: () => void;
+}) {
+  const hasEgresos = egresos > 0;
+
+  return (
+    <div
+      className="reports-metric-card min-w-0"
+      style={{ ["--reports-stagger" as string]: `${staggerMs}ms` }}
+    >
+      <dt className={`${cardLabelClass} flex min-w-0 items-center gap-1`}>
+        <span className="min-w-0 truncate">{label}</span>
+        {hasEgresos ? (
+          <button
+            type="button"
+            className={infoBtnClass}
+            onClick={onOpenEgresos}
+            aria-label={`Ver egresos de ${label.toLowerCase()}`}
+          >
+            <Info className="size-3.5" strokeWidth={2} aria-hidden />
+          </button>
+        ) : null}
+      </dt>
+      <dd className="mt-1 text-2xl font-normal tabular-nums text-stone-900 dark:text-zinc-100">
+        <StaticCopCents
+          cents={neto}
+          className={neto < 0 ? "text-red-700 dark:text-red-300" : undefined}
+        />
+      </dd>
+
+      {hasEgresos ? (
+        <button
+          type="button"
+          onClick={onOpenEgresos}
+          className="group mt-2.5 w-full text-left"
+        >
+          <MiniEgresosBar cobrado={cobrado} egresos={egresos} />
+          <p className="mt-1.5 flex items-center gap-1.5 text-[11px] leading-none text-stone-400 transition group-hover:text-stone-500 dark:text-zinc-500 dark:group-hover:text-zinc-400">
+            <span className="size-1.5 shrink-0 rounded-full bg-red-500/80" aria-hidden />
+            <span className="tabular-nums text-red-600/85 dark:text-red-400/85">
+              −{formatCop(egresos)}
+            </span>
+            <span>egresos</span>
+            {expenseCount > 1 ? (
+              <span className="text-stone-300 dark:text-zinc-600">· {expenseCount}</span>
+            ) : null}
+          </p>
+        </button>
+      ) : (
+        <p className="mt-1 text-xs text-stone-500 dark:text-zinc-400">{hint}</p>
+      )}
+    </div>
   );
 }
 
@@ -129,9 +219,9 @@ export function ReportLiquidityMetricCards({
 
   const modalHelp =
     open === "efectivo"
-      ? "Solo egresos registrados como efectivo. Ya están descontados del neto de la tarjeta Efectivo."
+      ? "Descontados del neto de Efectivo."
       : open === "transferencia"
-        ? "Solo egresos que no son efectivo (transferencia, tarjeta u otro). Ya están descontados del neto de la tarjeta Transferencia."
+        ? "Descontados del neto de Transferencia."
         : "";
 
   const modalTotalCents =
@@ -164,23 +254,25 @@ export function ReportLiquidityMetricCards({
             aria-labelledby={titleId}
             className="relative flex max-h-[min(88dvh,32rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-2xl dark:border-zinc-700 dark:bg-zinc-900"
           >
-            <header className="flex shrink-0 items-start justify-between gap-3 border-b border-stone-100 px-4 py-3 dark:border-zinc-800">
+            <header className="flex shrink-0 items-start justify-between gap-3 border-b border-stone-100 px-4 py-3.5 dark:border-zinc-800">
               <div className="min-w-0">
-                <h2
-                  id={titleId}
-                  className="text-sm font-semibold text-stone-900 dark:text-zinc-100"
-                >
-                  {modalTitle}
-                </h2>
-                <p className="mt-0.5 text-xs text-stone-500 dark:text-zinc-400">{periodLabel}</p>
-                <p className="mt-2 text-[11px] leading-snug text-stone-500 dark:text-zinc-400">
-                  {modalHelp}
+                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                  <h2
+                    id={titleId}
+                    className="text-sm font-semibold text-stone-900 dark:text-zinc-100"
+                  >
+                    {modalTitle}
+                  </h2>
+                  {modalTotalCents > 0 ? (
+                    <span className="text-sm tabular-nums text-red-600/90 dark:text-red-400/90">
+                      −{formatCop(modalTotalCents)}
+                    </span>
+                  ) : null}
+                </div>
+                <p className="mt-0.5 text-[11px] text-stone-400 dark:text-zinc-500">
+                  {periodLabel}
+                  {modalHelp ? ` · ${modalHelp}` : ""}
                 </p>
-                {modalTotalCents > 0 ? (
-                  <p className="mt-2 text-xs font-semibold tabular-nums text-stone-800 dark:text-zinc-200">
-                    Total: {formatCop(modalTotalCents)}
-                  </p>
-                ) : null}
               </div>
               <button
                 type="button"
@@ -191,8 +283,8 @@ export function ReportLiquidityMetricCards({
                 <X className="size-4" strokeWidth={2} aria-hidden />
               </button>
             </header>
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
-              <ul className="space-y-2">
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-3 pt-1">
+              <ul>
                 <ExpenseRows rows={modalRows} />
               </ul>
             </div>
@@ -200,55 +292,31 @@ export function ReportLiquidityMetricCards({
         </div>
       ) : null}
 
-      <div
-        className="reports-metric-card min-w-0"
-        style={{ ["--reports-stagger" as string]: "70ms" }}
-      >
-        <dt className={`${cardLabelClass} flex min-w-0 items-center gap-1`}>
-          <span className="min-w-0 truncate">Efectivo</span>
-          <button
-            type="button"
-            className={infoBtnClass}
-            onClick={() => setOpen("efectivo")}
-            aria-label="Ver egresos en efectivo del periodo"
-            title="Egresos en efectivo"
-          >
-            <Info className="size-3.5" strokeWidth={2} aria-hidden />
-          </button>
-        </dt>
-        <dd className="mt-1 text-2xl font-normal tabular-nums text-stone-900 dark:text-zinc-100">
-          <StaticCopCents
-            cents={efectivoNetoCaja}
-            className={efectivoNetoCaja < 0 ? "text-red-700 dark:text-red-300" : undefined}
-          />
-        </dd>
-        <p className="mt-1 text-xs text-stone-500 dark:text-zinc-400">{efectivoHint}</p>
-      </div>
+      <LiquidityBucketCard
+        label="Efectivo"
+        cobrado={efectivo}
+        neto={efectivoNetoCaja}
+        egresos={egresosEfectivoCents}
+        expenseCount={expensesEfectivo.length}
+        hint={efectivoHint}
+        staggerMs={70}
+        cardLabelClass={cardLabelClass}
+        infoBtnClass={infoBtnClass}
+        onOpenEgresos={() => setOpen("efectivo")}
+      />
 
-      <div
-        className="reports-metric-card min-w-0"
-        style={{ ["--reports-stagger" as string]: "135ms" }}
-      >
-        <dt className={`${cardLabelClass} flex min-w-0 items-center gap-1`}>
-          <span className="min-w-0 truncate">Transferencia</span>
-          <button
-            type="button"
-            className={infoBtnClass}
-            onClick={() => setOpen("transferencia")}
-            aria-label="Ver egresos en transferencia, tarjeta y otros del periodo"
-            title="Egresos transferencia / tarjeta / otros"
-          >
-            <Info className="size-3.5" strokeWidth={2} aria-hidden />
-          </button>
-        </dt>
-        <dd className="mt-1 text-2xl font-normal tabular-nums text-stone-900 dark:text-zinc-100">
-          <StaticCopCents
-            cents={transferenciaNeta}
-            className={transferenciaNeta < 0 ? "text-red-700 dark:text-red-300" : undefined}
-          />
-        </dd>
-        <p className="mt-1 text-xs text-stone-500 dark:text-zinc-400">{transferHint}</p>
-      </div>
+      <LiquidityBucketCard
+        label="Transferencia"
+        cobrado={transferencia}
+        neto={transferenciaNeta}
+        egresos={egresosTransferenciaBucketCents}
+        expenseCount={expensesOtros.length}
+        hint={transferHint}
+        staggerMs={135}
+        cardLabelClass={cardLabelClass}
+        infoBtnClass={infoBtnClass}
+        onOpenEgresos={() => setOpen("transferencia")}
+      />
     </>
   );
 }

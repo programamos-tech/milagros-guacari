@@ -244,10 +244,24 @@ function errorMessage(code: string | undefined): string | null {
 
 function ConfirmInvoiceButton({ disabled }: { disabled: boolean }) {
   return (
-    <AdminFormSubmitButton pendingLabel="Guardando…" disabled={disabled}>
+    <AdminFormSubmitButton
+      pendingLabel="Guardando…"
+      disabled={disabled}
+      data-invoice-confirm="true"
+    >
       Confirmar factura
     </AdminFormSubmitButton>
   );
+}
+
+function onInvoiceFormSubmit(e: React.FormEvent<HTMLFormElement>) {
+  const submitter = (e.nativeEvent as SubmitEvent).submitter;
+  if (
+    !(submitter instanceof HTMLButtonElement) ||
+    submitter.dataset.invoiceConfirm !== "true"
+  ) {
+    e.preventDefault();
+  }
 }
 
 export function NewInvoiceForm({
@@ -629,6 +643,38 @@ export function NewInvoiceForm({
     !cartStockExceeded &&
     paymentOk;
 
+  function selectCustomer(c: CustomerHit) {
+    setCustomer(c);
+    setCustomerQuery("");
+    setCustomerHits([]);
+  }
+
+  function onProductSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    if (productLoading) return;
+    const first = productHits.find(
+      (p) => Number(p.stock_local ?? p.stock_quantity ?? 0) >= 1,
+    );
+    if (first) addProduct(first);
+  }
+
+  function onKitSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    if (kitLoading) return;
+    const first = kitHits.find((k) => k.available && k.max_stock >= 1);
+    if (first) addKit(first);
+  }
+
+  function onCustomerSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    if (customer || customerLoading) return;
+    const first = customerHits[0];
+    if (first) selectCustomer(first);
+  }
+
   function addProduct(p: ProductHit) {
     setLines((prev) => {
       const stock = Number(p.stock_local ?? p.stock_quantity ?? 0);
@@ -791,7 +837,11 @@ export function NewInvoiceForm({
         </p>
       ) : null}
 
-      <form action={createPosInvoiceAction} className="space-y-6">
+      <form
+        action={createPosInvoiceAction}
+        className="space-y-6"
+        onSubmit={onInvoiceFormSubmit}
+      >
         <input type="hidden" name="payload" value={payloadJson} readOnly />
 
         <div className="flex min-w-0 flex-col gap-6 xl:grid xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] xl:items-start xl:gap-8">
@@ -803,6 +853,7 @@ export function NewInvoiceForm({
               <input
                 value={productQuery}
                 onChange={(e) => setProductQuery(e.target.value)}
+                onKeyDown={onProductSearchKeyDown}
                 placeholder="Buscar producto por nombre o código"
                 className={inputClass}
                 autoComplete="off"
@@ -847,6 +898,7 @@ export function NewInvoiceForm({
               <input
                 value={kitQuery}
                 onChange={(e) => setKitQuery(e.target.value)}
+                onKeyDown={onKitSearchKeyDown}
                 placeholder="Buscar kit / combo"
                 className={inputClass}
                 autoComplete="off"
@@ -1127,6 +1179,7 @@ export function NewInvoiceForm({
                   <input
                     value={customerQuery}
                     onChange={(e) => setCustomerQuery(e.target.value)}
+                    onKeyDown={onCustomerSearchKeyDown}
                     placeholder="Buscar por nombre, cédula, email o teléfono"
                     className={inputClass}
                     disabled={!!customer}
@@ -1147,11 +1200,7 @@ export function NewInvoiceForm({
                           <button
                             key={c.id}
                             type="button"
-                            onClick={() => {
-                              setCustomer(c);
-                              setCustomerQuery("");
-                              setCustomerHits([]);
-                            }}
+                            onClick={() => selectCustomer(c)}
                             className="flex w-full flex-col items-start gap-0.5 px-3 py-2.5 text-left text-sm transition hover:bg-zinc-50/80 dark:hover:bg-zinc-800/90"
                           >
                             <span className="font-medium text-zinc-900 dark:text-zinc-100">

@@ -1,6 +1,10 @@
 "use server";
 
 import { logAdminActivity } from "@/lib/admin-activity-log";
+import {
+  activityStockTraceToMetadata,
+  buildPosSaleStockTrace,
+} from "@/lib/activity-log-stock";
 import { verifyInsertedRow, verifyRowCountAtLeast } from "@/lib/admin-insert-verify";
 import { assertActionPermission } from "@/lib/require-admin-permission";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -419,6 +423,52 @@ export async function createPosInvoiceAction(formData: FormData) {
   const stockProductById = new Map(
     [...productById.entries()].map(([id, p]) => [id, { stock_local: p.stock_local }]),
   );
+
+  let stockByProductId = new Map<
+    string,
+    { id: string; name: string; stock_local: number | null; stock_warehouse: number | null }
+  >();
+  if (qtyByProduct.size > 0) {
+    const { data: stockDetailRows } = await supabase
+      .from("products")
+      .select("id,name,stock_local,stock_warehouse")
+      .in("id", [...qtyByProduct.keys()]);
+    stockByProductId = new Map(
+      (stockDetailRows ?? []).map((p) => [
+        String(p.id),
+        {
+          id: String(p.id),
+          name: String(p.name ?? "Producto"),
+          stock_local: p.stock_local,
+          stock_warehouse: p.stock_warehouse,
+        },
+      ]),
+    );
+  }
+
+  const stockTrace = buildPosSaleStockTrace({
+    productLines: lines.map((l) => ({
+      productId: l.productId,
+      name: String(productById.get(l.productId)?.name ?? "Producto"),
+      quantity: l.quantity,
+    })),
+    kitLines: kitLines.map((kl) => {
+      const kit = kitsById.get(kl.kitId)!;
+      const productNames = new Map(
+        (kit.items ?? []).map((row) => [
+          String(row.product_id),
+          String(row.products?.name ?? "Producto"),
+        ]),
+      );
+      return {
+        kitName: String(kit.name ?? "Kit"),
+        deductions: buildKitPosComponentDeductions(kit, kl.quantity),
+        productNames,
+      };
+    }),
+    stockByProductId,
+  });
+
   const stockResult = await decrementPosStockLocal(supabase, qtyByProduct, stockProductById);
   if (stockResult !== "ok") {
     await supabase.from("orders").delete().eq("id", orderId);
@@ -445,6 +495,7 @@ export async function createPosInvoiceAction(formData: FormData) {
       payment_method: paymentMethod,
       line_items: lines.length,
       kit_lines: kitLines.length,
+      ...activityStockTraceToMetadata(stockTrace),
     },
   });
   revalidatePath("/admin/actividades");

@@ -9,8 +9,9 @@ import { VentasPagination } from "@/components/admin/VentasPagination";
 import { VentasSalesTable } from "@/components/admin/VentasSalesTable";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { adminPanelClass } from "@/lib/admin-ui";
-import { fetchAdminVentasPage } from "@/lib/supabase/admin-ventas-list";
+import { fetchAdminVentasPage, type VentaOrderRow } from "@/lib/supabase/admin-ventas-list";
 import { buildAdminVentasListHref } from "@/lib/admin-ventas-list-url";
+import type { VentasFilterStats } from "@/lib/ventas-filter-stats";
 import type { VentaEstadoFilter, VentaPagoFilter } from "@/lib/ventas-sales";
 
 const VENTAS_PAGE_SIZE = 20;
@@ -53,16 +54,37 @@ export async function VentasPageBody({
   const supabase = await createSupabaseServerClient();
 
   let page = pageRequested;
-  let { rows: pageRows, total: totalFiltered, filterStats, error } =
-    await fetchAdminVentasPage(supabase, {
-      q: qRaw,
-      status,
-      payment,
-      dateFrom,
-      dateTo,
-      page,
-      pageSize: VENTAS_PAGE_SIZE,
-    });
+  let pageRows: VentaOrderRow[] = [];
+  let totalFiltered = 0;
+  let filterStats: VentasFilterStats = {
+    totalCents: 0,
+    cashCents: 0,
+    transferCents: 0,
+    mixedCents: 0,
+    otherCents: 0,
+    paidCount: 0,
+  };
+  let error: string | null = null;
+
+  try {
+    ({ rows: pageRows, total: totalFiltered, filterStats, error } =
+      await fetchAdminVentasPage(supabase, {
+        q: qRaw,
+        status,
+        payment,
+        dateFrom,
+        dateTo,
+        page,
+        pageSize: VENTAS_PAGE_SIZE,
+      }));
+  } catch (err) {
+    console.error("[ventas] fetchAdminVentasPage:", err);
+    return (
+      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800/80 dark:bg-amber-950/35 dark:text-amber-100">
+        No se pudieron cargar las ventas. Reintenta o contacta soporte si persiste.
+      </div>
+    );
+  }
 
   if (error) {
     return (
@@ -111,11 +133,23 @@ export async function VentasPageBody({
       <div className="border-b border-rose-100/80 bg-rose-50/25 px-3 py-2.5 dark:border-zinc-800 dark:bg-zinc-800/30 sm:px-4 md:px-5">
         <VentasFilteredSummary stats={filterStats} />
       </div>
-      <VentasFiltersBar
-        initialQ={qRaw}
-        initialFrom={dateFrom ?? ""}
-        initialTo={dateTo ?? ""}
-      />
+      <Suspense
+        fallback={
+          <div
+            className="border-b border-zinc-100 px-4 py-4 dark:border-zinc-800 sm:px-5"
+            role="status"
+          >
+            <span className="sr-only">Cargando filtros…</span>
+            <div className="h-20 animate-pulse rounded-lg bg-zinc-100/80 dark:bg-zinc-800/60 motion-reduce:animate-none" />
+          </div>
+        }
+      >
+        <VentasFiltersBar
+          initialQ={qRaw}
+          initialFrom={dateFrom ?? ""}
+          initialTo={dateTo ?? ""}
+        />
+      </Suspense>
       <VentasSalesTable rows={pageRows} orderListReturnHref={orderListReturnHref} />
       <VentasPagination
         page={page}

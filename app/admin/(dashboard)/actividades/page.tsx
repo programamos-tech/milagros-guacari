@@ -1,10 +1,24 @@
 import Link from "next/link";
 import { ActivityLogCard } from "@/components/admin/ActivityLogCard";
-import type { AdminActivityLogRow } from "@/lib/admin-activity-log";
+import { CustomersPagination } from "@/components/admin/CustomersPagination";
+import {
+  fetchAdminActivityLogPage,
+  type AdminActivityLogRow,
+} from "@/lib/admin-activity-log";
 import { REPORT_STORE_TIME_ZONE } from "@/lib/admin-report-range";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
+
+const ACTIVITIES_PAGE_SIZE = 25;
+
+function searchParamFirst(
+  v: string | string[] | undefined,
+): string | undefined {
+  if (typeof v === "string") return v;
+  if (Array.isArray(v) && typeof v[0] === "string") return v[0];
+  return undefined;
+}
 
 function formatWhen(iso: string): string {
   try {
@@ -19,15 +33,27 @@ function formatWhen(iso: string): string {
   }
 }
 
-export default async function AdminActividadesPage() {
+function buildPageHref(page: number): string {
+  if (page <= 1) return "/admin/actividades";
+  return `/admin/actividades?page=${page}`;
+}
+
+type Props = {
+  searchParams: Promise<{ page?: string | string[] }>;
+};
+
+export default async function AdminActividadesPage({ searchParams }: Props) {
+  const sp = await searchParams;
+  const pageRaw = Number.parseInt(searchParamFirst(sp.page) ?? "1", 10);
+  const pageRequested =
+    Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : 1;
+
   const supabase = await createSupabaseServerClient();
-  const { data: rows, error } = await supabase
-    .from("admin_activity_log")
-    .select(
-      "id, created_at, actor_id, action_type, entity_type, entity_id, summary, metadata",
-    )
-    .order("created_at", { ascending: false })
-    .limit(250);
+  let page = pageRequested;
+  let { rows: list, total, error } = await fetchAdminActivityLogPage(supabase, {
+    page,
+    pageSize: ACTIVITIES_PAGE_SIZE,
+  });
 
   if (error) {
     return (
@@ -41,7 +67,15 @@ export default async function AdminActividadesPage() {
     );
   }
 
-  const list = (rows ?? []) as AdminActivityLogRow[];
+  const totalPages = Math.max(1, Math.ceil(total / ACTIVITIES_PAGE_SIZE));
+  if (page > totalPages && total > 0) {
+    page = totalPages;
+    ({ rows: list, total } = await fetchAdminActivityLogPage(supabase, {
+      page,
+      pageSize: ACTIVITIES_PAGE_SIZE,
+    }));
+  }
+
   const actorIds = [...new Set(list.map((r) => r.actor_id))];
   const { data: profs } =
     actorIds.length > 0
@@ -77,6 +111,14 @@ export default async function AdminActividadesPage() {
         <p className="mt-2 max-w-2xl text-sm text-zinc-500 dark:text-zinc-400">
           Trazabilidad de altas, cambios y movimientos registrados por el equipo en el
           panel.
+          {total > 0 ? (
+            <>
+              {" "}
+              <span className="text-zinc-600 dark:text-zinc-300">
+                {total} {total === 1 ? "registro" : "registros"} en total.
+              </span>
+            </>
+          ) : null}
         </p>
       </div>
 
@@ -85,19 +127,27 @@ export default async function AdminActividadesPage() {
           Todavía no hay actividades registradas.
         </p>
       ) : (
-        <ul className="space-y-1.5">
-          {list.map((row) => {
-            const actor = actorLabel.get(row.actor_id) ?? row.actor_id.slice(0, 8);
-            return (
-              <ActivityLogCard
-                key={row.id}
-                row={row}
-                actorDisplay={actor}
-                formatWhen={formatWhen}
-              />
-            );
-          })}
-        </ul>
+        <div className="overflow-hidden rounded-2xl border border-zinc-200/90 bg-white shadow-sm ring-1 ring-zinc-950/5 dark:border-zinc-700/90 dark:bg-zinc-900 dark:shadow-none dark:ring-white/[0.06]">
+          <ul className="space-y-1.5 p-2 sm:p-3">
+            {list.map((row: AdminActivityLogRow) => {
+              const actor = actorLabel.get(row.actor_id) ?? row.actor_id.slice(0, 8);
+              return (
+                <ActivityLogCard
+                  key={row.id}
+                  row={row}
+                  actorDisplay={actor}
+                  formatWhen={formatWhen}
+                />
+              );
+            })}
+          </ul>
+          <CustomersPagination
+            page={page}
+            pageSize={ACTIVITIES_PAGE_SIZE}
+            total={total}
+            buildHref={buildPageHref}
+          />
+        </div>
       )}
     </div>
   );
