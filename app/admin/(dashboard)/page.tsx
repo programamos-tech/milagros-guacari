@@ -4,8 +4,8 @@ import { ReportsDashboardBody } from "@/components/admin/ReportsDashboardBody";
 import {
   parseReportRangeFromSearchParams,
   prettyReportPeriodLabel,
-  reportChartDayRange,
   reportDataFetchYmdRange,
+  reportSalesTrendWeekRanges,
   todayYmdInReportStore,
 } from "@/lib/admin-report-range";
 import { adminLandingPath } from "@/lib/admin-landing";
@@ -50,7 +50,14 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
     todayKey,
   );
   const periodLabel = prettyReportPeriodLabel(rangeFrom, rangeTo, todayKey);
-  const { chartFrom, chartTo } = reportChartDayRange(rangeTo);
+  const {
+    currentFrom: salesTrendCurrentFrom,
+    currentTo: salesTrendCurrentTo,
+    priorFrom: salesTrendPriorFrom,
+    priorTo: salesTrendPriorTo,
+    chartFrom,
+    chartTo,
+  } = reportSalesTrendWeekRanges(todayKey);
   const { fetchFrom, fetchTo } = reportDataFetchYmdRange(
     rangeFrom,
     rangeTo,
@@ -87,9 +94,14 @@ export default async function AdminHomePage({ searchParams }: PageProps) {
           rangeTo={rangeTo}
           chartFrom={chartFrom}
           chartTo={chartTo}
+          salesTrendCurrentFrom={salesTrendCurrentFrom}
+          salesTrendCurrentTo={salesTrendCurrentTo}
+          salesTrendPriorFrom={salesTrendPriorFrom}
+          salesTrendPriorTo={salesTrendPriorTo}
           fetchFrom={fetchFrom}
           fetchTo={fetchTo}
           periodLabel={periodLabel}
+          todayKey={todayKey}
         />
       </Suspense>
     </div>

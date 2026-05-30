@@ -1,5 +1,6 @@
 import { ReportLiquidityMetricCards } from "@/components/admin/ReportLiquidityMetricCards";
-import { CustomerTicketTrendChart } from "@/components/admin/CustomerTicketTrendChart";
+import { ReportStockTrendLine } from "@/components/admin/ReportStockTrendLine";
+import { ReportSalesWeekTrendChart } from "@/components/admin/ReportSalesWeekTrendChart";
 import {
   StaticCopCents,
   StaticInteger,
@@ -22,17 +23,27 @@ export async function ReportsDashboardBody({
   rangeTo,
   chartFrom,
   chartTo,
+  salesTrendCurrentFrom,
+  salesTrendCurrentTo,
+  salesTrendPriorFrom,
+  salesTrendPriorTo,
   fetchFrom,
   fetchTo,
   periodLabel,
+  todayKey,
 }: {
   rangeFrom: string;
   rangeTo: string;
   chartFrom: string;
   chartTo: string;
+  salesTrendCurrentFrom: string;
+  salesTrendCurrentTo: string;
+  salesTrendPriorFrom: string;
+  salesTrendPriorTo: string;
   fetchFrom: string;
   fetchTo: string;
   periodLabel: string;
+  todayKey: string;
 }) {
   let report;
   try {
@@ -42,6 +53,10 @@ export async function ReportsDashboardBody({
       rangeTo,
       chartFrom,
       chartTo,
+      salesTrendCurrentFrom,
+      salesTrendCurrentTo,
+      salesTrendPriorFrom,
+      salesTrendPriorTo,
       fetchFrom,
       fetchTo,
       periodLabel,
@@ -84,12 +99,14 @@ export async function ReportsDashboardBody({
     reportExpensesEfectivoLines,
     reportExpensesOtrosLines,
     reportIncomeChartPoints,
+    salesTrendComparison,
     peakIncomeDayKey,
     peakIncomeDayCents,
     stockInversionNet,
     stockInversionGross,
     stockHasProducts,
     stockHasGrossCost,
+    stockInvestmentTrend,
     revenueApproxFromOrderTotals,
   } = report;
 
@@ -232,6 +249,7 @@ export async function ReportsDashboardBody({
                 </span>
               ) : null}
             </dd>
+            <ReportStockTrendLine trend={stockInvestmentTrend} />
             {stockInversionGross === 0 && stockInversionNet > 0 ? (
               <p className="mt-1 text-[11px] leading-snug text-amber-900/80 dark:text-amber-100/80">
                 Sin costo con IVA cargado. Completá el campo en cada producto o ejecutá{" "}
@@ -266,33 +284,36 @@ export async function ReportsDashboardBody({
       </div>
 
       <section
-        key={`reports-chart-${rangeFrom}-${rangeTo}`}
+        key={`reports-chart-${todayKey}`}
         className={`reports-chart-reveal ${adminPanelLgClass} mt-6 overflow-hidden`}
         style={{ ["--reports-chart-delay" as string]: "520ms" }}
       >
-        <div className="px-6 pt-4 pb-2 sm:px-8 sm:pt-5 sm:pb-3">
-          <h2 className={sectionTitleClass}>Ingresos y egresos por día</h2>
+        <div className="px-6 pt-4 pb-1 sm:px-8 sm:pt-5">
+          <h2 className={sectionTitleClass}>Tendencia de ventas</h2>
           <p className="mt-1 w-full text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
-            Las tarjetas de arriba usan el periodo del filtro ({periodLabel}). Esta curva muestra siempre{" "}
-            <span className="font-medium text-zinc-600 dark:text-zinc-300">7 días</span> calendario
-            terminando en el último día del filtro ({prettyReportDayShortLabel(chartTo)}). Ingresos por
-            día de la venta; egresos por{" "}
-            <span className="font-medium text-zinc-600 dark:text-zinc-300">fecha del egreso</span>.
+            Ingresos de los últimos{" "}
+            <span className="font-medium text-zinc-600 dark:text-zinc-300">7 días</span> (
+            {prettyReportDayShortLabel(salesTrendCurrentFrom)} –{" "}
+            {prettyReportDayShortLabel(salesTrendCurrentTo)}
+            {salesTrendCurrentTo === todayKey ? ", hoy" : ""}) comparados con la semana anterior.
+            Independiente del filtro del resumen ({periodLabel}).
           </p>
         </div>
-        <div className="w-full min-w-0">
-          <CustomerTicketTrendChart
+        <div className="w-full min-w-0 pb-2">
+          <ReportSalesWeekTrendChart
             points={reportIncomeChartPoints}
-            seriesKind="day"
+            comparison={salesTrendComparison}
             fillGradientId="reportsIncomeChartFill"
-            secondaryCaption={null}
           />
         </div>
         <div className="border-t border-zinc-100/90 px-6 py-4 text-xs leading-relaxed text-zinc-500 dark:border-zinc-800 dark:text-zinc-400 sm:px-8">
           <p>
-            Los ingresos de la curva usan totales de pedido pagado por día. Las tarjetas del resumen
-            usan el periodo del filtro; en rangos cortos (≤31 días) el desglose de ingresos e IVA es
-            línea a línea.
+            Solo ventas pagadas. La línea{" "}
+            <span className="font-medium text-rose-900/80 dark:text-rose-200/90">roja</span> es esta
+            semana; la{" "}
+            <span className="font-medium text-amber-800/80 dark:text-amber-300/90">ámbar punteada</span>{" "}
+            es la semana anterior ({prettyReportDayShortLabel(salesTrendPriorFrom)} –{" "}
+            {prettyReportDayShortLabel(salesTrendPriorTo)}), día a día en el mismo eje.
           </p>
           {peakIncomeDayKey && peakIncomeDayCents > 0 ? (
             <p className="mt-2">
@@ -304,7 +325,7 @@ export async function ReportsDashboardBody({
               </Link>
               <span className="text-zinc-400 dark:text-zinc-500">
                 {" "}
-                · pico del gráfico {formatCop(peakIncomeDayCents)}
+                · mejor día de la semana {formatCop(peakIncomeDayCents)}
               </span>
             </p>
           ) : null}

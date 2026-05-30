@@ -113,6 +113,31 @@ export function reportChartDayRange(rangeToYmd: string): {
   return { chartFrom, chartTo };
 }
 
+/** Ventana de tendencia: 7 días hasta hoy vs los 7 días anteriores (14 días de fetch). */
+export function reportSalesTrendWeekRanges(todayYmd: string): {
+  currentFrom: string;
+  currentTo: string;
+  priorFrom: string;
+  priorTo: string;
+  /** Para RPC: incluye ambas semanas. */
+  chartFrom: string;
+  chartTo: string;
+} {
+  const currentTo = todayYmd;
+  const span = Math.max(1, REPORT_DEFAULT_RANGE_DAY_COUNT) - 1;
+  const currentFrom = addCalendarDaysReport(currentTo, -span);
+  const priorTo = addCalendarDaysReport(currentFrom, -1);
+  const priorFrom = addCalendarDaysReport(priorTo, -span);
+  return {
+    currentFrom,
+    currentTo,
+    priorFrom,
+    priorTo,
+    chartFrom: priorFrom,
+    chartTo: currentTo,
+  };
+}
+
 /** Unión del periodo del reporte y la ventana del gráfico (para pedidos y egresos). */
 export function reportDataFetchYmdRange(
   rangeFrom: string,

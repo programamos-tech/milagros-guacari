@@ -25,6 +25,9 @@ export type TicketTrendPoint = {
    * Si está definido, el gráfico puede mostrar ingresos vs egresos.
    */
   expenseCents?: number;
+  /** Tendencia semanal: ingresos del día equivalente en la semana anterior. */
+  priorWeekCents?: number;
+  priorWeekDayKey?: string;
 };
 
 /**

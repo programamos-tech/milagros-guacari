@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ReportExpenseDetailLine } from "@/components/admin/ReportLiquidityMetricCards";
+import type { StockInvestmentTrend } from "@/lib/admin-stock-investment-trend";
+import { fetchStockInvestmentTrend } from "@/lib/admin-stock-investment-trend";
 import {
   dayInRange,
   dayKeysInclusiveReport,
@@ -23,16 +25,32 @@ import {
   type ProductVatRow,
 } from "@/lib/order-revenue-vat";
 
+export type ReportSalesTrendComparison = {
+  currentFrom: string;
+  currentTo: string;
+  priorFrom: string;
+  priorTo: string;
+  currentTotalCents: number;
+  priorTotalCents: number;
+  /** null si la semana anterior no tuvo ventas. */
+  changePercent: number | null;
+  priorDailyAvgCents: number;
+};
+
 export type AdminReportDashboardData = {
   periodLabel: string;
   rangeFrom: string;
   rangeTo: string;
   chartFrom: string;
   chartTo: string;
+  salesTrendCurrentFrom: string;
+  salesTrendCurrentTo: string;
+  salesTrendComparison: ReportSalesTrendComparison;
   stockInversionNet: number;
   stockInversionGross: number;
   stockHasProducts: boolean;
   stockHasGrossCost: boolean;
+  stockInvestmentTrend: StockInvestmentTrend | null;
   ingresosSinIvaPeriod: number;
   ingresosConIvaPeriod: number;
   ivaRecaudadoPeriod: number;
@@ -64,6 +82,10 @@ type ReportFetchOpts = {
   rangeTo: string;
   chartFrom: string;
   chartTo: string;
+  salesTrendCurrentFrom: string;
+  salesTrendCurrentTo: string;
+  salesTrendPriorFrom: string;
+  salesTrendPriorTo: string;
   fetchFrom: string;
   fetchTo: string;
   periodLabel: string;
@@ -276,16 +298,92 @@ async function fetchLineDetailForOrders(
   return { orderItems, productsById };
 }
 
-function buildChartPointsFromRpc(
-  chartFrom: string,
-  chartTo: string,
-  chartPointsRaw: unknown,
-  expensesByChartDayRaw: unknown,
+function sumIncomeInRange(
+  incomeByDay: Map<string, { income: number; count: number }>,
+  from: string,
+  to: string,
+): number {
+  let total = 0;
+  for (const key of dayKeysInclusiveReport(from, to)) {
+    total += incomeByDay.get(key)?.income ?? 0;
+  }
+  return total;
+}
+
+function buildSalesTrendFromIncomeMap(
+  incomeByDay: Map<string, { income: number; count: number }>,
+  currentFrom: string,
+  currentTo: string,
+  priorFrom: string,
+  priorTo: string,
 ): {
   points: TicketTrendPoint[];
+  comparison: ReportSalesTrendComparison;
   peakIncomeDayKey: string | null;
   peakIncomeDayCents: number;
 } {
+  const priorTotalCents = sumIncomeInRange(incomeByDay, priorFrom, priorTo);
+  const currentTotalCents = sumIncomeInRange(incomeByDay, currentFrom, currentTo);
+  const priorDays = dayKeysInclusiveReport(priorFrom, priorTo).length;
+  const priorDailyAvgCents =
+    priorDays > 0 ? Math.round(priorTotalCents / priorDays) : 0;
+
+  let changePercent: number | null = null;
+  if (priorTotalCents > 0) {
+    changePercent =
+      Math.round(((currentTotalCents - priorTotalCents) / priorTotalCents) * 1000) / 10;
+  } else if (currentTotalCents > 0) {
+    changePercent = null;
+  } else {
+    changePercent = 0;
+  }
+
+  let peakIncomeDayKey: string | null = null;
+  let peakIncomeDayCents = 0;
+  const currentKeys = dayKeysInclusiveReport(currentFrom, currentTo);
+  const priorKeys = dayKeysInclusiveReport(priorFrom, priorTo);
+  const points: TicketTrendPoint[] = currentKeys.map((key, idx) => {
+    const income = incomeByDay.get(key);
+    const value = income?.income ?? 0;
+    const n = income?.count ?? 0;
+    const priorKey = priorKeys[idx] ?? "";
+    const priorValue = priorKey ? (incomeByDay.get(priorKey)?.income ?? 0) : 0;
+    if (value > peakIncomeDayCents) {
+      peakIncomeDayKey = key;
+      peakIncomeDayCents = value;
+    }
+    const label = prettyReportDayShortLabel(key);
+    const priorLabel = priorKey ? prettyReportDayShortLabel(priorKey) : "";
+    return {
+      monthKey: key,
+      labelX: label,
+      dayKey: key,
+      detail: `${label}: ${formatCop(value)} esta semana · ${priorLabel ? `${formatCop(priorValue)} sem. ant. (${priorLabel})` : "— sem. ant."} · ${n} venta${n === 1 ? "" : "s"}`,
+      avgCents: value,
+      orderCount: n,
+      priorWeekCents: priorValue,
+      priorWeekDayKey: priorKey || undefined,
+    };
+  });
+
+  return {
+    points,
+    comparison: {
+      currentFrom,
+      currentTo,
+      priorFrom,
+      priorTo,
+      currentTotalCents,
+      priorTotalCents,
+      changePercent,
+      priorDailyAvgCents,
+    },
+    peakIncomeDayKey,
+    peakIncomeDayCents,
+  };
+}
+
+function parseIncomeByDayFromRpc(chartPointsRaw: unknown): Map<string, { income: number; count: number }> {
   const incomeByDay = new Map<string, { income: number; count: number }>();
   if (Array.isArray(chartPointsRaw)) {
     for (const row of chartPointsRaw) {
@@ -299,65 +397,81 @@ function buildChartPointsFromRpc(
       });
     }
   }
+  return incomeByDay;
+}
 
-  const expensesByDay = new Map<string, number>();
-  if (expensesByChartDayRaw && typeof expensesByChartDayRaw === "object") {
-    for (const [key, value] of Object.entries(
-      expensesByChartDayRaw as Record<string, unknown>,
-    )) {
-      expensesByDay.set(key, Number(value ?? 0));
-    }
-  }
-
-  let peakIncomeDayKey: string | null = null;
-  let peakIncomeDayCents = 0;
-  const points: TicketTrendPoint[] = dayKeysInclusiveReport(chartFrom, chartTo).map(
-    (key) => {
-      const income = incomeByDay.get(key);
-      const value = income?.income ?? 0;
-      const n = income?.count ?? 0;
-      if (value > peakIncomeDayCents) {
-        peakIncomeDayKey = key;
-        peakIncomeDayCents = value;
-      }
-      const label = prettyReportDayShortLabel(key);
-      const eg = expensesByDay.get(key) ?? 0;
-      return {
-        monthKey: key,
-        labelX: label,
-        dayKey: key,
-        detail: `${label}: ${formatCop(value)} ingresos (IVA, ventas pagadas) · ${formatCop(eg)} egresos`,
-        avgCents: value,
-        orderCount: n,
-        expenseCents: eg,
-      };
-    },
+function buildChartPointsFromRpc(
+  currentFrom: string,
+  currentTo: string,
+  priorFrom: string,
+  priorTo: string,
+  chartPointsRaw: unknown,
+): {
+  points: TicketTrendPoint[];
+  comparison: ReportSalesTrendComparison;
+  peakIncomeDayKey: string | null;
+  peakIncomeDayCents: number;
+} {
+  const incomeByDay = parseIncomeByDayFromRpc(chartPointsRaw);
+  return buildSalesTrendFromIncomeMap(
+    incomeByDay,
+    currentFrom,
+    currentTo,
+    priorFrom,
+    priorTo,
   );
+}
 
-  return { points, peakIncomeDayKey, peakIncomeDayCents };
+async function loadStockInvestmentTrend(
+  supabase: SupabaseClient,
+  netCents: number,
+  grossCents: number,
+): Promise<StockInvestmentTrend | null> {
+  try {
+    return await fetchStockInvestmentTrend(supabase, netCents, grossCents);
+  } catch (err) {
+    console.error("[admin reportes] stock trend:", err);
+    return null;
+  }
 }
 
 function buildEmptyReport(
   opts: ReportFetchOpts,
   message: string | null,
 ): AdminReportDashboardData {
-  const { rangeFrom, rangeTo, chartFrom, chartTo, periodLabel } = opts;
-  const { points, peakIncomeDayKey, peakIncomeDayCents } = buildChartPointsFromRpc(
+  const {
+    rangeFrom,
+    rangeTo,
     chartFrom,
     chartTo,
-    [],
-    {},
-  );
+    salesTrendCurrentFrom,
+    salesTrendCurrentTo,
+    salesTrendPriorFrom,
+    salesTrendPriorTo,
+    periodLabel,
+  } = opts;
+  const { points, comparison, peakIncomeDayKey, peakIncomeDayCents } =
+    buildChartPointsFromRpc(
+      salesTrendCurrentFrom,
+      salesTrendCurrentTo,
+      salesTrendPriorFrom,
+      salesTrendPriorTo,
+      [],
+    );
   return {
     periodLabel,
     rangeFrom,
     rangeTo,
     chartFrom,
     chartTo,
+    salesTrendCurrentFrom,
+    salesTrendCurrentTo,
+    salesTrendComparison: comparison,
     stockInversionNet: 0,
     stockInversionGross: 0,
     stockHasProducts: false,
     stockHasGrossCost: false,
+    stockInvestmentTrend: null,
     ingresosSinIvaPeriod: 0,
     ingresosConIvaPeriod: 0,
     ivaRecaudadoPeriod: 0,
@@ -471,11 +585,19 @@ async function fetchAdminReportViaRpc(
   const efectivoNetoCaja = efectivo - egresosEfectivoCents;
   const transferenciaNeta = transferencia - egresosTransferenciaBucketCents;
 
-  const { points, peakIncomeDayKey, peakIncomeDayCents } = buildChartPointsFromRpc(
-    chartFrom,
-    chartTo,
-    d.chartPoints,
-    d.expensesByChartDay,
+  const { points, comparison, peakIncomeDayKey, peakIncomeDayCents } =
+    buildChartPointsFromRpc(
+      opts.salesTrendCurrentFrom,
+      opts.salesTrendCurrentTo,
+      opts.salesTrendPriorFrom,
+      opts.salesTrendPriorTo,
+      d.chartPoints,
+    );
+
+  const stockInvestmentTrend = await loadStockInvestmentTrend(
+    supabase,
+    stockTotals.netCents,
+    stockTotals.grossCents,
   );
 
   return {
@@ -484,10 +606,14 @@ async function fetchAdminReportViaRpc(
     rangeTo,
     chartFrom,
     chartTo,
+    salesTrendCurrentFrom: opts.salesTrendCurrentFrom,
+    salesTrendCurrentTo: opts.salesTrendCurrentTo,
+    salesTrendComparison: comparison,
     stockInversionNet: stockTotals.netCents,
     stockInversionGross: stockTotals.grossCents,
     stockHasProducts: stockTotals.productCount > 0,
     stockHasGrossCost: stockTotals.grossCents > 0,
+    stockInvestmentTrend,
     ingresosSinIvaPeriod,
     ingresosConIvaPeriod,
     ivaRecaudadoPeriod,
@@ -546,7 +672,6 @@ async function fetchAdminReportViaLegacy(
   let egresosEfectivoCents = 0;
   let egresosTransferenciaBucketCents = 0;
   let cantidadEgresosPeriod = 0;
-  const expensesByDayCents = new Map<string, number>();
   const reportExpensesEfectivoLines: ReportExpenseDetailLine[] = [];
   const reportExpensesOtrosLines: ReportExpenseDetailLine[] = [];
 
@@ -584,7 +709,11 @@ async function fetchAdminReportViaLegacy(
     (o) =>
       o.status === "paid" &&
       typeof o.created_at === "string" &&
-      dayInRange(reportCalendarDayKeyFromIso(o.created_at), chartFrom, chartTo),
+      dayInRange(
+        reportCalendarDayKeyFromIso(o.created_at),
+        opts.salesTrendPriorFrom,
+        opts.salesTrendCurrentTo,
+      ),
   );
 
   const periodDayCount = reportRangeDayCountInclusive(rangeFrom, rangeTo);
@@ -672,9 +801,6 @@ async function fetchAdminReportViaLegacy(
           : null;
     if (!raw) continue;
     const amount = Number(e.amount_cents ?? 0);
-    if (dayInRange(raw, chartFrom, chartTo)) {
-      expensesByDayCents.set(raw, (expensesByDayCents.get(raw) ?? 0) + amount);
-    }
     if (!dayInRange(raw, rangeFrom, rangeTo)) continue;
     egresosPeriod += amount;
     cantidadEgresosPeriod += 1;
@@ -718,39 +844,41 @@ async function fetchAdminReportViaLegacy(
   const efectivoNetoCaja = efectivo - egresosEfectivoCents;
   const transferenciaNeta = transferencia - egresosTransferenciaBucketCents;
 
-  const trendDayKeys = dayKeysInclusiveReport(chartFrom, chartTo);
-  const trendByDay = new Map(trendDayKeys.map((key) => [key, 0]));
-  const paidOrdersPerTrendDay = new Map<string, number>();
+  const incomeByDay = new Map<string, { income: number; count: number }>();
+  for (const key of dayKeysInclusiveReport(
+    opts.salesTrendPriorFrom,
+    opts.salesTrendCurrentTo,
+  )) {
+    incomeByDay.set(key, { income: 0, count: 0 });
+  }
 
   for (const o of paidOrdersForChart) {
     const key = reportCalendarDayKeyFromIso(o.created_at);
-    if (!trendByDay.has(key)) continue;
-    paidOrdersPerTrendDay.set(key, (paidOrdersPerTrendDay.get(key) ?? 0) + 1);
+    const cur = incomeByDay.get(key);
+    if (!cur) continue;
     const { gross } = revenueNetGrossFromLines(o, orderItems, productsById);
-    trendByDay.set(key, (trendByDay.get(key) ?? 0) + gross);
+    cur.income += gross;
+    cur.count += 1;
   }
 
-  let peakIncomeDayKey: string | null = null;
-  let peakIncomeDayCents = 0;
-  const reportIncomeChartPoints: TicketTrendPoint[] = trendDayKeys.map((key) => {
-    const value = trendByDay.get(key) ?? 0;
-    if (value > peakIncomeDayCents) {
-      peakIncomeDayCents = value;
-      peakIncomeDayKey = key;
-    }
-    const n = paidOrdersPerTrendDay.get(key) ?? 0;
-    const label = prettyReportDayShortLabel(key);
-    const eg = expensesByDayCents.get(key) ?? 0;
-    return {
-      monthKey: key,
-      labelX: label,
-      dayKey: key,
-      detail: `${label}: ${formatCop(value)} ingresos (IVA, ventas pagadas) · ${formatCop(eg)} egresos`,
-      avgCents: value,
-      orderCount: n,
-      expenseCents: eg,
-    };
-  });
+  const {
+    points: reportIncomeChartPoints,
+    comparison: salesTrendComparison,
+    peakIncomeDayKey,
+    peakIncomeDayCents,
+  } = buildSalesTrendFromIncomeMap(
+    incomeByDay,
+    opts.salesTrendCurrentFrom,
+    opts.salesTrendCurrentTo,
+    opts.salesTrendPriorFrom,
+    opts.salesTrendPriorTo,
+  );
+
+  const stockInvestmentTrend = await loadStockInvestmentTrend(
+    supabase,
+    stockTotals.netCents,
+    stockTotals.grossCents,
+  );
 
   return {
     periodLabel,
@@ -758,10 +886,14 @@ async function fetchAdminReportViaLegacy(
     rangeTo,
     chartFrom,
     chartTo,
+    salesTrendCurrentFrom: opts.salesTrendCurrentFrom,
+    salesTrendCurrentTo: opts.salesTrendCurrentTo,
+    salesTrendComparison,
     stockInversionNet: stockTotals.netCents,
     stockInversionGross: stockTotals.grossCents,
     stockHasProducts: stockTotals.productCount > 0,
     stockHasGrossCost: stockTotals.grossCents > 0,
+    stockInvestmentTrend,
     ingresosSinIvaPeriod,
     ingresosConIvaPeriod,
     ivaRecaudadoPeriod,
