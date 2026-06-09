@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { STORE_IMAGE_QUALITY } from "@/lib/store-image";
 import {
   storeProductImageFrameClass,
   storeProductImageMediaClass,
@@ -38,6 +39,7 @@ export function StoreProductImageFrame({
           alt={alt}
           fill
           sizes={sizes}
+          quality={STORE_IMAGE_QUALITY}
           className={`${storeProductImageMediaClass} ${imageClassName}`.trim()}
           unoptimized={shouldUnoptimizeStorageImageUrl(src)}
         />

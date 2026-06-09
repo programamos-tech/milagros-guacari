@@ -15,6 +15,10 @@ import {
   storefrontUnitGrossAfterCouponCents,
 } from "@/lib/storefront-gross-price";
 import { pseudoReviewCount } from "@/lib/pseudo-review";
+import {
+  STORE_IMAGE_QUALITY,
+  STORE_PRODUCT_DETAIL_IMAGE_SIZES,
+} from "@/lib/store-image";
 import { shouldUnoptimizeStorageImageUrl } from "@/lib/storage-public-url";
 import { productColorSwatchClass } from "@/lib/product-colors";
 
@@ -230,7 +234,8 @@ export function ProductDetailView({
               alt={name}
               fill
               className="object-contain object-center"
-              sizes="(max-width: 1024px) 100vw, 50vw"
+              sizes={STORE_PRODUCT_DETAIL_IMAGE_SIZES}
+              quality={STORE_IMAGE_QUALITY}
               priority
               unoptimized={unopt}
               onLoad={(e) => {

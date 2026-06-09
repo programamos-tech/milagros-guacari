@@ -6,6 +6,7 @@ import { useTransition } from "react";
 import { addKitToCartFromForm, setKitLineQuantity } from "@/app/actions/cart";
 import { useStoreCartDrawer } from "@/components/store/StoreCartDrawerProvider";
 import { StoreProductImageFrame } from "@/components/store/StoreProductImageFrame";
+import { STORE_PRODUCT_CARD_IMAGE_SIZES } from "@/lib/store-image";
 import { formatCop } from "@/lib/money";
 import { storagePublicObjectUrl } from "@/lib/storage-public-url";
 
@@ -40,7 +41,7 @@ export function StoreKitCard({
           src={img}
           alt={kit.name}
           bgClass="bg-[#f0eeeb]"
-          sizes="(max-width: 640px) 50vw, 25vw"
+          sizes={STORE_PRODUCT_CARD_IMAGE_SIZES}
         />
         <span className="absolute left-2 top-2 bg-white/95 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-800">
           Kit

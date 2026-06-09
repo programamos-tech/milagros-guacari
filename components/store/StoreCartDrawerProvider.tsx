@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { StoreProductImageFrame } from "@/components/store/StoreProductImageFrame";
+import { STORE_IMAGE_QUALITY } from "@/lib/store-image";
 import Link from "next/link";
 import {
   createContext,
@@ -228,8 +229,9 @@ function DrawerLine({
               src={img}
               alt=""
               fill
-              className="object-cover"
+              className="object-contain object-center p-1"
               sizes="96px"
+              quality={STORE_IMAGE_QUALITY}
               unoptimized={shouldUnoptimizeStorageImageUrl(img)}
             />
           ) : (

@@ -25,6 +25,7 @@ import {
   storagePublicObjectUrl,
 } from "@/lib/storage-public-url";
 import { StoreProductImageFrame } from "@/components/store/StoreProductImageFrame";
+import { STORE_PRODUCT_CARD_IMAGE_SIZES } from "@/lib/store-image";
 
 type Product = {
   id: string;
@@ -104,7 +105,7 @@ function ShowcaseProductCard({
           src={img}
           alt={product.name}
           bgClass={imageBgClass}
-          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+          sizes={STORE_PRODUCT_CARD_IMAGE_SIZES}
           imageClassName="transition duration-300 group-hover:scale-[1.02]"
           dimmed={outOfStock}
         />
@@ -202,7 +203,7 @@ function CatalogProductCard({
           src={img}
           alt={product.name}
           bgClass={imageBgClass}
-          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+          sizes={STORE_PRODUCT_CARD_IMAGE_SIZES}
           imageClassName="transition duration-300 group-hover/image:scale-[1.02]"
           placeholderClassName="text-4xl text-stone-300"
           dimmed={outOfStock}
