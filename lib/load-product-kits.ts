@@ -28,6 +28,48 @@ export async function fetchKitWithItems(
   };
 }
 
+function attachKitItemsToRows(
+  kits: ProductKitRow[],
+  items: Array<KitComponentRow & { kit_id: string }>,
+): ProductKitRow[] {
+  const byKit = new Map<string, KitComponentRow[]>();
+  for (const row of items) {
+    const kid = String(row.kit_id);
+    const list = byKit.get(kid) ?? [];
+    const { kit_id: _k, ...rest } = row;
+    list.push(rest);
+    byKit.set(kid, list);
+  }
+
+  return kits.map((k) => ({
+    ...k,
+    items: byKit.get(k.id as string) ?? [],
+  }));
+}
+
+/** Solo los kits pedidos (p. ej. factura POS), no todo el catálogo. */
+export async function fetchKitsByIdsWithItems(
+  supabase: SupabaseClient,
+  kitIds: string[],
+): Promise<ProductKitRow[]> {
+  const ids = [...new Set(kitIds.map((id) => String(id).trim()).filter(Boolean))];
+  if (ids.length === 0) return [];
+
+  const { data: kits } = await supabase.from("product_kits").select("*").in("id", ids);
+  if (!kits?.length) return [];
+
+  const { data: items } = await supabase
+    .from("product_kit_items")
+    .select(`${KIT_ITEMS_SELECT}, kit_id`)
+    .in("kit_id", ids)
+    .order("sort_order", { ascending: true });
+
+  return attachKitItemsToRows(
+    kits as ProductKitRow[],
+    (items ?? []) as unknown as Array<KitComponentRow & { kit_id: string }>,
+  );
+}
+
 export async function fetchKitsWithItems(
   supabase: SupabaseClient,
   opts?: { publishedOnly?: boolean },
@@ -50,19 +92,8 @@ export async function fetchKitsWithItems(
     .in("kit_id", ids)
     .order("sort_order", { ascending: true });
 
-  const byKit = new Map<string, KitComponentRow[]>();
-  for (const row of items ?? []) {
-    const kid = String((row as { kit_id: string }).kit_id);
-    const list = byKit.get(kid) ?? [];
-    const { kit_id: _k, ...rest } = row as unknown as KitComponentRow & {
-      kit_id: string;
-    };
-    list.push(rest);
-    byKit.set(kid, list);
-  }
-
-  return kits.map((k) => ({
-    ...(k as ProductKitRow),
-    items: byKit.get(k.id as string) ?? [],
-  }));
+  return attachKitItemsToRows(
+    kits as ProductKitRow[],
+    (items ?? []) as unknown as Array<KitComponentRow & { kit_id: string }>,
+  );
 }

@@ -477,22 +477,26 @@ export function NewInvoiceForm({
       setProductHits([]);
       return;
     }
-    let cancelled = false;
+    const ac = new AbortController();
     setProductLoading(true);
-    void fetch(`/api/admin/products-search?q=${encodeURIComponent(q)}`)
+    void fetch(`/api/admin/products-search?q=${encodeURIComponent(q)}`, {
+      signal: ac.signal,
+    })
       .then(async (r) => {
         if (!r.ok) return { products: [] as ProductHit[] };
         return r.json() as Promise<{ products?: ProductHit[] }>;
       })
       .then((j) => {
-        if (!cancelled) setProductHits(j.products ?? []);
+        if (!ac.signal.aborted) setProductHits(j.products ?? []);
+      })
+      .catch((err) => {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        if (!ac.signal.aborted) setProductHits([]);
       })
       .finally(() => {
-        if (!cancelled) setProductLoading(false);
+        if (!ac.signal.aborted) setProductLoading(false);
       });
-    return () => {
-      cancelled = true;
-    };
+    return () => ac.abort();
   }, [debouncedProductQ]);
 
   useEffect(() => {
@@ -501,22 +505,26 @@ export function NewInvoiceForm({
       setKitHits([]);
       return;
     }
-    let cancelled = false;
+    const ac = new AbortController();
     setKitLoading(true);
-    void fetch(`/api/admin/kits-search?q=${encodeURIComponent(q)}`)
+    void fetch(`/api/admin/kits-search?q=${encodeURIComponent(q)}`, {
+      signal: ac.signal,
+    })
       .then(async (r) => {
         if (!r.ok) return { kits: [] as KitHit[] };
         return r.json() as Promise<{ kits?: KitHit[] }>;
       })
       .then((j) => {
-        if (!cancelled) setKitHits(j.kits ?? []);
+        if (!ac.signal.aborted) setKitHits(j.kits ?? []);
+      })
+      .catch((err) => {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        if (!ac.signal.aborted) setKitHits([]);
       })
       .finally(() => {
-        if (!cancelled) setKitLoading(false);
+        if (!ac.signal.aborted) setKitLoading(false);
       });
-    return () => {
-      cancelled = true;
-    };
+    return () => ac.abort();
   }, [debouncedKitQ]);
 
   useEffect(() => {

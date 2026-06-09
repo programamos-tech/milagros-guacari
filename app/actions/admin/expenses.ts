@@ -3,10 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { todayYmdInReportStore } from "@/lib/admin-report-range";
-import { verifyInsertedRow } from "@/lib/admin-insert-verify";
 import { EXPENSE_CANCELLATION_REASON_MIN_LENGTH } from "@/lib/expenses-constants";
 import { loadAdminPermissions } from "@/lib/load-admin-permissions";
-import { assertActionPermission } from "@/lib/require-admin-permission";
+import { requireAdminPermission } from "@/lib/require-admin-permission";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const UUID_RE =
@@ -14,25 +13,13 @@ const UUID_RE =
 
 const YMD_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-async function assertProfile(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-) {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/admin/login");
-  const { data: prof } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (!prof) redirect("/admin/login?error=no_profile");
+function revalidateEgresosList() {
+  revalidatePath("/admin/egresos");
 }
 
 export async function createStoreExpense(formData: FormData) {
+  await requireAdminPermission("egresos_crear");
   const supabase = await createSupabaseServerClient();
-  await assertProfile(supabase);
-  await assertActionPermission("egresos_crear");
 
   const concept = String(formData.get("concept") ?? "").trim();
   if (!concept) redirect("/admin/egresos/nuevo?expense_error=concept");
@@ -69,14 +56,7 @@ export async function createStoreExpense(formData: FormData) {
 
   if (error || !row?.id) redirect("/admin/egresos/nuevo?expense_error=db");
 
-  const expenseId = String(row.id);
-  if (!(await verifyInsertedRow(supabase, "store_expenses", expenseId))) {
-    redirect("/admin/egresos/nuevo?expense_error=db");
-  }
-
-  revalidatePath("/admin/egresos/nuevo");
-  revalidatePath("/admin/egresos");
-  revalidatePath("/admin");
+  revalidateEgresosList();
   redirect("/admin/egresos");
 }
 
@@ -105,16 +85,13 @@ export async function cancelStoreExpense(
     return { ok: false, error: "reason_required" };
   }
 
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "auth" };
-
   const perm = await loadAdminPermissions();
-  if (!perm?.permissions.egresos_crear) {
+  if (!perm) return { ok: false, error: "auth" };
+  if (!perm.permissions.egresos_crear) {
     return { ok: false, error: "forbidden" };
   }
+
+  const supabase = await createSupabaseServerClient();
 
   const { data: row } = await supabase
     .from("store_expenses")
@@ -138,9 +115,8 @@ export async function cancelStoreExpense(
 
   if (error) return { ok: false, error: "db" };
 
-  revalidatePath("/admin/egresos");
+  revalidateEgresosList();
   revalidatePath(`/admin/egresos/${id}`);
-  revalidatePath("/admin");
   return { ok: true };
 }
 
@@ -167,16 +143,13 @@ export async function updateStoreExpenseDate(
     return { ok: false, error: "invalid" };
   }
 
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "auth" };
-
   const perm = await loadAdminPermissions();
-  if (!perm?.permissions.egresos_crear) {
+  if (!perm) return { ok: false, error: "auth" };
+  if (!perm.permissions.egresos_crear) {
     return { ok: false, error: "forbidden" };
   }
+
+  const supabase = await createSupabaseServerClient();
 
   const { data: row } = await supabase
     .from("store_expenses")
@@ -194,9 +167,7 @@ export async function updateStoreExpenseDate(
 
   if (error) return { ok: false, error: "db" };
 
-  revalidatePath("/admin/egresos");
+  revalidateEgresosList();
   revalidatePath(`/admin/egresos/${id}`);
-  revalidatePath("/admin");
   return { ok: true };
 }
-

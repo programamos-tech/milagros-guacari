@@ -6,7 +6,7 @@ import {
   buildPosSaleStockTrace,
 } from "@/lib/activity-log-stock";
 import { verifyInsertedRow, verifyRowCountAtLeast } from "@/lib/admin-insert-verify";
-import { assertActionPermission } from "@/lib/require-admin-permission";
+import { requireAdminPermission } from "@/lib/require-admin-permission";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   unitPriceAfterWholesaleCents,
@@ -16,7 +16,7 @@ import {
   applyPosLineNetDiscountCents,
   discountedUnitNetCentsFromLine,
 } from "@/lib/pos-line-discount";
-import { fetchKitsWithItems } from "@/lib/load-product-kits";
+import { fetchKitsByIdsWithItems } from "@/lib/load-product-kits";
 import {
   buildKitPosComponentDeductions,
   expandKitLinesToProductQty,
@@ -113,19 +113,8 @@ async function decrementPosStockLocal(
 }
 
 export async function createPosInvoiceAction(formData: FormData) {
+  const { userId } = await requireAdminPermission("ventas_crear");
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/admin/login");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (!profile) redirect("/admin/login?error=no_profile");
-  await assertActionPermission("ventas_crear");
 
   let payload: PosInvoicePayload;
   try {
@@ -178,14 +167,22 @@ export async function createPosInvoiceAction(formData: FormData) {
     redirectError("validation");
   }
 
-  const { data: customer, error: cErr } = await supabase
-    .from("customers")
-    .select(
-      "id,name,email,phone,document_id,shipping_address,customer_kind,wholesale_discount_percent",
-    )
-    .eq("id", customerId)
-    .maybeSingle();
+  const kitIds = [...new Set(kitLines.map((k) => k.kitId))];
 
+  const [customerRes, kitsLoaded] = await Promise.all([
+    supabase
+      .from("customers")
+      .select(
+        "id,name,email,phone,document_id,shipping_address,customer_kind,wholesale_discount_percent",
+      )
+      .eq("id", customerId)
+      .maybeSingle(),
+    kitIds.length > 0
+      ? fetchKitsByIdsWithItems(supabase, kitIds)
+      : Promise.resolve([] as ProductKitRow[]),
+  ]);
+
+  const { data: customer, error: cErr } = customerRes;
   if (cErr || !customer) redirectError("customer");
   const customerRow = customer;
   const wholesalePct = wholesaleDiscountPercentFromRow(
@@ -195,40 +192,11 @@ export async function createPosInvoiceAction(formData: FormData) {
     },
   );
 
-  const productIds = [...new Set(lines.map((l) => l.productId))];
-  const productById = new Map<
-    string,
-    {
-      id: string;
-      name: string;
-      price_cents: number;
-      stock_local: number | null;
-      has_vat: boolean | null;
-      vat_percent: number | null;
-    }
-  >();
-
-  if (productIds.length > 0) {
-    const { data: products, error: pErr } = await supabase
-      .from("products")
-      .select("id,name,price_cents,stock_local,has_vat,vat_percent")
-      .in("id", productIds);
-
-    if (pErr || !products || products.length !== productIds.length) {
-      redirectError("products");
-    }
-    for (const p of products) {
-      productById.set(p.id as string, p);
-    }
-  }
-
-  const kitIds = [...new Set(kitLines.map((k) => k.kitId))];
   const kitsById = new Map<string, ProductKitRow>();
+  for (const kit of kitsLoaded) {
+    kitsById.set(kit.id, kit);
+  }
   if (kitIds.length > 0) {
-    const allKits = await fetchKitsWithItems(supabase);
-    for (const kit of allKits) {
-      if (kitIds.includes(kit.id)) kitsById.set(kit.id, kit);
-    }
     if (kitsById.size !== kitIds.length) redirectError("products");
     for (const kl of kitLines) {
       const kit = kitsById.get(kl.kitId)!;
@@ -247,18 +215,41 @@ export async function createPosInvoiceAction(formData: FormData) {
     qtyByProduct.set(pid, (qtyByProduct.get(pid) ?? 0) + qty);
   }
 
-  if (qtyByProduct.size > 0) {
-    const stockIds = [...qtyByProduct.keys()];
-    const { data: stockRows } = await supabase
+  const lineProductIds = [...new Set(lines.map((l) => l.productId))];
+  const stockProductIds = [...qtyByProduct.keys()];
+  const productById = new Map<
+    string,
+    {
+      id: string;
+      name: string;
+      price_cents: number;
+      stock_local: number | null;
+      stock_warehouse: number | null;
+      has_vat: boolean | null;
+      vat_percent: number | null;
+    }
+  >();
+
+  if (stockProductIds.length > 0) {
+    const { data: products, error: pErr } = await supabase
       .from("products")
-      .select("id,stock_local")
-      .in("id", stockIds);
-    const stockById = new Map((stockRows ?? []).map((p) => [p.id as string, p]));
+      .select(
+        "id,name,price_cents,stock_local,stock_warehouse,has_vat,vat_percent",
+      )
+      .in("id", stockProductIds);
+
+    if (pErr || !products) redirectError("products");
+    for (const p of products) {
+      productById.set(p.id as string, p);
+    }
     for (const [pid, qty] of qtyByProduct) {
-      const p = stockById.get(pid);
+      const p = productById.get(pid);
       if (!p) redirectError("products");
       const stock = Number(p.stock_local ?? 0);
       if (stock < qty) redirectError("stock");
+    }
+    for (const pid of lineProductIds) {
+      if (!productById.has(pid)) redirectError("products");
     }
   }
 
@@ -403,18 +394,21 @@ export async function createPosInvoiceAction(formData: FormData) {
     redirectError("db");
   }
 
-  if (!(await verifyInsertedRow(supabase, "orders", orderId))) {
-    await supabase.from("orders").delete().eq("id", orderId);
-    redirectError("db");
-  }
-  if (
-    !(await verifyRowCountAtLeast(
+  const [orderVerified, itemsVerified] = await Promise.all([
+    verifyInsertedRow(supabase, "orders", orderId),
+    verifyRowCountAtLeast(
       supabase,
       "order_items",
       { column: "order_id", value: orderId },
       itemRows.length,
-    ))
-  ) {
+    ),
+  ]);
+
+  if (!orderVerified) {
+    await supabase.from("orders").delete().eq("id", orderId);
+    redirectError("db");
+  }
+  if (!itemsVerified) {
     await supabase.from("order_items").delete().eq("order_id", orderId);
     await supabase.from("orders").delete().eq("id", orderId);
     redirectError("db");
@@ -424,27 +418,17 @@ export async function createPosInvoiceAction(formData: FormData) {
     [...productById.entries()].map(([id, p]) => [id, { stock_local: p.stock_local }]),
   );
 
-  let stockByProductId = new Map<
-    string,
-    { id: string; name: string; stock_local: number | null; stock_warehouse: number | null }
-  >();
-  if (qtyByProduct.size > 0) {
-    const { data: stockDetailRows } = await supabase
-      .from("products")
-      .select("id,name,stock_local,stock_warehouse")
-      .in("id", [...qtyByProduct.keys()]);
-    stockByProductId = new Map(
-      (stockDetailRows ?? []).map((p) => [
-        String(p.id),
-        {
-          id: String(p.id),
-          name: String(p.name ?? "Producto"),
-          stock_local: p.stock_local,
-          stock_warehouse: p.stock_warehouse,
-        },
-      ]),
-    );
-  }
+  const stockByProductId = new Map(
+    [...productById.entries()].map(([id, p]) => [
+      id,
+      {
+        id,
+        name: String(p.name ?? "Producto"),
+        stock_local: p.stock_local,
+        stock_warehouse: p.stock_warehouse,
+      },
+    ]),
+  );
 
   const stockTrace = buildPosSaleStockTrace({
     productLines: lines.map((l) => ({
@@ -482,7 +466,7 @@ export async function createPosInvoiceAction(formData: FormData) {
   }).format(totalCents / 100);
 
   await logAdminActivity(supabase, {
-    actorId: user.id,
+    actorId: userId,
     actionType: "sale_created",
     entityType: "order",
     entityId: orderId,
@@ -498,9 +482,7 @@ export async function createPosInvoiceAction(formData: FormData) {
       ...activityStockTraceToMetadata(stockTrace),
     },
   });
-  revalidatePath("/admin/actividades");
-  revalidatePath("/admin/orders");
   revalidatePath("/admin/ventas");
-  revalidatePath(`/admin/customers/${customerId}`);
+  revalidatePath(`/admin/orders/${orderId}`);
   redirect(`/admin/orders/${orderId}`);
 }

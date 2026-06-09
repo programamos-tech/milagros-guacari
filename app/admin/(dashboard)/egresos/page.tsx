@@ -82,7 +82,7 @@ export default async function AdminEgresosPage({
     )
     .order("expense_date", { ascending: false })
     .order("created_at", { ascending: false })
-    .limit(1500);
+    .limit(400);
 
   if (dateFrom) {
     query = query.gte("expense_date", dateFrom);
@@ -134,7 +134,8 @@ export default async function AdminEgresosPage({
             Egresos
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-zinc-500 dark:text-zinc-400">
-            Vista de tabla con filtros por texto y rango de fechas del gasto.
+            Vista de tabla con filtros por texto y rango de fechas del gasto (hasta 400 filas por
+            consulta).
           </p>
         </div>
         <div className="flex items-center gap-2">
