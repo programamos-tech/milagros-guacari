@@ -30,6 +30,6 @@ export const STORE_IMAGE_WELL_TINT = "#fce8ef" as const;
 export const storeProductImageFrameClass =
   "relative aspect-[4/5] w-full shrink-0 overflow-hidden";
 
-/** Imagen dentro del marco: producto completo, sin recortar (mejor nitidez que `object-cover`). */
+/** Imagen dentro del marco: llena el 4:5 de borde a borde (sin bandas ni padding). */
 export const storeProductImageMediaClass =
-  "object-contain object-center p-4 sm:p-5";
+  "object-cover object-center";

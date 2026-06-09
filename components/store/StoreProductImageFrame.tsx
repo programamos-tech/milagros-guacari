@@ -17,7 +17,7 @@ type Props = {
   dimmed?: boolean;
 };
 
-/** Foto de producto en vitrina: marco fijo 4:5, imagen a borde de borde. */
+/** Foto de producto en vitrina: marco 4:5, imagen cubre todo el cuadro (`object-cover`). */
 export function StoreProductImageFrame({
   src,
   alt,

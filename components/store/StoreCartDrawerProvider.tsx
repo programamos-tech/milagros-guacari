@@ -229,7 +229,7 @@ function DrawerLine({
               src={img}
               alt=""
               fill
-              className="object-contain object-center p-1"
+              className="object-cover object-center"
               sizes="96px"
               quality={STORE_IMAGE_QUALITY}
               unoptimized={shouldUnoptimizeStorageImageUrl(img)}
