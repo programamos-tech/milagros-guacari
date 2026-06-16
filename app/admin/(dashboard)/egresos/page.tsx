@@ -2,18 +2,21 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { ExpenseRowActions } from "@/components/admin/ExpenseRowActions";
 import { ExpensesFiltersBar } from "@/components/admin/ExpensesFiltersBar";
+import { VentasPagination } from "@/components/admin/VentasPagination";
 import { StaticCopCents, StaticInteger } from "@/components/admin/ReportsAnimatedFigures";
 import {
+  currentYearMonthInReportStore,
+  monthYmdBounds,
+  prettyYearMonthLabel,
   reportCalendarDayKeyFromIso,
-  todayYmdInReportStore,
 } from "@/lib/admin-report-range";
 import { loadAdminPermissions } from "@/lib/load-admin-permissions";
+import { fetchAdminExpensesPage } from "@/lib/supabase/admin-expenses-list";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const EGRESOS_PAGE_SIZE = 25;
 
 const YMD_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -29,8 +32,7 @@ function normalizeDateRange(
   fromRaw: string | undefined,
   toRaw: string | undefined,
 ): { from: string | null; to: string | null } {
-  let f =
-    fromRaw && YMD_RE.test(fromRaw.trim()) ? fromRaw.trim() : null;
+  let f = fromRaw && YMD_RE.test(fromRaw.trim()) ? fromRaw.trim() : null;
   let t = toRaw && YMD_RE.test(toRaw.trim()) ? toRaw.trim() : null;
   if (f && t && f > t) {
     const x = f;
@@ -38,10 +40,6 @@ function normalizeDateRange(
     t = x;
   }
   return { from: f, to: t };
-}
-
-function sanitizeIlikeQuery(q: string) {
-  return q.replace(/[%_\\,]/g, "").slice(0, 80);
 }
 
 function expenseCalendarYmd(e: {
@@ -66,58 +64,58 @@ export default async function AdminEgresosPage({
 }) {
   const sp = await searchParams;
   const qRaw = (searchParamFirst(sp.q) ?? "").trim();
-  const { from: dateFrom, to: dateTo } = normalizeDateRange(
+  const { from: urlFrom, to: urlTo } = normalizeDateRange(
     searchParamFirst(sp.from),
     searchParamFirst(sp.to),
   );
+
+  const pageRaw = searchParamFirst(sp.page);
+  const pageParsed = pageRaw ? Number.parseInt(pageRaw, 10) : 1;
+  const page = Number.isFinite(pageParsed) && pageParsed > 0 ? pageParsed : 1;
+
+  const hasExplicitFilters =
+    qRaw.length > 0 || Boolean(urlFrom) || Boolean(urlTo);
+
+  // Sin filtros: limitar al mes actual para no cargar/pintar todo el historial.
+  const currentMonth = currentYearMonthInReportStore();
+  const monthBounds = monthYmdBounds(currentMonth);
+  const defaultMonthApplied = !hasExplicitFilters && monthBounds != null;
+  const dateFrom = hasExplicitFilters ? urlFrom : monthBounds?.from ?? null;
+  const dateTo = hasExplicitFilters ? urlTo : monthBounds?.to ?? null;
 
   const supabase = await createSupabaseServerClient();
   const perm = await loadAdminPermissions();
   const canCancel = Boolean(perm?.permissions.egresos_crear);
 
-  let query = supabase
-    .from("store_expenses")
-    .select(
-      "id,concept,amount_cents,payment_method,notes,expense_date,created_at,is_cancelled,cancellation_reason",
-    )
-    .order("expense_date", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(400);
+  const { rows, stats, error: expensesError } = await fetchAdminExpensesPage(
+    supabase,
+    {
+      q: qRaw,
+      dateFrom,
+      dateTo,
+      page,
+      pageSize: EGRESOS_PAGE_SIZE,
+    },
+  );
 
-  if (dateFrom) {
-    query = query.gte("expense_date", dateFrom);
-  }
-  if (dateTo) {
-    query = query.lte("expense_date", dateTo);
-  }
+  const { totalActivoCents, todayTotalCents, cancelledCount, total } = stats;
 
-  if (UUID_RE.test(qRaw)) {
-    query = query.eq("id", qRaw);
-  } else {
-    const qSan = sanitizeIlikeQuery(qRaw);
-    if (qSan.length > 0) {
-      const pattern = `%${qSan}%`;
-      query = query.or(`concept.ilike.${pattern},notes.ilike.${pattern}`);
-    }
-  }
-
-  const { data: expenses, error: expensesError } = await query;
-
-  const rows = expenses ?? [];
-  const activeRows = rows.filter((e) => e.is_cancelled !== true);
-  const total = activeRows.reduce((sum, e) => sum + Number(e.amount_cents ?? 0), 0);
-  const todayKey = todayYmdInReportStore();
-  const todayTotal = activeRows.reduce((sum, e) => {
-    const key = expenseCalendarYmd(e);
-    return key === todayKey ? sum + Number(e.amount_cents ?? 0) : sum;
-  }, 0);
-  const cancelledCount = rows.length - activeRows.length;
-
-  const hasFilters =
-    qRaw.length > 0 || Boolean(dateFrom) || Boolean(dateTo);
+  const periodLabel = defaultMonthApplied
+    ? prettyYearMonthLabel(currentMonth)
+    : null;
 
   const filterLabelClass =
     "mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400";
+
+  const buildPageHref = (targetPage: number) => {
+    const p = new URLSearchParams();
+    if (qRaw) p.set("q", qRaw);
+    if (urlFrom) p.set("from", urlFrom);
+    if (urlTo) p.set("to", urlTo);
+    if (targetPage > 1) p.set("page", String(targetPage));
+    const qs = p.toString();
+    return qs ? `/admin/egresos?${qs}` : "/admin/egresos";
+  };
 
   return (
     <div className="w-full min-w-0 space-y-8">
@@ -134,8 +132,9 @@ export default async function AdminEgresosPage({
             Egresos
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-zinc-500 dark:text-zinc-400">
-            Vista de tabla con filtros por texto y rango de fechas del gasto (hasta 400 filas por
-            consulta).
+            {defaultMonthApplied && periodLabel
+              ? `Mostrando ${periodLabel}. Usá los filtros de fecha para ver otro periodo.`
+              : "Vista de tabla con filtros por texto y rango de fechas del gasto."}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -144,13 +143,13 @@ export default async function AdminEgresosPage({
             style={{ ["--reports-stagger" as string]: "40ms" }}
           >
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
-              <p className="text-zinc-500 dark:text-zinc-400">Hoy (vista)</p>
+              <p className="text-zinc-500 dark:text-zinc-400">Hoy</p>
               <p className="font-semibold text-zinc-900 dark:text-zinc-100">
-                <StaticCopCents cents={todayTotal} />
+                <StaticCopCents cents={todayTotalCents} />
               </p>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                Total activo (vista):{" "}
-                <StaticCopCents cents={total} className="font-medium text-zinc-700 dark:text-zinc-200" />
+                Total activo (periodo):{" "}
+                <StaticCopCents cents={totalActivoCents} className="font-medium text-zinc-700 dark:text-zinc-200" />
                 {cancelledCount > 0 ? (
                   <span className="ml-1">
                     · {cancelledCount} anulado{cancelledCount === 1 ? "" : "s"}
@@ -191,8 +190,8 @@ export default async function AdminEgresosPage({
         >
           <ExpensesFiltersBar
             initialQ={qRaw}
-            initialFrom={dateFrom ?? ""}
-            initialTo={dateTo ?? ""}
+            initialFrom={urlFrom ?? ""}
+            initialTo={urlTo ?? ""}
           />
         </Suspense>
 
@@ -201,105 +200,109 @@ export default async function AdminEgresosPage({
             <h2 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">
               Historial de egresos
             </h2>
-            {hasFilters ? (
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                <StaticInteger value={rows.length} className="font-semibold tabular-nums text-zinc-600 dark:text-zinc-300" />{" "}
-                {rows.length === 1 ? "resultado" : "resultados"}
-              </p>
-            ) : null}
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              <StaticInteger value={total} className="font-semibold tabular-nums text-zinc-600 dark:text-zinc-300" />{" "}
+              {total === 1 ? "resultado" : "resultados"}
+            </p>
           </div>
         </div>
         {expensesError ? (
           <p className="px-4 py-6 text-sm text-amber-800 dark:text-amber-200 sm:px-5">
-            No se pudieron aplicar los filtros: {expensesError.message}
+            No se pudieron aplicar los filtros: {expensesError}
           </p>
         ) : rows.length === 0 ? (
           <p className="px-4 py-6 text-sm text-zinc-500 dark:text-zinc-400 sm:px-5">
-            {hasFilters
+            {hasExplicitFilters
               ? "No hay egresos que coincidan con la búsqueda o las fechas."
-              : "Aún no hay egresos registrados."}
+              : "Aún no hay egresos registrados en este periodo."}
           </p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-0 text-left text-sm xl:min-w-[960px]">
-              <thead>
-                <tr className="border-b border-zinc-100 bg-white dark:border-zinc-800 dark:bg-zinc-950/80">
-                  <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
-                    Concepto / estado
-                  </th>
-                  <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
-                    Pago
-                  </th>
-                  <th className="min-w-[9.5rem] whitespace-nowrap px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
-                    Fecha
-                  </th>
-                  <th className="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
-                    Monto
-                  </th>
-                  <th className="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((e, index) => {
-                  const isCancelled = e.is_cancelled === true;
-                  const zebra =
-                    index % 2 === 1
-                      ? "bg-zinc-50/80 dark:bg-zinc-900/50"
-                      : "bg-white dark:bg-zinc-900";
-                  const dateStr = expenseCalendarYmd(e);
-                  return (
-                    <tr
-                      key={String(e.id)}
-                      className={`border-b border-zinc-100/90 ${zebra} align-top transition hover:bg-zinc-100/60 dark:border-zinc-800 dark:hover:bg-zinc-800/50 ${isCancelled ? "opacity-70" : ""}`}
-                    >
-                      <td className="max-w-md px-4 py-3.5">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p
-                            className={`font-semibold text-zinc-900 dark:text-zinc-100 ${isCancelled ? "line-through decoration-zinc-400" : ""}`}
-                          >
-                            {String(e.concept ?? "Egreso")}
-                          </p>
-                          {isCancelled ? (
-                            <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-800 dark:bg-red-950/50 dark:text-red-200">
-                              Anulado
-                            </span>
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-0 text-left text-sm xl:min-w-[960px]">
+                <thead>
+                  <tr className="border-b border-zinc-100 bg-white dark:border-zinc-800 dark:bg-zinc-950/80">
+                    <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
+                      Concepto / estado
+                    </th>
+                    <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
+                      Pago
+                    </th>
+                    <th className="min-w-[9.5rem] whitespace-nowrap px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
+                      Fecha
+                    </th>
+                    <th className="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
+                      Monto
+                    </th>
+                    <th className="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
+                      Acciones
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((e, index) => {
+                    const isCancelled = e.is_cancelled === true;
+                    const zebra =
+                      index % 2 === 1
+                        ? "bg-zinc-50/80 dark:bg-zinc-900/50"
+                        : "bg-white dark:bg-zinc-900";
+                    const dateStr = expenseCalendarYmd(e);
+                    return (
+                      <tr
+                        key={String(e.id)}
+                        className={`border-b border-zinc-100/90 ${zebra} align-top transition hover:bg-zinc-100/60 dark:border-zinc-800 dark:hover:bg-zinc-800/50 ${isCancelled ? "opacity-70" : ""}`}
+                      >
+                        <td className="max-w-md px-4 py-3.5">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p
+                              className={`font-semibold text-zinc-900 dark:text-zinc-100 ${isCancelled ? "line-through decoration-zinc-400" : ""}`}
+                            >
+                              {String(e.concept ?? "Egreso")}
+                            </p>
+                            {isCancelled ? (
+                              <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-800 dark:bg-red-950/50 dark:text-red-200">
+                                Anulado
+                              </span>
+                            ) : null}
+                          </div>
+                          {e.notes ? (
+                            <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-zinc-500 dark:text-zinc-400">
+                              {String(e.notes)}
+                            </p>
                           ) : null}
-                        </div>
-                        {e.notes ? (
-                          <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-zinc-500 dark:text-zinc-400">
-                            {String(e.notes)}
-                          </p>
-                        ) : null}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3.5 text-zinc-600 dark:text-zinc-300">
-                        {String(e.payment_method ?? "—")}
-                      </td>
-                      <td className="min-w-[9.5rem] whitespace-nowrap px-4 py-3.5 tabular-nums text-zinc-600 dark:text-zinc-300">
-                        {dateStr}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3.5 text-right font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
-                        <span className={isCancelled ? "line-through decoration-zinc-400" : ""}>
-                          <StaticCopCents
-                            cents={Number(e.amount_cents ?? 0)}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3.5 text-zinc-600 dark:text-zinc-300">
+                          {String(e.payment_method ?? "—")}
+                        </td>
+                        <td className="min-w-[9.5rem] whitespace-nowrap px-4 py-3.5 tabular-nums text-zinc-600 dark:text-zinc-300">
+                          {dateStr}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3.5 text-right font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
+                          <span className={isCancelled ? "line-through decoration-zinc-400" : ""}>
+                            <StaticCopCents cents={Number(e.amount_cents ?? 0)} />
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <ExpenseRowActions
+                            expenseId={String(e.id)}
+                            conceptLabel={String(e.concept ?? "Egreso")}
+                            isCancelled={isCancelled}
+                            canCancel={canCancel}
                           />
-                        </span>
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <ExpenseRowActions
-                          expenseId={String(e.id)}
-                          conceptLabel={String(e.concept ?? "Egreso")}
-                          isCancelled={isCancelled}
-                          canCancel={canCancel}
-                        />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <VentasPagination
+              page={page}
+              pageSize={EGRESOS_PAGE_SIZE}
+              total={total}
+              buildHref={buildPageHref}
+            />
+          </>
         )}
       </div>
     </div>

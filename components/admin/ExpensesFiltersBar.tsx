@@ -19,6 +19,8 @@ function buildExpensesQuery(
     if (!t) p.delete(key);
     else p.set(key, t);
   }
+  // Cambiar cualquier filtro reinicia la paginación.
+  p.delete("page");
   const qs = p.toString();
   return qs ? `${pathname}?${qs}` : pathname;
 }
