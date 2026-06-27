@@ -37,7 +37,7 @@ function CuentaAccountHero({
           src={STORE_ACCOUNT_HERO_IMAGE}
           alt=""
           fill
-          className="object-cover object-[center_30%]"
+          className="object-cover object-center"
           sizes="100vw"
           priority
         />
