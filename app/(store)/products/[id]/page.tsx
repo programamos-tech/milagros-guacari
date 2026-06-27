@@ -9,6 +9,7 @@ import {
   normalizeSizeOptionsFromRow,
 } from "@/lib/product-size-options";
 import { fetchStorefrontCouponDiscountPercentForProduct } from "@/lib/store-coupons";
+import { productHasStorefrontImage } from "@/lib/storefront-product-image";
 import { storeShellClass } from "@/lib/store-theme";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +36,7 @@ export default async function ProductDetailPage({ params }: Props) {
     .eq("is_published", true)
     .maybeSingle();
 
-  if (!product) notFound();
+  if (!product || !productHasStorefrontImage(product.image_path)) notFound();
 
   const catRel = product.categories as { name?: string } | null | undefined;
   const categoryName =

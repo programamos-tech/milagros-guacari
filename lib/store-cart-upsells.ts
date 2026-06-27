@@ -1,5 +1,6 @@
 import { expandFragranceLabels } from "@/lib/fragrance-options";
 import { storefrontListGrossUnitCents } from "@/lib/storefront-gross-price";
+import { withStorefrontImage } from "@/lib/storefront-product-image";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type StoreCartUpsellProduct = {
@@ -24,6 +25,16 @@ function normalizedColorList(colors: unknown): string[] {
   );
 }
 
+type UpsellProductRow = {
+  id: string;
+  name: string;
+  price_cents: number;
+  has_vat?: boolean | null;
+  image_path: string | null;
+  colors: unknown;
+  fragrance_options: unknown;
+};
+
 export async function loadStoreCartUpsells(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   excludeIds: string[],
@@ -35,22 +46,20 @@ export async function loadStoreCartUpsells(
     Math.max(32, limit + exclude.size + 12),
   );
 
-  const { data } = await supabase
-    .from("products")
-    .select(
-      "id,name,price_cents,has_vat,image_path,colors,stock_quantity,created_at,fragrance_options",
-    )
-    .eq("is_published", true)
-    .gt("stock_quantity", 0)
+  const { data } = await withStorefrontImage(
+    supabase
+      .from("products")
+      .select(
+        "id,name,price_cents,has_vat,image_path,colors,stock_quantity,created_at,fragrance_options",
+      )
+      .eq("is_published", true)
+      .gt("stock_quantity", 0),
+  )
     .order("created_at", { ascending: false })
     .limit(fetchLimit);
 
-  return (data ?? [])
-    .filter((row) => {
-      if (exclude.has(row.id)) return false;
-      const path = typeof row.image_path === "string" ? row.image_path.trim() : "";
-      return path.length > 0;
-    })
+  return ((data ?? []) as UpsellProductRow[])
+    .filter((row) => !exclude.has(row.id))
     .slice(0, limit)
     .map((p) => {
       const rawFragrance = Array.isArray(p.fragrance_options)

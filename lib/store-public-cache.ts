@@ -6,6 +6,7 @@ import { fetchListingFacets } from "@/lib/product-listing-facets";
 import { fetchPublishedBanners } from "@/lib/store-banners";
 import { fetchBannerStoreCoupon, fetchStorefrontCouponDiscountPercentByProductId } from "@/lib/store-coupons";
 import { fetchActiveWelcomeModal } from "@/lib/store-welcome-modal";
+import { withStorefrontImage } from "@/lib/storefront-product-image";
 
 const STORE_CACHE_REVALIDATE_SEC = 120;
 
@@ -91,17 +92,32 @@ export const getCachedStorefrontCouponDiscounts = unstable_cache(
 
 const HOME_PRODUCTS_LIMIT = 8;
 
+export type HomeFeaturedProduct = {
+  id: string;
+  name: string;
+  brand: string | null;
+  description: string | null;
+  price_cents: number;
+  has_vat: boolean | null;
+  image_path: string | null;
+  stock_quantity: number;
+  fragrance_options: string[] | null;
+  created_at: string;
+};
+
 export const getCachedHomeFeaturedProducts = unstable_cache(
-  async () => {
-    const { data } = await publicSupabase()
-      .from("products")
-      .select(
-        "id,name,brand,description,price_cents,has_vat,image_path,stock_quantity,fragrance_options,created_at",
-      )
-      .eq("is_published", true)
+  async (): Promise<HomeFeaturedProduct[]> => {
+    const { data } = await withStorefrontImage(
+      publicSupabase()
+        .from("products")
+        .select(
+          "id,name,brand,description,price_cents,has_vat,image_path,stock_quantity,fragrance_options,created_at",
+        )
+        .eq("is_published", true),
+    )
       .order("created_at", { ascending: false })
       .limit(HOME_PRODUCTS_LIMIT);
-    return data ?? [];
+    return (data ?? []) as HomeFeaturedProduct[];
   },
   ["store-home-featured-products"],
   { revalidate: STORE_CACHE_REVALIDATE_SEC, tags: ["store-products"] },

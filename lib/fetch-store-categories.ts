@@ -8,6 +8,7 @@ import {
   getStoreCategoryVisual,
   type StoreCategoryVisual,
 } from "@/lib/store-category-visuals";
+import { withStorefrontImage } from "@/lib/storefront-product-image";
 
 export type StoreCategoryMenuItem = {
   id: string;
@@ -100,10 +101,9 @@ async function fetchPublishedProductCountsByCategory(
     );
   }
 
-  const { data: products, error: prodErr } = await supabase
-    .from("products")
-    .select("category_id")
-    .eq("is_published", true);
+  const { data: products, error: prodErr } = await withStorefrontImage(
+    supabase.from("products").select("category_id").eq("is_published", true),
+  );
 
   const countByCategory = new Map<string, number>();
   if (!prodErr) {

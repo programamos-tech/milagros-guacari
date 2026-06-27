@@ -34,6 +34,7 @@ import {
   getCachedPublishedBanners,
 } from "@/lib/store-public-cache";
 import { storeShellClass } from "@/lib/store-theme";
+import { withStorefrontImage } from "@/lib/storefront-product-image";
 
 /** Tope de filas en listado filtrado (evita respuestas enormes). */
 const CATALOG_FILTERED_LIST_MAX = 300;
@@ -201,12 +202,14 @@ export default async function ProductsPage({ searchParams }: Props) {
   async function fetchFilteredList(): Promise<ListProduct[]> {
     if (catalogBrowseMode) return [];
 
-    let query = supabase
-      .from("products")
-      .select(
-        "id,name,brand,description,price_cents,has_vat,image_path,stock_quantity,size_options,size_value,size_unit,fragrance_options,created_at",
-      )
-      .eq("is_published", true);
+    let query = withStorefrontImage(
+      supabase
+        .from("products")
+        .select(
+          "id,name,brand,description,price_cents,has_vat,image_path,stock_quantity,size_options,size_value,size_unit,fragrance_options,created_at",
+        )
+        .eq("is_published", true),
+    );
 
     if (categoryFilterId && expandedCategoryIds?.length) {
       query = query.in("category_id", expandedCategoryIds);

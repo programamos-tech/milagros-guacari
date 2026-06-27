@@ -4,6 +4,7 @@ import {
   categoryGroupKey,
   pickCanonicalCategoryId,
 } from "@/lib/store-category-group";
+import { withStorefrontImage } from "@/lib/storefront-product-image";
 
 export type SizeFacetOption = {
   key: string;
@@ -124,10 +125,12 @@ async function fetchListingFacetsFallback(
   supabase: SupabaseClient,
   options: { categoryIds: string[] | null },
 ): Promise<ListingFacets> {
-  let q = supabase
-    .from("products")
-    .select("brand, colors, size_options, size_value, size_unit, price_cents")
-    .eq("is_published", true);
+  let q = withStorefrontImage(
+    supabase
+      .from("products")
+      .select("brand, colors, size_options, size_value, size_unit, price_cents")
+      .eq("is_published", true),
+  );
   if (options.categoryIds?.length) {
     q = q.in("category_id", options.categoryIds);
   }

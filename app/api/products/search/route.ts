@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { withStorefrontImage } from "@/lib/storefront-product-image";
 
 const SEARCH_CACHE_CONTROL = "public, s-maxage=60, stale-while-revalidate=30";
 
@@ -30,10 +31,12 @@ export async function GET(request: Request) {
   }
 
   const supabase = createClient(url, key);
-  const { data, error } = await supabase
-    .from("products")
-    .select("id,name,price_cents,has_vat,image_path")
-    .eq("is_published", true)
+  const { data, error } = await withStorefrontImage(
+    supabase
+      .from("products")
+      .select("id,name,price_cents,has_vat,image_path")
+      .eq("is_published", true),
+  )
     .ilike("name", `%${q}%`)
     .order("name")
     .limit(12);

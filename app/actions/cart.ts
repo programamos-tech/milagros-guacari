@@ -19,6 +19,7 @@ import {
   maxKitsAvailableFromItems,
 } from "@/lib/product-kits";
 import { normalizeStorefrontCartLines } from "@/lib/storefront-cart";
+import { productHasStorefrontImage } from "@/lib/storefront-product-image";
 
 function revalidateStoreCart() {
   revalidatePath("/products");
@@ -51,12 +52,12 @@ export async function addToCart(
   const supabase = await createSupabaseServerClient();
   const { data: row } = await supabase
     .from("products")
-    .select("stock_quantity, fragrance_options")
+    .select("stock_quantity, fragrance_options, image_path")
     .eq("id", productId)
     .eq("is_published", true)
     .maybeSingle();
 
-  if (!row) return;
+  if (!row || !productHasStorefrontImage(row.image_path)) return;
 
   const fragOptsRaw = Array.isArray(row.fragrance_options)
     ? row.fragrance_options.filter(

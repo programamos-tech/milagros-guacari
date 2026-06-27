@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { mergeCategoryRowsForFilterMenu } from "@/lib/product-listing-facets";
 import { expandCategoryIdsFromRows } from "@/lib/store-category-group";
+import { withStorefrontImage } from "@/lib/storefront-product-image";
 
 const PRODUCT_SELECT =
   "id,name,brand,description,price_cents,has_vat,image_path,stock_quantity,size_options,size_value,size_unit,fragrance_options,created_at";
@@ -88,21 +89,25 @@ async function fetchCatalogBrowsePreviewRowsFallback(
 
   const rows: BrowsePreviewRow[] = [];
   for (const cat of categories) {
-    const { data } = await supabase
-      .from("products")
-      .select(`${PRODUCT_SELECT},category_id,created_at`)
-      .eq("is_published", true)
-      .eq("category_id", cat.id)
+    const { data } = await withStorefrontImage(
+      supabase
+        .from("products")
+        .select(`${PRODUCT_SELECT},category_id,created_at`)
+        .eq("is_published", true)
+        .eq("category_id", cat.id),
+    )
       .order("created_at", { ascending: false })
       .limit(CATALOG_ROW_PREVIEW_LIMIT + 1);
     if (data?.length) rows.push(...(data as BrowsePreviewRow[]));
   }
 
-  const { data: uncategorized } = await supabase
-    .from("products")
-    .select(`${PRODUCT_SELECT},category_id,created_at`)
-    .eq("is_published", true)
-    .is("category_id", null)
+  const { data: uncategorized } = await withStorefrontImage(
+    supabase
+      .from("products")
+      .select(`${PRODUCT_SELECT},category_id,created_at`)
+      .eq("is_published", true)
+      .is("category_id", null),
+  )
     .order("created_at", { ascending: false })
     .limit(CATALOG_ROW_PREVIEW_LIMIT + 1);
 
