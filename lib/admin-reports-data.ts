@@ -15,6 +15,7 @@ import {
   fetchOrdersCreatedInReportYmdWindow,
 } from "@/lib/admin-fetch-orders-for-report";
 import { formatCop } from "@/lib/money";
+import { posPaymentBreakdownForOrder } from "@/lib/pos-payment-breakdown";
 import type { TicketTrendPoint } from "@/lib/customer-ticket-trend";
 import {
   revenueNetGrossFromLines,
@@ -655,7 +656,7 @@ async function fetchAdminReportViaLegacy(
       supabase,
       fetchFrom,
       fetchTo,
-      "id,status,total_cents,created_at,wompi_reference",
+      "id,status,total_cents,created_at,wompi_reference,pos_mixed_cash_cents,pos_mixed_transfer_cents",
     ),
   ]);
 
@@ -685,14 +686,17 @@ async function fetchAdminReportViaLegacy(
       totalCobradoPedidos += total;
       const ref = String(o.wompi_reference ?? "");
       if (!ref.startsWith("POS:")) ventasVirtuales += total;
-      if (ref === "POS:cash") efectivo += total;
-      else if (
-        ref === "POS:transfer" ||
-        ref === "POS:mixed" ||
-        !ref.startsWith("POS:")
-      ) {
-        transferencia += total;
-      }
+      const pay = posPaymentBreakdownForOrder({
+        status: "paid",
+        total_cents: total,
+        wompi_reference: ref || null,
+        pos_mixed_cash_cents: (o as { pos_mixed_cash_cents?: number | null })
+          .pos_mixed_cash_cents,
+        pos_mixed_transfer_cents: (o as { pos_mixed_transfer_cents?: number | null })
+          .pos_mixed_transfer_cents,
+      });
+      efectivo += pay.cashCents;
+      transferencia += pay.transferCents + pay.otherCents;
     } else if (o.status === "cancelled") {
       anuladas += 1;
     }

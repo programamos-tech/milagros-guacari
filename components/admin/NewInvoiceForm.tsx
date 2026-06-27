@@ -830,10 +830,26 @@ export function NewInvoiceForm({
         quantity: l.quantity,
       })),
       paymentMethod: payment,
+      ...(payment === "mixed"
+        ? {
+            mixedCashCents: mixedCashCents,
+            mixedTransferCents: mixedTransferCents,
+          }
+        : {}),
       shippingAddress: address,
       shippingPhone: phone,
     });
-  }, [customer, lines, kitLines, payment, shipChoice, shipOptions, customerWholesalePct]);
+  }, [
+    customer,
+    lines,
+    kitLines,
+    payment,
+    mixedCashCents,
+    mixedTransferCents,
+    shipChoice,
+    shipOptions,
+    customerWholesalePct,
+  ]);
 
   const banner = errorMessage(initialError);
 

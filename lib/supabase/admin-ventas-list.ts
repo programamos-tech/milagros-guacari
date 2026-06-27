@@ -149,7 +149,11 @@ async function fetchVentasFilterStatsFallback(
   opts: VentasFilterOpts,
 ): Promise<VentasFilterStats> {
   const { data, error } = await applyVentasFilters(
-    supabase.from("orders").select("status,total_cents,wompi_reference"),
+    supabase
+      .from("orders")
+      .select(
+        "status,total_cents,wompi_reference,pos_mixed_cash_cents,pos_mixed_transfer_cents",
+      ),
     opts,
   ).limit(5000);
 
@@ -162,6 +166,8 @@ async function fetchVentasFilterStatsFallback(
     status: string;
     total_cents: number;
     wompi_reference: string | null;
+    pos_mixed_cash_cents?: number | null;
+    pos_mixed_transfer_cents?: number | null;
   }[];
 
   if (rows.length >= 5000) {

@@ -48,6 +48,10 @@ export type PosInvoicePayload = {
   lines: PosInvoiceLinePayload[];
   kitLines?: PosInvoiceKitLinePayload[];
   paymentMethod: "cash" | "transfer" | "mixed";
+  /** Solo si paymentMethod === "mixed": centavos en efectivo. */
+  mixedCashCents?: number;
+  /** Solo si paymentMethod === "mixed": centavos en transferencia. */
+  mixedTransferCents?: number;
   shippingAddress: string | null;
   shippingPhone: string | null;
 };
@@ -311,6 +315,24 @@ export async function createPosInvoiceAction(formData: FormData) {
 
   const wompiRef = `POS:${paymentMethod}`;
 
+  let posMixedCashCents: number | null = null;
+  let posMixedTransferCents: number | null = null;
+  if (paymentMethod === "mixed") {
+    const cash = Math.floor(Number(payload.mixedCashCents ?? 0));
+    const transfer = Math.floor(Number(payload.mixedTransferCents ?? 0));
+    if (
+      cash < 0 ||
+      transfer < 0 ||
+      !Number.isFinite(cash) ||
+      !Number.isFinite(transfer) ||
+      cash + transfer !== totalCents
+    ) {
+      redirectError("validation");
+    }
+    posMixedCashCents = cash;
+    posMixedTransferCents = transfer;
+  }
+
   const { data: orderRow, error: oErr } = await supabase
     .from("orders")
     .insert({
@@ -323,6 +345,12 @@ export async function createPosInvoiceAction(formData: FormData) {
       wompi_reference: wompiRef,
       shipping_address: shippingAddress,
       shipping_phone: shippingPhone,
+      ...(paymentMethod === "mixed"
+        ? {
+            pos_mixed_cash_cents: posMixedCashCents,
+            pos_mixed_transfer_cents: posMixedTransferCents,
+          }
+        : {}),
     })
     .select("id")
     .single();
@@ -479,6 +507,12 @@ export async function createPosInvoiceAction(formData: FormData) {
       vat_cents: vatCents,
       total_cents: totalCents,
       payment_method: paymentMethod,
+      ...(paymentMethod === "mixed" && posMixedCashCents != null
+        ? {
+            mixed_cash_cents: posMixedCashCents,
+            mixed_transfer_cents: posMixedTransferCents,
+          }
+        : {}),
       line_items: lines.length,
       kit_lines: kitLines.length,
       ...activityStockTraceToMetadata(stockTrace),

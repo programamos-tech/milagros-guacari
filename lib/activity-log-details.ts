@@ -139,6 +139,15 @@ export function getActivityDetailRows(
     }
     const pm = str(m.payment_method);
     if (pm) rows.push({ label: "Pago", value: paymentMethodLabel(pm) });
+    const mixedCash = num(m.mixed_cash_cents);
+    const mixedTransfer = num(m.mixed_transfer_cents);
+    if (pm === "mixed" && mixedCash != null && mixedTransfer != null) {
+      rows.push({ label: "Efectivo (mixto)", value: formatMoneyCOP(mixedCash) });
+      rows.push({
+        label: "Transferencia (mixto)",
+        value: formatMoneyCOP(mixedTransfer),
+      });
+    }
     const lines = num(m.line_items);
     if (lines != null) rows.push({ label: "Líneas en factura", value: String(lines) });
     const cid = str(m.customer_id);
