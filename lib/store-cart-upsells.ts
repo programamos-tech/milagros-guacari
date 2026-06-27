@@ -14,9 +14,8 @@ export type StoreCartUpsellProduct = {
   canQuickAdd: boolean;
 };
 
-export const CART_DRAWER_UPSELL_LIMIT = 8;
-export const CHECKOUT_UPSELL_LIMIT = 6;
-export const CHECKOUT_PAYMENT_UPSELL_LIMIT = 4;
+export const CART_DRAWER_UPSELL_LIMIT = 5;
+export const CHECKOUT_PAYMENT_UPSELL_LIMIT = 3;
 
 function normalizedColorList(colors: unknown): string[] {
   if (!Array.isArray(colors)) return [];
@@ -28,7 +27,7 @@ function normalizedColorList(colors: unknown): string[] {
 export async function loadStoreCartUpsells(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   excludeIds: string[],
-  limit = CHECKOUT_UPSELL_LIMIT,
+  limit = CHECKOUT_PAYMENT_UPSELL_LIMIT,
 ): Promise<StoreCartUpsellProduct[]> {
   const exclude = new Set(excludeIds);
   const fetchLimit = Math.min(

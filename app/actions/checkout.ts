@@ -52,8 +52,8 @@ export async function startCheckout(formData: FormData) {
   const shippingPostalCode = String(formData.get("zipCode") ?? "").trim();
   const shippingPhone = String(formData.get("mobile") ?? "").trim();
   const couponCode = String(formData.get("couponCode") ?? "").trim();
-  const paymentMethodRaw = String(formData.get("paymentMethod") ?? "wompi").trim();
-  const useTransfer = paymentMethodRaw === "transfer";
+  const paymentMethodRaw = String(formData.get("paymentMethod") ?? "transfer").trim();
+  const useTransfer = paymentMethodRaw !== "wompi";
 
   if (!resolvedName) {
     redirect("/checkout?error=missing_name");

@@ -105,6 +105,9 @@ function CartDrawerUpsellScroller({
         >
           Complementa tu compra
         </h3>
+        <p className="mt-0.5 text-[11px] text-stone-500">
+          Añade sin salir de la bolsa
+        </p>
         <div className="flex min-h-8 shrink-0 items-center gap-1">
           {canPrev ? (
             <button

@@ -43,7 +43,6 @@ import { CartUpsellList } from "@/components/store/CartUpsellList";
 import { FreeShippingProgress } from "@/components/store/FreeShippingProgress";
 import {
   CHECKOUT_PAYMENT_UPSELL_LIMIT,
-  CHECKOUT_UPSELL_LIMIT,
   loadStoreCartUpsells,
 } from "@/lib/store-cart-upsells";
 import { freeShippingProgress } from "@/lib/store-free-shipping";
@@ -444,12 +443,11 @@ export default async function CheckoutPage({
   const totalVat = Math.max(0, totalGross - totalNet);
   const wholesaleSavingCents = Math.max(0, catalogListTotalGross - totalGross);
 
-  const upsellProducts = await loadStoreCartUpsells(
+  const paymentUpsellProducts = await loadStoreCartUpsells(
     sessionSb,
     productIds,
-    CHECKOUT_UPSELL_LIMIT,
+    CHECKOUT_PAYMENT_UPSELL_LIMIT,
   );
-  const paymentUpsellProducts = upsellProducts.slice(0, CHECKOUT_PAYMENT_UPSELL_LIMIT);
   const shippingProgress = freeShippingProgress(totalGross);
 
   return (
@@ -491,26 +489,15 @@ export default async function CheckoutPage({
         <form action={startCheckout}>
           <div className="mt-10 grid gap-12 lg:grid-cols-[1fr_min(100%,340px)] lg:items-start xl:gap-16">
             <div className="min-w-0 space-y-14">
-              <section
-                className={
-                  upsellProducts.length > 0
-                    ? "grid gap-10 lg:grid-cols-2 lg:items-start lg:gap-12"
-                    : ""
-                }
-              >
-                {upsellProducts.length > 0 ? (
-                  <CartUpsellList products={upsellProducts} />
-                ) : null}
-
-                <div className="min-w-0">
-                  <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-brand)]">
-                    Carrito
-                  </h2>
-                  <FreeShippingProgress
-                    subtotalCents={totalGross}
-                    className="mt-4"
-                  />
-                  <ul className="mt-6 divide-y divide-stone-200">
+              <section>
+                <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-brand)]">
+                  Carrito
+                </h2>
+                <FreeShippingProgress
+                  subtotalCents={totalGross}
+                  className="mt-4"
+                />
+                <ul className="mt-6 divide-y divide-stone-200">
                   {rows.map(({ line, p, sub, catalogListLineGross }) => {
                     const row = p as typeof p & {
                       colors?: unknown;
@@ -665,7 +652,6 @@ export default async function CheckoutPage({
                     );
                   })}
                 </ul>
-                </div>
               </section>
 
               <section className="border-t border-stone-200 pt-12">
@@ -769,67 +755,24 @@ export default async function CheckoutPage({
                   Forma de pago
                 </h2>
                 <p className="mt-2 text-sm leading-relaxed text-stone-500">
-                  Pago en línea con Wompi o transferencia a la cuenta de la tienda. En transferencia verás la llave
-                  y podrás adjuntar el comprobante en los 2 minutos posteriores a cada vez que habilites la subida.
+                  El pago se realiza únicamente por transferencia bancaria. Al finalizar verás la llave
+                  de la cuenta y podrás adjuntar el comprobante en los 2 minutos posteriores a cada vez
+                  que habilites la subida.
                 </p>
-
-                <fieldset className="mt-6 space-y-3">
-                  <legend className="sr-only">Elige método de pago</legend>
-                  <label className="flex cursor-pointer items-center gap-3 border border-[var(--store-accent)] bg-white p-4 ring-1 ring-[var(--store-accent)]">
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="wompi"
-                      defaultChecked
-                      className="size-4 border-stone-400 text-[var(--store-accent)] focus:ring-[var(--store-accent)]"
-                    />
-                    <span className="text-sm font-medium text-stone-900">
-                      Pago en línea (Wompi)
-                    </span>
-                  </label>
-                  <label className="flex cursor-pointer items-center gap-3 border border-stone-200 bg-white p-4 hover:border-stone-300">
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="transfer"
-                      className="size-4 border-stone-400 text-[var(--store-accent)] focus:ring-[var(--store-accent)]"
-                    />
-                    <span className="text-sm text-stone-700">
-                      <span className="font-medium text-stone-900">Transferencia bancaria</span>
-                      <span className="mt-1 block text-xs text-stone-500">
-                        Verás la llave (por defecto una de ejemplo hasta que configures env) y el
-                        formulario para subir el comprobante.
-                      </span>
-                    </span>
-                  </label>
-                  <label className="flex cursor-not-allowed items-center gap-3 border border-stone-200 bg-stone-50 p-4 opacity-60">
-                    <input type="radio" disabled className="size-4" />
-                    <span className="text-sm text-stone-600">
-                      Contra entrega{" "}
-                      <span className="text-stone-400">(próximamente)</span>
-                    </span>
-                  </label>
-                </fieldset>
-
-                <p className="mt-5 flex flex-wrap items-center gap-2 text-xs text-stone-500">
-                  <span className="font-medium uppercase tracking-wide text-stone-700">
-                    Medios típicos (Wompi)
-                  </span>
-                  <span className="border border-stone-200 px-2 py-0.5 font-mono text-[10px] tracking-wide">
-                    VISA
-                  </span>
-                  <span className="border border-stone-200 px-2 py-0.5 font-mono text-[10px] tracking-wide">
-                    MC
-                  </span>
-                  <span className="border border-stone-200 px-2 py-0.5 font-mono text-[10px] tracking-wide">
-                    PSE
-                  </span>
-                </p>
+                <input type="hidden" name="paymentMethod" value="transfer" />
+                <div className="mt-6 border border-[var(--store-accent)] bg-white p-4 ring-1 ring-[var(--store-accent)]">
+                  <p className="text-sm font-medium text-stone-900">
+                    Transferencia bancaria
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-stone-500">
+                    Recibirás los datos para transferir y un formulario para subir el comprobante de
+                    pago.
+                  </p>
+                </div>
               </section>
             </div>
 
             <aside className="sticky top-28 space-y-6 bg-[#f4f4f3] p-6 lg:p-8">
-              <FreeShippingProgress subtotalCents={totalGross} />
               <details className="group border-b border-stone-300/80 pb-5 open:pb-4">
                 <summary className="cursor-pointer list-none text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-brand)] marker:hidden [&::-webkit-details-marker]:hidden">
                   <span className="flex items-center justify-between gap-2">
@@ -911,12 +854,23 @@ export default async function CheckoutPage({
               </dl>
 
               {paymentUpsellProducts.length > 0 ? (
-                <CartUpsellList
-                  products={paymentUpsellProducts}
-                  title="Agrega estos infaltables en tu rutina"
-                  subtitle="Más cuidado, más brillo, más crecimiento."
-                  layout="bump"
-                />
+                <details className="group border-t border-stone-300/70 pt-4">
+                  <summary className="cursor-pointer list-none text-[12px] font-medium text-stone-700 marker:hidden [&::-webkit-details-marker]:hidden">
+                    <span className="flex items-center justify-between gap-2">
+                      ¿Algo más para tu rutina?
+                      <span className="text-stone-400 transition group-open:rotate-180">
+                        ▾
+                      </span>
+                    </span>
+                  </summary>
+                  <div className="mt-3">
+                    <CartUpsellList
+                      products={paymentUpsellProducts}
+                      title=""
+                      layout="bump"
+                    />
+                  </div>
+                </details>
               ) : null}
 
               <button type="submit" className={primaryBtnClass}>

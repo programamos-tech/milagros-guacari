@@ -81,7 +81,7 @@ export function CartUpsellList({
     layout === "scroll"
       ? "w-[8.75rem] shrink-0"
       : layout === "bump"
-        ? "rounded-xl border border-stone-200/90 bg-white p-3"
+        ? "rounded-lg border border-stone-200/80 bg-white p-2.5"
         : "py-4 first:pt-0 last:pb-0";
 
   const titleId = title ? "cart-upsell-title" : undefined;
