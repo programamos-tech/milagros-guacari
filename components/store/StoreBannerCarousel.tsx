@@ -155,8 +155,13 @@ export function StoreBannerCarousel({
 
   const frameClass =
     variant === "hero"
-      ? "relative aspect-[5/3] w-full min-h-[200px] max-h-[min(85vh,720px)] sm:aspect-[21/9] sm:min-h-[280px]"
+      ? "relative aspect-[21/9] w-full min-h-[140px] max-h-[min(52vh,440px)] sm:min-h-[280px] sm:max-h-[min(85vh,720px)]"
       : "relative aspect-[21/9] min-h-[140px] w-full max-h-[280px] sm:max-h-[320px]";
+
+  const imageClassName =
+    variant === "hero"
+      ? "object-contain object-center sm:object-cover sm:object-center"
+      : "object-cover object-center";
 
   const sizes =
     variant === "hero"
@@ -165,7 +170,7 @@ export function StoreBannerCarousel({
 
   const shell =
     variant === "hero"
-      ? "relative w-full overflow-hidden bg-stone-100"
+      ? "relative w-full max-w-full overflow-hidden bg-[#ebe4f4]"
       : "relative w-full overflow-hidden rounded-2xl bg-stone-100 ring-1 ring-stone-200/70";
 
   const defaultAlt =
@@ -206,7 +211,7 @@ export function StoreBannerCarousel({
                 src={url}
                 alt={alt}
                 fill
-                className="object-cover"
+                className={imageClassName}
                 sizes={sizes}
                 unoptimized={shouldUnoptimizeStorageImageUrl(url)}
                 priority={i === 0}

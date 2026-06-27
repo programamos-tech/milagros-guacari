@@ -128,8 +128,12 @@ function SearchResultsPanel({
 
 export function StoreSearch({
   variant = "default",
+  autoFocus = false,
+  onNavigate,
 }: {
-  variant?: "default" | "minimal";
+  variant?: "default" | "minimal" | "drawer";
+  autoFocus?: boolean;
+  onNavigate?: () => void;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -138,6 +142,12 @@ export function StoreSearch({
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<ProductRow[]>([]);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!autoFocus) return;
+    inputRef.current?.focus();
+  }, [autoFocus]);
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(query.trim()), 280);
@@ -197,8 +207,14 @@ export function StoreSearch({
     e.preventDefault();
     const q = query.trim();
     close();
+    onNavigate?.();
     if (q) router.push(`/products?q=${encodeURIComponent(q)}`);
     else router.push("/products");
+  }
+
+  function handlePick() {
+    close();
+    onNavigate?.();
   }
 
   function onQueryChange(v: string) {
@@ -222,14 +238,53 @@ export function StoreSearch({
       debounced={debounced}
       loading={loading}
       products={products}
-      onPick={close}
+      onPick={handlePick}
       panelClassName={
-        variant === "minimal"
-          ? `${panelBase} right-0 w-[min(100vw-2rem,22rem)]`
-          : `${panelBase} right-0 w-full`
+        variant === "drawer"
+          ? "mt-2 max-h-[min(45vh,18rem)] w-full overflow-y-auto rounded-xl border border-stone-200/90 bg-white shadow-lg ring-1 ring-stone-100"
+          : variant === "minimal"
+            ? `${panelBase} right-0 w-[min(100vw-2rem,22rem)]`
+            : `${panelBase} right-0 w-full`
       }
     />
   ) : null;
+
+  if (variant === "drawer") {
+    return (
+      <div ref={wrapRef} className="relative w-full">
+        <form
+          onSubmit={onSubmit}
+          className="flex items-center gap-2 rounded-full border border-stone-200 bg-white py-2 pl-4 pr-3 shadow-sm"
+        >
+          <input
+            ref={inputRef}
+            name="q"
+            type="search"
+            autoComplete="off"
+            autoFocus={autoFocus}
+            placeholder="Buscar producto"
+            value={query}
+            onChange={(e) => onQueryChange(e.target.value)}
+            onFocus={() => {
+              if (debounced.length >= 2) setOpen(true);
+            }}
+            className="min-w-0 flex-1 bg-transparent text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none"
+            aria-controls="store-search-results"
+            aria-autocomplete="list"
+            aria-haspopup="listbox"
+          />
+          <button
+            type="submit"
+            className="flex shrink-0 items-center justify-center rounded-full p-1 text-stone-500 transition hover:bg-stone-50 hover:text-stone-700"
+            aria-label="Buscar"
+          >
+            <Search className="size-5" strokeWidth={STORE_HEADER_ICON_STROKE} aria-hidden />
+          </button>
+        </form>
+        {resultsPanel}
+      </div>
+    );
+  }
 
   if (variant === "minimal") {
     return (
@@ -274,6 +329,7 @@ export function StoreSearch({
         className="flex items-center gap-2 rounded-full border border-stone-200 bg-[#fff9fb] py-2 pl-4 pr-3 shadow-sm"
       >
         <input
+          ref={inputRef}
           name="q"
           type="search"
           autoComplete="off"

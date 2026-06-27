@@ -34,7 +34,7 @@ export default async function HomePage() {
   return (
     <div>
       {/* Hero: solo imágenes desde Admin → Banners (zona hero), ancho completo, sin textos */}
-      <section className="w-full" aria-label="Banner principal">
+      <section className="w-full max-w-full overflow-hidden" aria-label="Banner principal">
         {heroBanners.length > 0 ? (
           <StoreBannerCarousel
             variant="hero"

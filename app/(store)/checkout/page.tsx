@@ -39,6 +39,14 @@ import {
   type CheckoutShippingInitial,
 } from "@/components/store/CheckoutShippingFields";
 import { CheckoutLineControls } from "@/components/store/CheckoutLineControls";
+import { CartUpsellList } from "@/components/store/CartUpsellList";
+import { FreeShippingProgress } from "@/components/store/FreeShippingProgress";
+import {
+  CHECKOUT_PAYMENT_UPSELL_LIMIT,
+  CHECKOUT_UPSELL_LIMIT,
+  loadStoreCartUpsells,
+} from "@/lib/store-cart-upsells";
+import { freeShippingProgress } from "@/lib/store-free-shipping";
 
 const labelClass =
   "mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-900";
@@ -436,6 +444,14 @@ export default async function CheckoutPage({
   const totalVat = Math.max(0, totalGross - totalNet);
   const wholesaleSavingCents = Math.max(0, catalogListTotalGross - totalGross);
 
+  const upsellProducts = await loadStoreCartUpsells(
+    sessionSb,
+    productIds,
+    CHECKOUT_UPSELL_LIMIT,
+  );
+  const paymentUpsellProducts = upsellProducts.slice(0, CHECKOUT_PAYMENT_UPSELL_LIMIT);
+  const shippingProgress = freeShippingProgress(totalGross);
+
   return (
     <div className="min-h-[calc(100vh-8rem)] bg-white">
       <div className="mx-auto max-w-6xl px-4 pb-14 pt-10 sm:px-6 lg:pb-16 lg:pt-12">
@@ -475,8 +491,26 @@ export default async function CheckoutPage({
         <form action={startCheckout}>
           <div className="mt-10 grid gap-12 lg:grid-cols-[1fr_min(100%,340px)] lg:items-start xl:gap-16">
             <div className="min-w-0 space-y-14">
-              <section>
-                <ul className="divide-y divide-stone-200">
+              <section
+                className={
+                  upsellProducts.length > 0
+                    ? "grid gap-10 lg:grid-cols-2 lg:items-start lg:gap-12"
+                    : ""
+                }
+              >
+                {upsellProducts.length > 0 ? (
+                  <CartUpsellList products={upsellProducts} />
+                ) : null}
+
+                <div className="min-w-0">
+                  <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-brand)]">
+                    Carrito
+                  </h2>
+                  <FreeShippingProgress
+                    subtotalCents={totalGross}
+                    className="mt-4"
+                  />
+                  <ul className="mt-6 divide-y divide-stone-200">
                   {rows.map(({ line, p, sub, catalogListLineGross }) => {
                     const row = p as typeof p & {
                       colors?: unknown;
@@ -631,6 +665,7 @@ export default async function CheckoutPage({
                     );
                   })}
                 </ul>
+                </div>
               </section>
 
               <section className="border-t border-stone-200 pt-12">
@@ -794,6 +829,7 @@ export default async function CheckoutPage({
             </div>
 
             <aside className="sticky top-28 space-y-6 bg-[#f4f4f3] p-6 lg:p-8">
+              <FreeShippingProgress subtotalCents={totalGross} />
               <details className="group border-b border-stone-300/80 pb-5 open:pb-4">
                 <summary className="cursor-pointer list-none text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-brand)] marker:hidden [&::-webkit-details-marker]:hidden">
                   <span className="flex items-center justify-between gap-2">
@@ -858,8 +894,14 @@ export default async function CheckoutPage({
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-stone-600">Envío</dt>
-                  <dd className="shrink-0 text-xs font-medium uppercase tracking-wide text-stone-500">
-                    Por confirmar
+                  <dd
+                    className={`shrink-0 text-xs font-medium uppercase tracking-wide ${
+                      shippingProgress.qualified
+                        ? "font-semibold text-emerald-700"
+                        : "text-stone-500"
+                    }`}
+                  >
+                    {shippingProgress.qualified ? "Gratis" : "Por confirmar"}
                   </dd>
                 </div>
                 <div className="flex justify-between gap-4 border-t border-stone-400 pt-4 text-[15px] font-semibold text-stone-900">
@@ -867,6 +909,15 @@ export default async function CheckoutPage({
                   <dd className="tabular-nums">{formatCop(totalGross)}</dd>
                 </div>
               </dl>
+
+              {paymentUpsellProducts.length > 0 ? (
+                <CartUpsellList
+                  products={paymentUpsellProducts}
+                  title="Agrega estos infaltables en tu rutina"
+                  subtitle="Más cuidado, más brillo, más crecimiento."
+                  layout="bump"
+                />
+              ) : null}
 
               <button type="submit" className={primaryBtnClass}>
                 Finalizar compra

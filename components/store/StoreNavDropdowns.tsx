@@ -9,6 +9,7 @@ import {
 } from "@/lib/store-header-icons";
 import type { StoreCategoryMenuItem } from "@/lib/fetch-store-categories";
 import { storeBrand } from "@/lib/brand";
+import { StoreSearch } from "@/components/store/StoreSearch";
 
 const drawerLinkClass =
   "flex items-center justify-between gap-3 px-4 py-3.5 text-left text-[15px] font-medium text-stone-800 transition hover:bg-white/50 active:bg-white/65";
@@ -23,9 +24,17 @@ export function StoreNavDropdowns({
   accountLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const baseId = useId();
 
-  const close = useCallback(() => setOpen(false), []);
+  const close = useCallback(() => {
+    setSearchOpen(false);
+    setOpen(false);
+  }, []);
+
+  useEffect(() => {
+    if (!open) setSearchOpen(false);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -39,11 +48,17 @@ export function StoreNavDropdowns({
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") close();
+      if (e.key === "Escape") {
+        if (searchOpen) {
+          setSearchOpen(false);
+          return;
+        }
+        close();
+      }
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open, close]);
+  }, [open, close, searchOpen]);
 
   const shopBtnClass =
     "group inline-flex items-center gap-2 rounded-none py-1 text-[13px] font-medium tracking-wide text-white/90 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--store-header-bg)]";
@@ -109,13 +124,34 @@ export function StoreNavDropdowns({
         <div className="min-h-0 flex-1 overflow-y-auto px-0 pb-5 pt-1">
           <ul className="border-b border-rose-200/35 md:hidden">
             <li>
-              <Link href="/products" onClick={close} className={drawerLinkClass}>
-                <span className="inline-flex items-center gap-3">
-                  <Search className="size-[18px] text-stone-500" strokeWidth={1.5} aria-hidden />
-                  Buscar productos
-                </span>
-                <ChevronRight className="size-4 shrink-0 text-stone-400" strokeWidth={1.5} aria-hidden />
-              </Link>
+              {searchOpen ? (
+                <div className="space-y-2 px-4 py-3">
+                  <StoreSearch
+                    variant="drawer"
+                    autoFocus
+                    onNavigate={close}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setSearchOpen(false)}
+                    className="text-[13px] font-medium text-stone-500 transition hover:text-stone-800"
+                  >
+                    Cancelar búsqueda
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setSearchOpen(true)}
+                  className={`${drawerLinkClass} w-full`}
+                >
+                  <span className="inline-flex items-center gap-3">
+                    <Search className="size-[18px] text-stone-500" strokeWidth={1.5} aria-hidden />
+                    Buscar productos
+                  </span>
+                  <ChevronRight className="size-4 shrink-0 text-stone-400" strokeWidth={1.5} aria-hidden />
+                </button>
+              )}
             </li>
             <li>
               <Link href="/kits" onClick={close} className={drawerLinkClass}>

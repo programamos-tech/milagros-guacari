@@ -1,8 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import { StoreProductImageFrame } from "@/components/store/StoreProductImageFrame";
-import { STORE_IMAGE_QUALITY } from "@/lib/store-image";
 import Link from "next/link";
 import {
   createContext,
@@ -17,12 +15,15 @@ import {
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, Minus, Plus } from "lucide-react";
 import { setKitLineQuantity, setLineQuantity } from "@/app/actions/cart";
+import { CartUpsellList } from "@/components/store/CartUpsellList";
+import { FreeShippingProgress } from "@/components/store/FreeShippingProgress";
 import { formatCop } from "@/lib/money";
-import { productColorSwatchClass } from "@/lib/product-colors";
+import type { StoreCartUpsellProduct } from "@/lib/store-cart-upsells";
 import {
   shouldUnoptimizeStorageImageUrl,
   storagePublicObjectUrl,
 } from "@/lib/storage-public-url";
+import { STORE_IMAGE_QUALITY } from "@/lib/store-image";
 
 export type StoreCartDrawerItem = {
   productId?: string;
@@ -39,24 +40,18 @@ export type StoreCartDrawerItem = {
   maxStock: number;
 };
 
-type StoreCartSuggestion = {
-  id: string;
-  name: string;
-  priceCents: number;
-  imagePath: string | null;
-  colors: string[];
-};
+type StoreCartSuggestion = StoreCartUpsellProduct;
 
 const SCROLL_EDGE_EPS = 6;
 
-function CartDrawerSuggestionsRow({
-  suggestions,
-  onPickProduct,
+function CartDrawerUpsellScroller({
+  products,
+  onAdded,
 }: {
-  suggestions: StoreCartSuggestion[];
-  onPickProduct: () => void;
+  products: StoreCartUpsellProduct[];
+  onAdded: () => void;
 }) {
-  const scrollerRef = useRef<HTMLUListElement>(null);
+  const scrollerRef = useRef<HTMLDivElement>(null);
   const [canPrev, setCanPrev] = useState(false);
   const [canNext, setCanNext] = useState(false);
 
@@ -81,7 +76,7 @@ function CartDrawerSuggestionsRow({
       el.removeEventListener("scroll", updateArrows);
       ro.disconnect();
     };
-  }, [suggestions, updateArrows]);
+  }, [products, updateArrows]);
 
   const scrollStep = useCallback((dir: "prev" | "next") => {
     const el = scrollerRef.current;
@@ -93,7 +88,7 @@ function CartDrawerSuggestionsRow({
     });
   }, []);
 
-  if (suggestions.length === 0) return null;
+  if (products.length === 0) return null;
 
   const arrowBtnClass =
     "flex size-8 shrink-0 items-center justify-center border border-stone-300 text-stone-600 transition hover:border-[var(--store-accent)] hover:bg-[#fff8fb] hover:text-[var(--store-accent)]";
@@ -101,14 +96,14 @@ function CartDrawerSuggestionsRow({
   return (
     <section
       className="mt-2 border-t border-stone-200/90 pt-8"
-      aria-labelledby="store-cart-drawer-suggestions-title"
+      aria-labelledby="store-cart-drawer-upsell-title"
     >
       <div className="mb-5 flex items-center justify-between gap-3">
         <h3
-          id="store-cart-drawer-suggestions-title"
+          id="store-cart-drawer-upsell-title"
           className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-brand)]"
         >
-          También te puede gustar
+          Complementa tu compra
         </h3>
         <div className="flex min-h-8 shrink-0 items-center gap-1">
           {canPrev ? (
@@ -133,57 +128,14 @@ function CartDrawerSuggestionsRow({
           ) : null}
         </div>
       </div>
-
-      <ul
-        ref={scrollerRef}
-        className="store-cart-suggestions-scroll -mx-1 flex list-none gap-3 px-1 pb-2"
-      >
-        {suggestions.map((s) => {
-          const img = storagePublicObjectUrl(s.imagePath);
-          const swatches = s.colors.slice(0, 4);
-          const extraColors = Math.max(0, s.colors.length - swatches.length);
-          return (
-            <li key={s.id} className="w-[8.125rem] shrink-0">
-              <Link
-                href={`/products/${s.id}`}
-                onClick={onPickProduct}
-                className="block outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-[var(--store-accent)]/25 focus-visible:ring-offset-2"
-              >
-                <StoreProductImageFrame
-                  src={img}
-                  alt={s.name}
-                  bgClass="bg-[#f4f4f3]"
-                  sizes="130px"
-                  placeholderClassName="text-xl text-stone-200"
-                />
-                <p className="mt-2 line-clamp-2 text-[10px] font-semibold uppercase leading-snug tracking-[0.08em] text-[var(--store-brand)]">
-                  {s.name}
-                </p>
-                <p className="mt-1 text-[11px] font-medium tabular-nums text-stone-900">
-                  {formatCop(s.priceCents)}
-                </p>
-                {swatches.length > 0 ? (
-                  <div className="mt-2 flex flex-wrap items-center gap-1">
-                    {swatches.map((c, i) => (
-                      <span
-                        key={`${s.id}-sw-${i}`}
-                        className={`size-4 shrink-0 rounded-full ${productColorSwatchClass(c)}`}
-                        aria-hidden
-                        title={c}
-                      />
-                    ))}
-                    {extraColors > 0 ? (
-                      <span className="text-[10px] font-medium tabular-nums text-stone-500">
-                        +{extraColors}
-                      </span>
-                    ) : null}
-                  </div>
-                ) : null}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
+      <div ref={scrollerRef} className="store-cart-suggestions-scroll overflow-x-auto">
+        <CartUpsellList
+          products={products}
+          title=""
+          layout="scroll"
+          onAdded={onAdded}
+        />
+      </div>
     </section>
   );
 }
@@ -477,9 +429,9 @@ export function StoreCartDrawerProvider({
                       Explorar productos
                     </Link>
                   </div>
-                  <CartDrawerSuggestionsRow
-                    suggestions={suggestions}
-                    onPickProduct={closeCart}
+                  <CartDrawerUpsellScroller
+                    products={suggestions}
+                    onAdded={() => void reloadCart("quiet")}
                   />
                 </>
               ) : (
@@ -498,9 +450,9 @@ export function StoreCartDrawerProvider({
                       />
                     ))}
                   </ul>
-                  <CartDrawerSuggestionsRow
-                    suggestions={suggestions}
-                    onPickProduct={closeCart}
+                  <CartDrawerUpsellScroller
+                    products={suggestions}
+                    onAdded={() => void reloadCart("quiet")}
                   />
                 </>
               )}
@@ -508,6 +460,7 @@ export function StoreCartDrawerProvider({
 
             {items.length > 0 ? (
               <footer className="border-t border-stone-200/80 bg-white px-6 pb-8 pt-6 sm:px-8">
+                <FreeShippingProgress subtotalCents={subtotalCents} className="mb-5" />
                 <dl className="space-y-2 text-[12px] text-stone-700">
                   {subtotalVatCents > 0 ? (
                     <>

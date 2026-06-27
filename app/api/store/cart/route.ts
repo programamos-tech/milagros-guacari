@@ -15,6 +15,11 @@ import {
   resolveKitSalePriceCents,
 } from "@/lib/product-kits";
 import { getStorefrontCartLines } from "@/lib/storefront-cart";
+import {
+  CART_DRAWER_UPSELL_LIMIT,
+  loadStoreCartUpsells,
+  type StoreCartUpsellProduct,
+} from "@/lib/store-cart-upsells";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -35,48 +40,7 @@ export type CartDrawerItem = {
   maxStock: number;
 };
 
-export type CartDrawerSuggestion = {
-  id: string;
-  name: string;
-  priceCents: number;
-  imagePath: string | null;
-  colors: string[];
-};
-
-const SUGGESTION_LIMIT = 8;
-
-function normalizedColorList(colors: unknown): string[] {
-  if (!Array.isArray(colors)) return [];
-  return colors.filter((c): c is string => typeof c === "string" && c.trim().length > 0);
-}
-
-async function loadCartDrawerSuggestions(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  excludeIds: string[],
-): Promise<CartDrawerSuggestion[]> {
-  const exclude = new Set(excludeIds);
-  const { data } = await supabase
-    .from("products")
-    .select("id,name,price_cents,has_vat,image_path,colors,stock_quantity,created_at")
-    .eq("is_published", true)
-    .gt("stock_quantity", 0)
-    .order("created_at", { ascending: false })
-    .limit(Math.min(64, Math.max(32, SUGGESTION_LIMIT + exclude.size + 12)));
-
-  return (data ?? [])
-    .filter((row) => !exclude.has(row.id))
-    .slice(0, SUGGESTION_LIMIT)
-    .map((p) => ({
-      id: p.id,
-      name: p.name,
-      priceCents: storefrontListGrossUnitCents(
-        p.price_cents,
-        (p as { has_vat?: boolean | null }).has_vat,
-      ),
-      imagePath: p.image_path,
-      colors: normalizedColorList(p.colors),
-    }));
-}
+export type CartDrawerSuggestion = StoreCartUpsellProduct;
 
 function firstColorLabel(colors: unknown): string | null {
   if (!Array.isArray(colors) || colors.length === 0) return null;
@@ -117,7 +81,7 @@ export async function GET() {
 
   if (lines.length === 0) {
     const empty: CartDrawerItem[] = [];
-    const suggestions = await loadCartDrawerSuggestions(supabase, []);
+    const suggestions = await loadStoreCartUpsells(supabase, [], CART_DRAWER_UPSELL_LIMIT);
     return NextResponse.json({
       lines: [],
       items: empty,
@@ -236,7 +200,11 @@ export async function GET() {
     }
   }
 
-  const suggestions = await loadCartDrawerSuggestions(supabase, ids);
+  const suggestions = await loadStoreCartUpsells(
+    supabase,
+    ids,
+    CART_DRAWER_UPSELL_LIMIT,
+  );
 
   return NextResponse.json({
     lines,
