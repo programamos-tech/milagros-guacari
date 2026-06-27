@@ -14,16 +14,30 @@ export default function AdminDashboardError({
     console.error("[admin dashboard]", error);
   }, [error]);
 
+  const isNetworkError = /failed to fetch|networkerror|load failed/i.test(
+    error.message,
+  );
+
+  function handleRetry() {
+    if (isNetworkError) {
+      window.location.reload();
+      return;
+    }
+    reset();
+  }
+
   return (
     <div className="rounded-xl border border-red-200 bg-red-50/90 px-4 py-6 text-sm text-red-950 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-100">
       <p className="font-semibold">No se pudo cargar esta sección del panel</p>
       <p className="mt-2 text-red-900/90 dark:text-red-100/90">
-        {error.message || "Ocurrió un error al consultar los datos."}
+        {isNetworkError
+          ? "No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo."
+          : error.message || "Ocurrió un error al consultar los datos."}
       </p>
       <div className="mt-4 flex flex-wrap gap-3">
         <button
           type="button"
-          onClick={() => reset()}
+          onClick={handleRetry}
           className="rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-red-900 hover:bg-red-50 dark:border-red-800 dark:bg-red-950 dark:text-red-100 dark:hover:bg-red-900/40"
         >
           Reintentar

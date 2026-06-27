@@ -1,5 +1,5 @@
-import { NewInvoiceForm, NewInvoiceHeader } from "@/components/admin/NewInvoiceForm";
 import { AdminNewPageShell } from "@/components/admin/AdminNewPageShell";
+import { NuevaFacturaPageClient } from "@/components/admin/NuevaFacturaPageClient";
 import { requireAdminPermission } from "@/lib/require-admin-permission";
 
 export const dynamic = "force-dynamic";
@@ -19,8 +19,7 @@ export default async function AdminNuevaFacturaPage({ searchParams }: Props) {
 
   return (
     <AdminNewPageShell>
-      <NewInvoiceHeader />
-      <NewInvoiceForm
+      <NuevaFacturaPageClient
         initialError={initialError}
         initialCustomerId={initialCustomerId}
       />

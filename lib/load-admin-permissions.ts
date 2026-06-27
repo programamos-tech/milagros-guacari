@@ -21,11 +21,25 @@ async function loadAdminPermissionsUncached(): Promise<{
   const user = authResult?.data.user ?? null;
   if (!user) return null;
 
-  const { data: row } = await supabase
-    .from("profiles")
-    .select("permissions, job_role")
-    .eq("id", user.id)
-    .maybeSingle();
+  const profileResult = await withTimeout(
+    supabase
+      .from("profiles")
+      .select("permissions, job_role")
+      .eq("id", user.id)
+      .maybeSingle(),
+    ADMIN_AUTH_TIMEOUT_MS,
+  );
+
+  if (!profileResult || !("data" in profileResult)) {
+    console.error("[admin] profiles: timeout");
+    return null;
+  }
+
+  const { data: row, error: profileError } = profileResult;
+  if (profileError) {
+    console.error("[admin] profiles:", profileError.message);
+    return null;
+  }
 
   if (!row) return null;
 
