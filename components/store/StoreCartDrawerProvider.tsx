@@ -16,7 +16,6 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, Minus, Plus } from "lucide-react";
 import { setKitLineQuantity, setLineQuantity } from "@/app/actions/cart";
 import { CartUpsellList } from "@/components/store/CartUpsellList";
-import { FreeShippingProgress } from "@/components/store/FreeShippingProgress";
 import { formatCop } from "@/lib/money";
 import type { StoreCartUpsellProduct } from "@/lib/store-cart-upsells";
 import {
@@ -51,7 +50,7 @@ function CartDrawerUpsellScroller({
   products: StoreCartUpsellProduct[];
   onAdded: () => void;
 }) {
-  const scrollerRef = useRef<HTMLDivElement>(null);
+  const scrollerRef = useRef<HTMLUListElement>(null);
   const [canPrev, setCanPrev] = useState(false);
   const [canNext, setCanNext] = useState(false);
 
@@ -72,7 +71,9 @@ function CartDrawerUpsellScroller({
     el.addEventListener("scroll", updateArrows, { passive: true });
     const ro = new ResizeObserver(updateArrows);
     ro.observe(el);
+    const t = window.setTimeout(updateArrows, 150);
     return () => {
+      window.clearTimeout(t);
       el.removeEventListener("scroll", updateArrows);
       ro.disconnect();
     };
@@ -98,47 +99,48 @@ function CartDrawerUpsellScroller({
       className="mt-2 border-t border-stone-200/90 pt-8"
       aria-labelledby="store-cart-drawer-upsell-title"
     >
-      <div className="mb-5 flex items-center justify-between gap-3">
-        <h3
-          id="store-cart-drawer-upsell-title"
-          className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-brand)]"
-        >
-          Complementa tu compra
-        </h3>
-        <p className="mt-0.5 text-[11px] text-stone-500">
-          Añade sin salir de la bolsa
-        </p>
-        <div className="flex min-h-8 shrink-0 items-center gap-1">
-          {canPrev ? (
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3
+            id="store-cart-drawer-upsell-title"
+            className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-brand)]"
+          >
+            Complementa tu compra
+          </h3>
+          <p className="mt-0.5 text-[11px] text-stone-500">
+            Añade sin salir de la bolsa
+          </p>
+        </div>
+        {products.length > 1 ? (
+          <div className="flex shrink-0 items-center gap-1">
             <button
               type="button"
-              className={arrowBtnClass}
+              className={`${arrowBtnClass} disabled:pointer-events-none disabled:opacity-30`}
               aria-label="Ver productos anteriores"
+              disabled={!canPrev}
               onClick={() => scrollStep("prev")}
             >
               <ChevronLeft className="size-4" strokeWidth={1.35} aria-hidden />
             </button>
-          ) : null}
-          {canNext ? (
             <button
               type="button"
-              className={arrowBtnClass}
+              className={`${arrowBtnClass} disabled:pointer-events-none disabled:opacity-30`}
               aria-label="Ver más productos"
+              disabled={!canNext}
               onClick={() => scrollStep("next")}
             >
               <ChevronRight className="size-4" strokeWidth={1.35} aria-hidden />
             </button>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
       </div>
-      <div ref={scrollerRef} className="store-cart-suggestions-scroll overflow-x-auto">
-        <CartUpsellList
-          products={products}
-          title=""
-          layout="scroll"
-          onAdded={onAdded}
-        />
-      </div>
+      <CartUpsellList
+        products={products}
+        title=""
+        layout="scroll"
+        listRef={scrollerRef}
+        onAdded={onAdded}
+      />
     </section>
   );
 }
@@ -463,7 +465,6 @@ export function StoreCartDrawerProvider({
 
             {items.length > 0 ? (
               <footer className="border-t border-stone-200/80 bg-white px-6 pb-8 pt-6 sm:px-8">
-                <FreeShippingProgress subtotalCents={subtotalCents} className="mb-5" />
                 <dl className="space-y-2 text-[12px] text-stone-700">
                   {subtotalVatCents > 0 ? (
                     <>

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition, type RefObject } from "react";
 import { addToCart } from "@/app/actions/cart";
 import { formatCop } from "@/lib/money";
 import type { StoreCartUpsellProduct } from "@/lib/store-cart-upsells";
@@ -17,12 +17,14 @@ export function CartUpsellList({
   title = "Complementa tu compra",
   subtitle,
   layout = "stack",
+  listRef,
   onAdded,
 }: {
   products: StoreCartUpsellProduct[];
   title?: string;
   subtitle?: string;
   layout?: "stack" | "scroll" | "bump";
+  listRef?: RefObject<HTMLUListElement | null>;
   onAdded?: () => void;
 }) {
   const router = useRouter();
@@ -79,7 +81,7 @@ export function CartUpsellList({
 
   const itemClass =
     layout === "scroll"
-      ? "w-[8.75rem] shrink-0"
+      ? "w-[7.25rem] shrink-0 sm:w-[7.75rem]"
       : layout === "bump"
         ? "rounded-lg border border-stone-200/80 bg-white p-2.5"
         : "py-4 first:pt-0 last:pb-0";
@@ -111,7 +113,10 @@ export function CartUpsellList({
           {subtitle}
         </p>
       ) : null}
-      <ul className={`${title || subtitle ? "mt-4" : ""} ${listClass}`}>
+      <ul
+        ref={layout === "scroll" ? listRef : undefined}
+        className={`${title || subtitle ? "mt-4" : ""} ${listClass}`}
+      >
         {products.map((product) => {
           const img = storagePublicObjectUrl(product.imagePath);
           const busy = isPending && pendingId === product.id;
@@ -205,14 +210,14 @@ export function CartUpsellList({
                   }
                 >
                   {layout === "scroll" ? (
-                    <div className="relative aspect-square w-full overflow-hidden bg-[#f4f4f3]">
+                    <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#f4f4f3]">
                       {img ? (
                         <Image
                           src={img}
                           alt={product.name}
                           fill
                           className="object-cover"
-                          sizes="140px"
+                          sizes="124px"
                           unoptimized={shouldUnoptimizeStorageImageUrl(img)}
                         />
                       ) : (
