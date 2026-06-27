@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
 import { startCheckout } from "@/app/actions/checkout";
 import { syncStoreCustomerFromSession } from "@/app/actions/store-customer";
+import { ensureStoreCustomerLinked } from "@/lib/store-customer-service";
 import {
   isCartKitLine,
   isCartProductLine,
@@ -39,10 +40,9 @@ import {
   type CheckoutShippingInitial,
 } from "@/components/store/CheckoutShippingFields";
 import { CheckoutLineControls } from "@/components/store/CheckoutLineControls";
-import { CartUpsellList } from "@/components/store/CartUpsellList";
-import { FreeShippingProgress } from "@/components/store/FreeShippingProgress";
+import { CartUpsellScroller } from "@/components/store/CartUpsellScroller";
 import {
-  CHECKOUT_PAYMENT_UPSELL_LIMIT,
+  CART_DRAWER_UPSELL_LIMIT,
   loadStoreCartUpsells,
 } from "@/lib/store-cart-upsells";
 import { freeShippingProgress } from "@/lib/store-free-shipping";
@@ -297,66 +297,76 @@ export default async function CheckoutPage({
   let wholesaleDisplayPct = 0;
 
   if (checkoutUser?.email) {
+    accountEmail = checkoutUser.email;
+    const meta = checkoutUser.user_metadata as
+      | { full_name?: string; document_id?: string }
+      | undefined;
+    const full = meta?.full_name?.trim();
+    if (full) {
+      const parts = full.split(/\s+/).filter(Boolean);
+      defaultFirst = parts[0] ?? "";
+      defaultLast = parts.length > 1 ? parts.slice(1).join(" ") : "";
+    }
+
     const { data: adminProf } = await sessionSb
       .from("profiles")
       .select("id")
       .eq("id", checkoutUser.id)
       .maybeSingle();
+
     if (!adminProf) {
-      accountEmail = checkoutUser.email;
-      const full = (
-        checkoutUser.user_metadata as { full_name?: string } | undefined
-      )?.full_name?.trim();
-      if (full) {
-        const parts = full.split(/\s+/).filter(Boolean);
-        defaultFirst = parts[0] ?? "";
-        defaultLast = parts.length > 1 ? parts.slice(1).join(" ") : "";
-      }
+      await ensureStoreCustomerLinked(
+        checkoutUser.id,
+        checkoutUser.email,
+        full ?? null,
+        meta?.document_id ?? null,
+      );
+    }
 
-      const { data: cust } = await sessionSb
-        .from("customers")
-        .select(
-          "name, phone, shipping_address, shipping_city, shipping_postal_code, customer_kind, wholesale_discount_percent",
-        )
-        .maybeSingle();
+    const { data: cust } = await sessionSb
+      .from("customers")
+      .select(
+        "name, phone, shipping_address, shipping_city, shipping_postal_code, customer_kind, wholesale_discount_percent",
+      )
+      .eq("auth_user_id", checkoutUser.id)
+      .maybeSingle();
 
-      wholesaleDisplayPct = cust
-        ? wholesaleDiscountPercentFromRow(
-            cust as {
-              customer_kind?: string | null;
-              wholesale_discount_percent?: number | null;
-            },
-          )
-        : 0;
+    if (!adminProf && cust) {
+      wholesaleDisplayPct = wholesaleDiscountPercentFromRow(
+        cust as {
+          customer_kind?: string | null;
+          wholesale_discount_percent?: number | null;
+        },
+      );
+    }
 
-      if (cust) {
-        const nm = cust.name?.trim() ?? "";
-        if (nm) {
-          const parts = nm.split(/\s+/).filter(Boolean);
-          shippingInitial.firstName = parts[0] ?? defaultFirst;
-          shippingInitial.lastName =
-            parts.length > 1 ? parts.slice(1).join(" ") : defaultLast;
-        } else {
-          shippingInitial.firstName = defaultFirst;
-          shippingInitial.lastName = defaultLast;
-        }
-        shippingInitial.profileAddressLine = cust.shipping_address?.trim() ?? "";
-        shippingInitial.city = cust.shipping_city?.trim() ?? "";
-        shippingInitial.zipCode = cust.shipping_postal_code?.trim() ?? "";
-        shippingInitial.mobile = cust.phone?.trim() ?? "";
-
-        const { data: addrs } = await sessionSb
-          .from("customer_addresses")
-          .select("id, label, address_line, reference, sort_order")
-          .order("sort_order", { ascending: true });
-        savedAddresses = (addrs ?? []) as CheckoutSavedAddress[];
+    if (cust) {
+      const nm = cust.name?.trim() ?? "";
+      if (nm) {
+        const parts = nm.split(/\s+/).filter(Boolean);
+        shippingInitial.firstName = parts[0] ?? defaultFirst;
+        shippingInitial.lastName =
+          parts.length > 1 ? parts.slice(1).join(" ") : defaultLast;
       } else {
         shippingInitial.firstName = defaultFirst;
         shippingInitial.lastName = defaultLast;
-        const authPhone = checkoutUser.phone?.trim();
-        if (authPhone) {
-          shippingInitial.mobile = authPhone;
-        }
+      }
+      shippingInitial.profileAddressLine = cust.shipping_address?.trim() ?? "";
+      shippingInitial.city = cust.shipping_city?.trim() ?? "";
+      shippingInitial.zipCode = cust.shipping_postal_code?.trim() ?? "";
+      shippingInitial.mobile = cust.phone?.trim() ?? "";
+
+      const { data: addrs } = await sessionSb
+        .from("customer_addresses")
+        .select("id, label, address_line, reference, sort_order")
+        .order("sort_order", { ascending: true });
+      savedAddresses = (addrs ?? []) as CheckoutSavedAddress[];
+    } else {
+      shippingInitial.firstName = defaultFirst;
+      shippingInitial.lastName = defaultLast;
+      const authPhone = checkoutUser.phone?.trim();
+      if (authPhone) {
+        shippingInitial.mobile = authPhone;
       }
     }
   }
@@ -443,10 +453,10 @@ export default async function CheckoutPage({
   const totalVat = Math.max(0, totalGross - totalNet);
   const wholesaleSavingCents = Math.max(0, catalogListTotalGross - totalGross);
 
-  const paymentUpsellProducts = await loadStoreCartUpsells(
+  const cartUpsellProducts = await loadStoreCartUpsells(
     sessionSb,
     productIds,
-    CHECKOUT_PAYMENT_UPSELL_LIMIT,
+    CART_DRAWER_UPSELL_LIMIT,
   );
   const shippingProgress = freeShippingProgress(totalGross);
 
@@ -493,10 +503,6 @@ export default async function CheckoutPage({
                 <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-brand)]">
                   Carrito
                 </h2>
-                <FreeShippingProgress
-                  subtotalCents={totalGross}
-                  className="mt-4"
-                />
                 <ul className="mt-6 divide-y divide-stone-200">
                   {rows.map(({ line, p, sub, catalogListLineGross }) => {
                     const row = p as typeof p & {
@@ -526,14 +532,14 @@ export default async function CheckoutPage({
                         <div className="flex min-w-0 flex-1 gap-5 sm:gap-8">
                           <Link
                             href={`/products/${p.id}`}
-                            className="relative size-[6.75rem] shrink-0 bg-[#f0eeeb] sm:size-28"
+                            className="relative aspect-[3/4] w-[6.75rem] shrink-0 overflow-hidden bg-[#f0eeeb] sm:w-28"
                           >
                             {img ? (
                               <Image
                                 src={img}
                                 alt=""
                                 fill
-                                className="object-cover"
+                                className="object-cover object-center"
                                 sizes="112px"
                                 unoptimized={shouldUnoptimizeStorageImageUrl(img)}
                               />
@@ -609,14 +615,14 @@ export default async function CheckoutPage({
                         <div className="flex min-w-0 flex-1 gap-5 sm:gap-8">
                           <Link
                             href="/kits"
-                            className="relative size-[6.75rem] shrink-0 bg-[#f0eeeb] sm:size-28"
+                            className="relative aspect-[3/4] w-[6.75rem] shrink-0 overflow-hidden bg-[#f0eeeb] sm:w-28"
                           >
                             {img ? (
                               <Image
                                 src={img}
                                 alt=""
                                 fill
-                                className="object-cover"
+                                className="object-cover object-center"
                                 sizes="112px"
                                 unoptimized={shouldUnoptimizeStorageImageUrl(img)}
                               />
@@ -652,6 +658,12 @@ export default async function CheckoutPage({
                     );
                   })}
                 </ul>
+                <CartUpsellScroller
+                  products={cartUpsellProducts}
+                  titleId="checkout-cart-upsell-title"
+                  subtitle="Agrega en un clic"
+                  className="border-t border-stone-200 pt-10"
+                />
               </section>
 
               <section className="border-t border-stone-200 pt-12">
@@ -852,26 +864,6 @@ export default async function CheckoutPage({
                   <dd className="tabular-nums">{formatCop(totalGross)}</dd>
                 </div>
               </dl>
-
-              {paymentUpsellProducts.length > 0 ? (
-                <details className="group border-t border-stone-300/70 pt-4">
-                  <summary className="cursor-pointer list-none text-[12px] font-medium text-stone-700 marker:hidden [&::-webkit-details-marker]:hidden">
-                    <span className="flex items-center justify-between gap-2">
-                      ¿Algo más para tu rutina?
-                      <span className="text-stone-400 transition group-open:rotate-180">
-                        ▾
-                      </span>
-                    </span>
-                  </summary>
-                  <div className="mt-3">
-                    <CartUpsellList
-                      products={paymentUpsellProducts}
-                      title=""
-                      layout="bump"
-                    />
-                  </div>
-                </details>
-              ) : null}
 
               <button type="submit" className={primaryBtnClass}>
                 Finalizar compra

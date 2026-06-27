@@ -46,7 +46,11 @@ export async function loadStoreCartUpsells(
     .limit(fetchLimit);
 
   return (data ?? [])
-    .filter((row) => !exclude.has(row.id))
+    .filter((row) => {
+      if (exclude.has(row.id)) return false;
+      const path = typeof row.image_path === "string" ? row.image_path.trim() : "";
+      return path.length > 0;
+    })
     .slice(0, limit)
     .map((p) => {
       const rawFragrance = Array.isArray(p.fragrance_options)
