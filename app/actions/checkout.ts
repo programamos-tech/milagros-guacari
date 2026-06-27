@@ -31,6 +31,7 @@ import {
 import { storefrontPayableUnitGrossCents } from "@/lib/storefront-gross-price";
 import { findActiveStoreCouponForCheckout } from "@/lib/store-coupons";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
+import { deductOrderItemsStock, deductTransferWebOrderStock } from "@/lib/storefront-order-stock";
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -357,6 +358,15 @@ export async function startCheckout(formData: FormData) {
   if (iErr) {
     await supabase.from("orders").delete().eq("id", orderId);
     redirect("/checkout?error=items");
+  }
+
+  if (useTransfer) {
+    const stockResult = await deductTransferWebOrderStock(supabase, orderId);
+    if (!stockResult.ok) {
+      redirect("/checkout?error=stock");
+    }
+    revalidatePath("/admin/products");
+    revalidatePath("/products");
   }
 
   revalidatePath("/admin/ventas");
