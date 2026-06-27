@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { revalidateStoreCouponsTag } from "@/lib/revalidate-store-cache";
-import { verifyInsertedRow } from "@/lib/admin-insert-verify";
+import { verifyInsertedRowInDev } from "@/lib/admin-insert-verify";
 import { assertActionPermission } from "@/lib/require-admin-permission";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -187,7 +187,7 @@ export async function createStoreCoupon(formData: FormData) {
     redirect("/admin/coupons/nuevo?coupon_error=db");
   }
 
-  if (!(await verifyInsertedRow(supabase, "store_coupons", couponId))) {
+  if (!(await verifyInsertedRowInDev(supabase, "store_coupons", couponId))) {
     await supabase.from("store_coupons").delete().eq("id", couponId);
     redirect("/admin/coupons/nuevo?coupon_error=db");
   }

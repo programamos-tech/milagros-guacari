@@ -1,7 +1,10 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
-import { verifyInsertedRow, verifyRowCountAtLeast } from "@/lib/admin-insert-verify";
+import {
+  verifyInsertedRowInDev,
+  verifyRowCountAtLeastInDev,
+} from "@/lib/admin-insert-verify";
 import { assertActionPermission } from "@/lib/require-admin-permission";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
@@ -41,7 +44,7 @@ export async function createSupplierAction(formData: FormData) {
 
   if (error || !data?.id) redirect("/admin/proveedores/nuevo?error=db");
   const supplierId = String(data.id);
-  if (!(await verifyInsertedRow(supabase, "suppliers", supplierId))) {
+  if (!(await verifyInsertedRowInDev(supabase, "suppliers", supplierId))) {
     redirect("/admin/proveedores/nuevo?error=db");
   }
   revalidatePath("/admin/proveedores");
@@ -164,13 +167,13 @@ export async function createSupplierInvoiceAction(formData: FormData) {
     redirectDb();
   }
 
-  if (!(await verifyInsertedRow(supabase, "supplier_invoices", invId))) {
+  if (!(await verifyInsertedRowInDev(supabase, "supplier_invoices", invId))) {
     await supabase.from("supplier_invoice_lines").delete().eq("invoice_id", invId);
     await supabase.from("supplier_invoices").delete().eq("id", invId);
     redirectDb();
   }
   if (
-    !(await verifyRowCountAtLeast(
+    !(await verifyRowCountAtLeastInDev(
       supabase,
       "supplier_invoice_lines",
       { column: "invoice_id", value: invId },

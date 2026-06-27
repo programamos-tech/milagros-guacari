@@ -1,7 +1,7 @@
 "use server";
 
 import { logAdminActivity } from "@/lib/admin-activity-log";
-import { verifyInsertedRow } from "@/lib/admin-insert-verify";
+import { verifyInsertedRowInDev } from "@/lib/admin-insert-verify";
 import {
   legacySizeFromOptions,
   parseSizeOptionsFromFormData,
@@ -408,10 +408,10 @@ export async function createProduct(formData: FormData) {
   }
 
   const id = row.id as string;
-  if (!(await verifyInsertedRow(supabase, "products", id))) {
+  if (!(await verifyInsertedRowInDev(supabase, "products", id))) {
     redirect("/admin/products/new?error=db");
   }
-  await logAdminActivity(supabase, {
+  void logAdminActivity(supabase, {
     actorId: user.id,
     actionType: "product_created",
     entityType: "product",
@@ -419,13 +419,10 @@ export async function createProduct(formData: FormData) {
     summary: `Nuevo producto: ${name} (${reference})`,
     metadata: { price_cents, stock_warehouse: stockWarehouse, stock_local: stockLocal },
   });
-  revalidatePath("/admin/actividades");
-  const fragranceImagesMap = await buildFragranceOptionImagesFromForm(
-    supabase,
-    id,
-    formData,
-    fragrance_options,
-  );
+  const [fragranceImagesMap, uploaded] = await Promise.all([
+    buildFragranceOptionImagesFromForm(supabase, id, formData, fragrance_options),
+    uploadProductImageFromForm(supabase, id, formData),
+  ]);
   if (Object.keys(fragranceImagesMap).length > 0) {
     await supabase
       .from("products")
@@ -433,7 +430,6 @@ export async function createProduct(formData: FormData) {
       .eq("id", id);
   }
 
-  const uploaded = await uploadProductImageFromForm(supabase, id, formData);
   if (uploaded.status === "ok") {
     await supabase
       .from("products")
@@ -441,13 +437,11 @@ export async function createProduct(formData: FormData) {
       .eq("id", id);
   } else if (uploaded.status === "error") {
     revalidateStoreProductCache();
-    revalidatePath("/products");
     revalidatePath("/admin/products");
     redirect("/admin/products?saved=1&uploadError=1");
   }
 
   revalidateStoreProductCache();
-  revalidatePath("/products");
   revalidatePath("/admin/products");
   redirect("/admin/products?saved=1");
 }

@@ -35,20 +35,18 @@ export default async function AdminOrderDetailPage({ params, searchParams }: Pro
   const sp = await searchParams;
   const ventasListHref = safeAdminVentasListReturnPath(sp.returnTo);
   const supabase = await createSupabaseServerClient();
-  const { data: order } = await supabase
-    .from("orders")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
+
+  const [{ data: order }, { data: itemsRaw }] = await Promise.all([
+    supabase.from("orders").select("*").eq("id", id).maybeSingle(),
+    supabase
+      .from("order_items")
+      .select(
+        "id, quantity, unit_price_cents, product_name_snapshot, product_id, line_discount_percent, line_discount_amount_cents, products(reference)",
+      )
+      .eq("order_id", id),
+  ]);
 
   if (!order) notFound();
-
-  const { data: itemsRaw } = await supabase
-    .from("order_items")
-    .select(
-      "id, quantity, unit_price_cents, product_name_snapshot, product_id, line_discount_percent, line_discount_amount_cents, products(reference)",
-    )
-    .eq("order_id", id);
 
   const items = (itemsRaw ?? []) as unknown as ItemRow[];
 
@@ -71,26 +69,46 @@ export default async function AdminOrderDetailPage({ params, searchParams }: Pro
     order.customer_id != null && String(order.customer_id).trim().length > 0
       ? String(order.customer_id)
       : null;
+
+  const checkoutPm =
+    "checkout_payment_method" in order && order.checkout_payment_method != null
+      ? String(order.checkout_payment_method)
+      : null;
+
+  const needsTransferProofs =
+    String(order.status) === "pending" && checkoutPm === "transfer";
+
+  const [customerRes, proofsRes] = await Promise.all([
+    customerId
+      ? supabase
+          .from("customers")
+          .select("phone,document_id,shipping_address,shipping_city")
+          .eq("id", customerId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    needsTransferProofs
+      ? supabase
+          .from("order_transfer_proofs")
+          .select("storage_path, original_filename, created_at")
+          .eq("order_id", id)
+          .order("created_at", { ascending: true })
+      : Promise.resolve({ data: [] as { storage_path: string; original_filename: string | null; created_at: string }[] }),
+  ]);
+
   let customerDocumentId: string | null = null;
   let customerPhoneFromProfile: string | null = null;
   let customerAddressFromProfile: string | null = null;
 
-  if (customerId) {
-    const { data: cust } = await supabase
-      .from("customers")
-      .select("phone,document_id,shipping_address,shipping_city")
-      .eq("id", customerId)
-      .maybeSingle();
-    if (cust) {
-      const doc = cust.document_id != null ? String(cust.document_id).trim() : "";
-      if (doc.length > 0) customerDocumentId = doc;
-      const phone = cust.phone != null ? String(cust.phone).trim() : "";
-      if (phone.length > 0) customerPhoneFromProfile = phone;
-      const addrParts = [cust.shipping_city, cust.shipping_address]
-        .map((v) => (v != null ? String(v).trim() : ""))
-        .filter((v) => v.length > 0);
-      if (addrParts.length > 0) customerAddressFromProfile = addrParts.join(" · ");
-    }
+  const cust = customerRes.data;
+  if (cust) {
+    const doc = cust.document_id != null ? String(cust.document_id).trim() : "";
+    if (doc.length > 0) customerDocumentId = doc;
+    const phone = cust.phone != null ? String(cust.phone).trim() : "";
+    if (phone.length > 0) customerPhoneFromProfile = phone;
+    const addrParts = [cust.shipping_city, cust.shipping_address]
+      .map((v) => (v != null ? String(v).trim() : ""))
+      .filter((v) => v.length > 0);
+    if (addrParts.length > 0) customerAddressFromProfile = addrParts.join(" · ");
   }
 
   const orderShippingPhone =
@@ -107,26 +125,15 @@ export default async function AdminOrderDetailPage({ params, searchParams }: Pro
   const customerPhone =
     orderShippingPhone.length > 0 ? orderShippingPhone : customerPhoneFromProfile;
 
-  const checkoutPm =
-    "checkout_payment_method" in order && order.checkout_payment_method != null
-      ? String(order.checkout_payment_method)
-      : null;
-
   let transferProofAttachments: {
     signedUrl: string;
     createdAt: string;
     filename: string | null;
   }[] = [];
 
-  if (String(order.status) === "pending" && checkoutPm === "transfer") {
-    const { data: proofsRaw } = await supabase
-      .from("order_transfer_proofs")
-      .select("storage_path, original_filename, created_at")
-      .eq("order_id", id)
-      .order("created_at", { ascending: true });
-
+  if (needsTransferProofs) {
     const bucket = supabase.storage.from("order-payment-proofs");
-    const rows = proofsRaw ?? [];
+    const rows = proofsRes.data ?? [];
     transferProofAttachments = (
       await Promise.all(
         rows.map(async (row) => {

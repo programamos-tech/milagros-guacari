@@ -5,7 +5,10 @@ import {
   activityStockTraceToMetadata,
   buildPosSaleStockTrace,
 } from "@/lib/activity-log-stock";
-import { verifyInsertedRow, verifyRowCountAtLeast } from "@/lib/admin-insert-verify";
+import {
+  verifyInsertedRowInDev,
+  verifyRowCountAtLeastInDev,
+} from "@/lib/admin-insert-verify";
 import { requireAdminPermission } from "@/lib/require-admin-permission";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
@@ -422,26 +425,24 @@ export async function createPosInvoiceAction(formData: FormData) {
     redirectError("db");
   }
 
-  if (process.env.NODE_ENV !== "production") {
-    const [orderVerified, itemsVerified] = await Promise.all([
-      verifyInsertedRow(supabase, "orders", orderId),
-      verifyRowCountAtLeast(
-        supabase,
-        "order_items",
-        { column: "order_id", value: orderId },
-        itemRows.length,
-      ),
-    ]);
+  const [orderVerified, itemsVerified] = await Promise.all([
+    verifyInsertedRowInDev(supabase, "orders", orderId),
+    verifyRowCountAtLeastInDev(
+      supabase,
+      "order_items",
+      { column: "order_id", value: orderId },
+      itemRows.length,
+    ),
+  ]);
 
-    if (!orderVerified) {
-      await supabase.from("orders").delete().eq("id", orderId);
-      redirectError("db");
-    }
-    if (!itemsVerified) {
-      await supabase.from("order_items").delete().eq("order_id", orderId);
-      await supabase.from("orders").delete().eq("id", orderId);
-      redirectError("db");
-    }
+  if (!orderVerified) {
+    await supabase.from("orders").delete().eq("id", orderId);
+    redirectError("db");
+  }
+  if (!itemsVerified) {
+    await supabase.from("order_items").delete().eq("order_id", orderId);
+    await supabase.from("orders").delete().eq("id", orderId);
+    redirectError("db");
   }
 
   const stockProductById = new Map(
@@ -495,7 +496,7 @@ export async function createPosInvoiceAction(formData: FormData) {
     maximumFractionDigits: 0,
   }).format(totalCents / 100);
 
-  await logAdminActivity(supabase, {
+  void logAdminActivity(supabase, {
     actorId: userId,
     actionType: "sale_created",
     entityType: "order",

@@ -6,7 +6,10 @@ import {
   parseStoreCustomerKind,
 } from "@/lib/customer-wholesale-pricing";
 import { loadAdminPermissions } from "@/lib/load-admin-permissions";
-import { verifyInsertedRow, verifyRowCountAtLeast } from "@/lib/admin-insert-verify";
+import {
+  verifyInsertedRowInDev,
+  verifyRowCountAtLeastInDev,
+} from "@/lib/admin-insert-verify";
 import { assertActionPermission } from "@/lib/require-admin-permission";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
@@ -43,15 +46,11 @@ export async function createQuickStoreCustomer(input: {
   name: string;
   document_id?: string;
 }): Promise<CreateQuickStoreCustomerResult> {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, code: "auth" };
-
   const perm = await loadAdminPermissions();
-  if (!perm?.permissions.clientes_crear) return { ok: false, code: "forbidden" };
+  if (!perm) return { ok: false, code: "auth" };
+  if (!perm.permissions.clientes_crear) return { ok: false, code: "forbidden" };
 
+  const supabase = await createSupabaseServerClient();
   const name = String(input.name ?? "").trim();
   const documentId = String(input.document_id ?? "").trim();
   if (!name) return { ok: false, code: "name" };
@@ -78,24 +77,22 @@ export async function createQuickStoreCustomer(input: {
   if (insertErr || !cust) return { ok: false, code: "db" };
 
   const customerId = (cust as { id: string }).id;
-  if (!(await verifyInsertedRow(supabase, "customers", customerId))) {
+  if (!(await verifyInsertedRowInDev(supabase, "customers", customerId))) {
     return { ok: false, code: "db" };
   }
 
-  await logAdminActivity(supabase, {
-    actorId: user.id,
+  void logAdminActivity(supabase, {
+    actorId: perm.userId,
     actionType: "customer_created",
     entityType: "customer",
-    entityId: (cust as { id: string }).id,
+    entityId: customerId,
     summary: `Nuevo cliente: ${name}${documentId ? ` · Doc. ${documentId}` : ""}`,
     metadata: {
       source: "pos_quick",
       ...(documentId ? { document_id: documentId } : {}),
     },
   });
-  revalidatePath("/admin/actividades");
-  revalidatePath("/admin/customers");
-  revalidatePath("/admin/ventas/nueva");
+
   return {
     ok: true,
     customer: cust as QuickStoreCustomerRow,
@@ -272,11 +269,11 @@ export async function createStoreCustomer(formData: FormData) {
     }
   }
 
-  if (!(await verifyInsertedRow(supabase, "customers", customerId))) {
+  if (!(await verifyInsertedRowInDev(supabase, "customers", customerId))) {
     redirectNewCustomerError("db");
   }
   if (meaningful.length > 0) {
-    const addressesOk = await verifyRowCountAtLeast(
+    const addressesOk = await verifyRowCountAtLeastInDev(
       supabase,
       "customer_addresses",
       { column: "customer_id", value: customerId },

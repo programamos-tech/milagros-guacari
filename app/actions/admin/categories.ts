@@ -1,7 +1,7 @@
 "use server";
 
 import { isCategoryIconKey, resolveCategoryIconKey } from "@/lib/category-icons";
-import { verifyInsertedRow } from "@/lib/admin-insert-verify";
+import { verifyInsertedRowInDev } from "@/lib/admin-insert-verify";
 import { assertActionPermission } from "@/lib/require-admin-permission";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { revalidateStoreCatalogTags } from "@/lib/revalidate-store-cache";
@@ -40,7 +40,7 @@ export async function createCategory(formData: FormData) {
   if (error || !row?.id) redirectErr("db");
 
   const categoryId = String(row!.id);
-  if (!(await verifyInsertedRow(supabase, "categories", categoryId))) {
+  if (!(await verifyInsertedRowInDev(supabase, "categories", categoryId))) {
     redirectErr("db");
   }
 

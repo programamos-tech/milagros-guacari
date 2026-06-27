@@ -1,7 +1,10 @@
 "use server";
 
 import { logAdminActivity } from "@/lib/admin-activity-log";
-import { verifyInsertedRow, verifyRowCountAtLeast } from "@/lib/admin-insert-verify";
+import {
+  verifyInsertedRowInDev,
+  verifyRowCountAtLeastInDev,
+} from "@/lib/admin-insert-verify";
 import { fetchKitWithItems } from "@/lib/load-product-kits";
 import {
   kitMarginPreview,
@@ -171,12 +174,12 @@ export async function createKitAction(formData: FormData) {
     redirectKitError("/admin/kits/nuevo", code);
   }
 
-  if (!(await verifyInsertedRow(supabase, "product_kits", kitId))) {
+  if (!(await verifyInsertedRowInDev(supabase, "product_kits", kitId))) {
     await supabase.from("product_kits").delete().eq("id", kitId);
     redirectKitError("/admin/kits/nuevo", "db");
   }
   if (
-    !(await verifyRowCountAtLeast(
+    !(await verifyRowCountAtLeastInDev(
       supabase,
       "product_kit_items",
       { column: "kit_id", value: kitId },
