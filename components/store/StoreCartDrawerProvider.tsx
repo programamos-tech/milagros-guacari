@@ -179,7 +179,7 @@ function DrawerLine({
       <div className="flex gap-4">
         <Link
           href={href}
-          className="relative size-24 shrink-0 bg-[#f0eeeb]"
+          className="relative aspect-[3/4] w-[4.75rem] shrink-0 overflow-hidden bg-[#f0eeeb] sm:w-20"
         >
           {img ? (
             <Image
@@ -187,7 +187,7 @@ function DrawerLine({
               alt=""
               fill
               className="object-cover object-center"
-              sizes="96px"
+              sizes="80px"
               quality={STORE_IMAGE_QUALITY}
               unoptimized={shouldUnoptimizeStorageImageUrl(img)}
             />
