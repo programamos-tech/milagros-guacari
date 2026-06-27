@@ -1,4 +1,9 @@
 import { VentasPageShell } from "@/components/admin/VentasPageBody";
+import {
+  currentYearMonthInReportStore,
+  monthYmdBounds,
+  prettyYearMonthLabel,
+} from "@/lib/admin-report-range";
 import type { VentaEstadoFilter, VentaPagoFilter } from "@/lib/ventas-sales";
 
 export const dynamic = "force-dynamic";
@@ -34,10 +39,10 @@ type Props = {
 
 export default async function AdminVentasPage({ searchParams }: Props) {
   const sp = await searchParams;
-  const qRaw = typeof sp.q === "string" ? sp.q : "";
+  const qRaw = (typeof sp.q === "string" ? sp.q : "").trim();
   const status = (typeof sp.status === "string" ? sp.status : "all") as VentaEstadoFilter;
   const payment = (typeof sp.payment === "string" ? sp.payment : "all") as VentaPagoFilter;
-  const { from: dateFrom, to: dateTo } = normalizeDateRange(
+  const { from: urlFrom, to: urlTo } = normalizeDateRange(
     searchParamFirst(sp.from),
     searchParamFirst(sp.to),
   );
@@ -45,13 +50,29 @@ export default async function AdminVentasPage({ searchParams }: Props) {
   const pageRequested =
     Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : 1;
 
+  const hasExplicitDateOrQuery =
+    qRaw.length > 0 || Boolean(urlFrom) || Boolean(urlTo);
+
+  const currentMonth = currentYearMonthInReportStore();
+  const monthBounds = monthYmdBounds(currentMonth);
+  const defaultMonthApplied = !hasExplicitDateOrQuery && monthBounds != null;
+  const dateFrom = hasExplicitDateOrQuery ? urlFrom : monthBounds?.from ?? null;
+  const dateTo = hasExplicitDateOrQuery ? urlTo : monthBounds?.to ?? null;
+  const periodLabel = defaultMonthApplied
+    ? prettyYearMonthLabel(currentMonth)
+    : null;
+
   return (
     <VentasPageShell
       qRaw={qRaw}
       status={status}
       payment={payment}
+      urlFrom={urlFrom}
+      urlTo={urlTo}
       dateFrom={dateFrom}
       dateTo={dateTo}
+      defaultMonthApplied={defaultMonthApplied}
+      periodLabel={periodLabel}
       pageRequested={pageRequested}
     />
   );

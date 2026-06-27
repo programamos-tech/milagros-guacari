@@ -394,24 +394,26 @@ export async function createPosInvoiceAction(formData: FormData) {
     redirectError("db");
   }
 
-  const [orderVerified, itemsVerified] = await Promise.all([
-    verifyInsertedRow(supabase, "orders", orderId),
-    verifyRowCountAtLeast(
-      supabase,
-      "order_items",
-      { column: "order_id", value: orderId },
-      itemRows.length,
-    ),
-  ]);
+  if (process.env.NODE_ENV !== "production") {
+    const [orderVerified, itemsVerified] = await Promise.all([
+      verifyInsertedRow(supabase, "orders", orderId),
+      verifyRowCountAtLeast(
+        supabase,
+        "order_items",
+        { column: "order_id", value: orderId },
+        itemRows.length,
+      ),
+    ]);
 
-  if (!orderVerified) {
-    await supabase.from("orders").delete().eq("id", orderId);
-    redirectError("db");
-  }
-  if (!itemsVerified) {
-    await supabase.from("order_items").delete().eq("order_id", orderId);
-    await supabase.from("orders").delete().eq("id", orderId);
-    redirectError("db");
+    if (!orderVerified) {
+      await supabase.from("orders").delete().eq("id", orderId);
+      redirectError("db");
+    }
+    if (!itemsVerified) {
+      await supabase.from("order_items").delete().eq("order_id", orderId);
+      await supabase.from("orders").delete().eq("id", orderId);
+      redirectError("db");
+    }
   }
 
   const stockProductById = new Map(

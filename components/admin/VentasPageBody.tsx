@@ -40,6 +40,8 @@ export async function VentasPageBody({
   qRaw,
   status,
   payment,
+  urlFrom,
+  urlTo,
   dateFrom,
   dateTo,
   pageRequested,
@@ -47,6 +49,8 @@ export async function VentasPageBody({
   qRaw: string;
   status: VentaEstadoFilter;
   payment: VentaPagoFilter;
+  urlFrom: string | null;
+  urlTo: string | null;
   dateFrom: string | null;
   dateTo: string | null;
   pageRequested: number;
@@ -114,8 +118,8 @@ export async function VentasPageBody({
       q: qRaw,
       status,
       payment,
-      from: dateFrom,
-      to: dateTo,
+      from: urlFrom,
+      to: urlTo,
       page: p > 1 ? p : undefined,
     });
 
@@ -123,8 +127,8 @@ export async function VentasPageBody({
     q: qRaw,
     status,
     payment,
-    from: dateFrom,
-    to: dateTo,
+    from: urlFrom,
+    to: urlTo,
     page,
   });
 
@@ -146,8 +150,8 @@ export async function VentasPageBody({
       >
         <VentasFiltersBar
           initialQ={qRaw}
-          initialFrom={dateFrom ?? ""}
-          initialTo={dateTo ?? ""}
+          initialFrom={urlFrom ?? ""}
+          initialTo={urlTo ?? ""}
         />
       </Suspense>
       <VentasSalesTable rows={pageRows} orderListReturnHref={orderListReturnHref} />
@@ -165,15 +169,23 @@ export function VentasPageShell({
   qRaw,
   status,
   payment,
+  urlFrom,
+  urlTo,
   dateFrom,
   dateTo,
+  defaultMonthApplied,
+  periodLabel,
   pageRequested,
 }: {
   qRaw: string;
   status: VentaEstadoFilter;
   payment: VentaPagoFilter;
+  urlFrom: string | null;
+  urlTo: string | null;
   dateFrom: string | null;
   dateTo: string | null;
+  defaultMonthApplied: boolean;
+  periodLabel: string | null;
   pageRequested: number;
 }) {
   const suspenseKey = `${qRaw}|${status}|${payment}|${dateFrom ?? ""}|${dateTo ?? ""}|${pageRequested}`;
@@ -186,7 +198,9 @@ export function VentasPageShell({
             Ventas
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
-            Gestioná facturas de mostrador y pedidos con envío desde un solo lugar.
+            {defaultMonthApplied && periodLabel
+              ? `Mostrando ${periodLabel}. Usá los filtros de fecha para ver otro periodo.`
+              : "Gestioná facturas de mostrador y pedidos con envío desde un solo lugar."}
           </p>
         </div>
         <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-end">
@@ -205,6 +219,8 @@ export function VentasPageShell({
           qRaw={qRaw}
           status={status}
           payment={payment}
+          urlFrom={urlFrom}
+          urlTo={urlTo}
           dateFrom={dateFrom}
           dateTo={dateTo}
           pageRequested={pageRequested}

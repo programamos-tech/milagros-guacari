@@ -19,10 +19,10 @@ export type ExpenseRow = {
 const EXPENSES_DETAIL_SELECT =
   "id,concept,amount_cents,payment_method,notes,expense_date,created_at,is_cancelled,cancellation_reason";
 
-/** Columnas mínimas para los totales del periodo (sin render). */
+/** Columnas mínimas para el fallback Node (sin RPC). */
 const EXPENSES_AGG_SELECT = "amount_cents,is_cancelled,expense_date,created_at";
 
-/** Tope del agregado (igual que el fallback de ventas): un mes cabe de sobra. */
+/** Tope del agregado fallback: un mes cabe de sobra. */
 const EXPENSES_AGG_LIMIT = 5000;
 
 const UUID_RE =
@@ -56,21 +56,6 @@ function applyExpensesFilters(query: any, opts: ExpensesFilterOpts) {
   return query;
 }
 
-function expenseCalendarYmd(e: {
-  expense_date?: unknown;
-  created_at?: unknown;
-}): string {
-  const ed = e.expense_date;
-  if (typeof ed === "string" && /^\d{4}-\d{2}-\d{2}/.test(ed.trim())) {
-    return ed.trim().slice(0, 10);
-  }
-  const ca = e.created_at;
-  if (typeof ca === "string" && ca.length > 0) {
-    return reportCalendarDayKeyFromIso(ca);
-  }
-  return "";
-}
-
 export type ExpensesFilterStats = {
   /** Suma de egresos NO anulados en el periodo filtrado (todas las páginas). */
   totalActivoCents: number;
@@ -89,17 +74,57 @@ const EMPTY_STATS: ExpensesFilterStats = {
   total: 0,
 };
 
-async function fetchExpensesFilterStats(
+function parseEgresosFilterStatsRpc(raw: unknown): ExpensesFilterStats | null {
+  if (raw == null) return null;
+  let payload: Record<string, unknown>;
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+      payload = parsed as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  } else if (typeof raw === "object" && !Array.isArray(raw)) {
+    payload = raw as Record<string, unknown>;
+  } else {
+    return null;
+  }
+
+  return {
+    totalActivoCents: Number(payload.totalActivoCents ?? 0),
+    todayTotalCents: Number(payload.todayTotalCents ?? 0),
+    cancelledCount: Number(payload.cancelledCount ?? 0),
+    total: Number(payload.total ?? 0),
+  };
+}
+
+async function fetchExpensesFilterStatsFallback(
   supabase: SupabaseClient,
   opts: ExpensesFilterOpts,
 ): Promise<ExpensesFilterStats> {
+  function expenseCalendarYmd(e: {
+    expense_date?: unknown;
+    created_at?: unknown;
+  }): string {
+    const ed = e.expense_date;
+    if (typeof ed === "string" && /^\d{4}-\d{2}-\d{2}/.test(ed.trim())) {
+      return ed.trim().slice(0, 10);
+    }
+    const ca = e.created_at;
+    if (typeof ca === "string" && ca.length > 0) {
+      return reportCalendarDayKeyFromIso(ca);
+    }
+    return "";
+  }
+
   const { data, error } = await applyExpensesFilters(
     supabase.from("store_expenses").select(EXPENSES_AGG_SELECT),
     opts,
   ).limit(EXPENSES_AGG_LIMIT);
 
   if (error) {
-    console.error("[egresos] stats:", error.message);
+    console.error("[egresos] fallback stats:", error.message);
     return EMPTY_STATS;
   }
 
@@ -111,7 +136,7 @@ async function fetchExpensesFilterStats(
   }[];
 
   if (rows.length >= EXPENSES_AGG_LIMIT) {
-    console.warn("[egresos] stats truncado a", EXPENSES_AGG_LIMIT, "filas");
+    console.warn("[egresos] fallback stats truncado a", EXPENSES_AGG_LIMIT, "filas");
   }
 
   const todayKey = todayYmdInReportStore();
@@ -135,6 +160,33 @@ async function fetchExpensesFilterStats(
     cancelledCount,
     total: rows.length,
   };
+}
+
+async function fetchExpensesFilterStats(
+  supabase: SupabaseClient,
+  opts: ExpensesFilterOpts,
+): Promise<ExpensesFilterStats> {
+  const q = opts.q?.trim() ? sanitizeIlikeQuery(opts.q) : null;
+
+  try {
+    const { data, error } = await supabase.rpc("admin_egresos_filter_stats", {
+      p_date_from: opts.dateFrom,
+      p_date_to: opts.dateTo,
+      p_q: q,
+    });
+
+    if (!error) {
+      const parsed = parseEgresosFilterStatsRpc(data);
+      if (parsed) return parsed;
+      console.error("[egresos] admin_egresos_filter_stats: payload inválido");
+    } else {
+      console.error("[egresos] admin_egresos_filter_stats:", error.message);
+    }
+  } catch (err) {
+    console.error("[egresos] admin_egresos_filter_stats exception:", err);
+  }
+
+  return fetchExpensesFilterStatsFallback(supabase, opts);
 }
 
 export type FetchAdminExpensesPageOpts = ExpensesFilterOpts & {
