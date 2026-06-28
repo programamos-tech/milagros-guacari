@@ -85,7 +85,7 @@ export const storeShortDescription =
 
 /** Teléfono de contacto (footer, cabecera). */
 export const storeSupportPhone =
-  process.env.NEXT_PUBLIC_STORE_PHONE ?? "+57 300 555 0100";
+  process.env.NEXT_PUBLIC_STORE_PHONE ?? "+57 320 5848594";
 
 /**
  * Solo dígitos para wa.me (sin +). Puedes fijar NEXT_PUBLIC_WHATSAPP_NUMBER si difiere del teléfono visible.
@@ -129,4 +129,4 @@ export const storeInstagramUrl =
 /** Mensaje precargado para abrir WhatsApp. */
 export const storeWhatsAppPrefilledText =
   process.env.NEXT_PUBLIC_WHATSAPP_TEXT ??
-  "Hola, quiero asesoría para elegir mis productos.";
+  "Hola, te escribo desde la tienda de Aleya Shop. Me gustaría recibir asesoría.";

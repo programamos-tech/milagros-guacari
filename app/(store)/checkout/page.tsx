@@ -767,9 +767,9 @@ export default async function CheckoutPage({
                   Forma de pago
                 </h2>
                 <p className="mt-2 text-sm leading-relaxed text-stone-500">
-                  El pago se realiza únicamente por transferencia bancaria. Al finalizar verás la llave
-                  de la cuenta y podrás adjuntar el comprobante en los 2 minutos posteriores a cada vez
-                  que habilites la subida.
+                  El pago se realiza únicamente por transferencia bancaria. Al finalizar verás las cuentas
+                  disponibles (Bancolombia, Nequi o Daviplata) y podrás adjuntar el comprobante en los 2
+                  minutos posteriores a cada vez que habilites la subida.
                 </p>
                 <input type="hidden" name="paymentMethod" value="transfer" />
                 <div className="mt-6 border border-[var(--store-accent)] bg-white p-4 ring-1 ring-[var(--store-accent)]">

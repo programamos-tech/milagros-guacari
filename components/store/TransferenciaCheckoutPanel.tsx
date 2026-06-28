@@ -164,8 +164,8 @@ export function TransferenciaCheckoutPanel({
   const activeWindow = deadlineIso !== null && remain > 0;
   const expiredWindow = deadlineIso !== null && remain <= 0;
 
-  const copyValue = async () => {
-    const v = instructions.accountValue.trim();
+  const copyValue = async (value: string) => {
+    const v = value.trim();
     if (!v) return;
     try {
       await navigator.clipboard.writeText(v);
@@ -206,34 +206,42 @@ export function TransferenciaCheckoutPanel({
               Datos para transferir
             </h2>
             <div className="mt-4 space-y-3 text-sm text-stone-700">
-              {instructions.bankName ? (
-                <p>
-                  <span className="text-stone-500">Banco: </span>
-                  {instructions.bankName}
-                </p>
-              ) : null}
               {instructions.accountHolder ? (
                 <p>
                   <span className="text-stone-500">Titular: </span>
                   {instructions.accountHolder}
                 </p>
               ) : null}
-              <div className="flex flex-wrap items-end justify-between gap-3 rounded-lg border border-stone-200 bg-white px-3 py-3">
-                <div className="min-w-0">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-500">
-                    {instructions.accountLabel}
-                  </p>
-                  <p className="mt-1 break-all font-mono text-base font-medium text-stone-900">
-                    {instructions.accountValue || "— (configura NEXT_PUBLIC_TRANSFER_ACCOUNT_VALUE)"}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => void copyValue()}
-                  className="shrink-0 rounded-lg border border-stone-300 bg-stone-50 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-stone-800 transition hover:bg-stone-100"
-                >
-                  Copiar
-                </button>
+              {instructions.taxId ? (
+                <p>
+                  <span className="text-stone-500">NIT: </span>
+                  {instructions.taxId}
+                </p>
+              ) : null}
+              <div className="space-y-3">
+                {instructions.accounts.map((account) => (
+                  <div
+                    key={`${account.label}-${account.value}`}
+                    className="flex flex-wrap items-end justify-between gap-3 rounded-lg border border-stone-200 bg-white px-3 py-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-500">
+                        {account.label}
+                        {account.detail ? ` · ${account.detail}` : ""}
+                      </p>
+                      <p className="mt-1 break-all font-mono text-base font-medium text-stone-900">
+                        {account.value}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void copyValue(account.value)}
+                      className="shrink-0 rounded-lg border border-stone-300 bg-stone-50 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-stone-800 transition hover:bg-stone-100"
+                    >
+                      Copiar
+                    </button>
+                  </div>
+                ))}
               </div>
               {instructions.extraNote ? (
                 <p className="text-xs leading-relaxed text-stone-600">{instructions.extraNote}</p>
