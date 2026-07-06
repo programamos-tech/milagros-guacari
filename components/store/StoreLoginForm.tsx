@@ -2,7 +2,6 @@
 
 import { syncStoreCustomerFromSession } from "@/app/actions/store-customer";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { storeAuthCallbackUrl } from "@/lib/store-site-url";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { friendlyStoreAuthError } from "@/components/store/store-auth-shared";
@@ -34,7 +33,11 @@ export function StoreLoginForm({
       return;
     }
     if (authMessageParam) {
-      setError(friendlyStoreAuthError(decodeURIComponent(authMessageParam.replace(/\+/g, " ")));
+      setError(
+        friendlyStoreAuthError(
+          decodeURIComponent(authMessageParam.replace(/\+/g, " ")),
+        ),
+      );
       return;
     }
     if (authErrorParam) {
