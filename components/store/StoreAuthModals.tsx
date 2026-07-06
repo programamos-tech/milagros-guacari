@@ -7,7 +7,6 @@ import {
   useMemo,
   useState,
 } from "react";
-import { useRouter } from "next/navigation";
 import { StoreLoginModal } from "@/components/store/StoreLoginModal";
 import { StoreRegisterModal } from "@/components/store/StoreRegisterModal";
 
@@ -35,7 +34,6 @@ export function StoreAuthModalProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
   const [registerOpen, setRegisterOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
 
@@ -54,9 +52,8 @@ export function StoreAuthModalProvider({
 
   const onRegistered = useCallback(() => {
     setRegisterOpen(false);
-    router.push("/cuenta");
-    router.refresh();
-  }, [router]);
+    window.location.assign("/cuenta");
+  }, []);
 
   const value = useMemo(
     () => ({

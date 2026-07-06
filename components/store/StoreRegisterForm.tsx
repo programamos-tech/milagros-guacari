@@ -2,7 +2,7 @@
 
 import { syncStoreCustomerFromSession } from "@/app/actions/store-customer";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+import { storeAuthCallbackUrl } from "@/lib/store-site-url";
 import { useState } from "react";
 import { friendlyStoreAuthError } from "@/components/store/store-auth-shared";
 import {
@@ -24,7 +24,6 @@ export function StoreRegisterForm({
   inputClassName?: string;
   submitButtonClassName?: string;
 } = {}) {
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -66,6 +65,7 @@ export function StoreRegisterForm({
       password,
       options: {
         data: { full_name: name, document_id: documentNorm },
+        emailRedirectTo: storeAuthCallbackUrl("/cuenta"),
       },
     });
 
@@ -86,8 +86,7 @@ export function StoreRegisterForm({
       if (onSuccess) {
         onSuccess();
       } else {
-        router.replace("/cuenta");
-        router.refresh();
+        window.location.assign("/cuenta");
       }
       return;
     }

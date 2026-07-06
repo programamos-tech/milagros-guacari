@@ -2,8 +2,9 @@
 
 import { syncStoreCustomerFromSession } from "@/app/actions/store-customer";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { storeAuthCallbackUrl } from "@/lib/store-site-url";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { friendlyStoreAuthError } from "@/components/store/store-auth-shared";
 import {
   storeAuthFormErrorClass,
@@ -18,11 +19,28 @@ export function StoreLoginForm({
   /** Tras login correcto (p. ej. cerrar panel lateral). */
   onLoggedIn?: () => void;
 } = {}) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = searchParams.get("next");
+  const authErrorParam = searchParams.get("auth_error");
+  const authMessageParam = searchParams.get("auth_message");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (authErrorParam === "access_denied" && authMessageParam?.includes("expired")) {
+      setError(
+        "El enlace de confirmación expiró. Regístrate de nuevo o pide un enlace nuevo al equipo.",
+      );
+      return;
+    }
+    if (authMessageParam) {
+      setError(friendlyStoreAuthError(decodeURIComponent(authMessageParam.replace(/\+/g, " ")));
+      return;
+    }
+    if (authErrorParam) {
+      setError("No se pudo completar el acceso. Intenta iniciar sesión de nuevo.");
+    }
+  }, [authErrorParam, authMessageParam]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -58,8 +76,7 @@ export function StoreLoginForm({
       nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//")
         ? nextPath
         : "/cuenta";
-    router.replace(safeNext);
-    router.refresh();
+    window.location.assign(safeNext);
   }
 
   return (
