@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useId, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { StoreRegisterForm } from "@/components/store/StoreRegisterForm";
+import { storeAuthFormOutlineBtnClass } from "@/components/store/store-auth-form-primitives";
 
 type Props = {
   open: boolean;
@@ -118,15 +119,15 @@ export function StoreRegisterModal({
               Iniciar sesión
             </button>
           </p>
-          <p className="mt-4 text-center text-sm">
+          <div className="mt-6">
             <button
               type="button"
               onClick={dismiss}
-              className="text-stone-500 underline decoration-stone-200 underline-offset-4 transition hover:text-stone-800"
+              className={storeAuthFormOutlineBtnClass}
             >
-              ← Volver a la tienda
+              Volver a la tienda
             </button>
-          </p>
+          </div>
         </div>
       </div>
     </>
