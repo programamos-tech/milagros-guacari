@@ -43,7 +43,9 @@ export default async function StoreLayout({
             <Suspense fallback={<StoreHeaderSkeleton />}>
               <StoreHeader />
             </Suspense>
-            <StoreWelcomeDiscountBanner dbCoupon={promoBanner} />
+            {promoBanner ? (
+              <StoreWelcomeDiscountBanner dbCoupon={promoBanner} />
+            ) : null}
             <main className="flex-1">
               <Suspense>{children}</Suspense>
             </main>
