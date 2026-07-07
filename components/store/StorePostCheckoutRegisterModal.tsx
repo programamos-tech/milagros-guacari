@@ -58,16 +58,16 @@ export function StorePostCheckoutRegisterModal({
         </button>
         <div className="space-y-4 px-6 pb-7 pt-8">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--store-brand)]">
-            Creá tu cuenta
+            Crea tu cuenta
           </p>
           <h2
             id="post-checkout-register-title"
             className="pr-6 text-xl font-semibold leading-snug text-stone-900"
           >
-            Registrate y aprovechá promociones y descuentos
+            Regístrate y aprovecha promociones y descuentos
           </h2>
           <p className="text-sm leading-relaxed text-stone-600">
-            Guardá tus pedidos, direcciones y recibí ofertas exclusivas para clientes
+            Guarda tus pedidos, direcciones y recibe ofertas exclusivas para clientes
             registrados.
           </p>
           <div className="flex flex-col gap-2 pt-2">
