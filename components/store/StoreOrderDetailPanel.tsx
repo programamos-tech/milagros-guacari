@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 import {
   TransferenciaCheckoutPanel,
   type TransferOrderLine,
@@ -65,8 +66,16 @@ export function StoreOrderDetailPanel({
   instructions,
   isGuest,
   showAccountLinks,
-  proofCount,
+  proofCount: initialProofCount,
 }: Props) {
+  const [proofCount, setProofCount] = useState(initialProofCount);
+  useEffect(() => {
+    setProofCount(initialProofCount);
+  }, [initialProofCount]);
+  const onProofUploaded = useCallback((count: number) => {
+    setProofCount(count);
+  }, []);
+
   const isPendingTransfer = status === "pending";
   const shortRef = orderId.slice(0, 8);
 
@@ -207,8 +216,9 @@ export function StoreOrderDetailPanel({
               Pago por transferencia
             </h3>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-stone-600">
-              Transfiere el valor exacto y sube el comprobante. Tienes ventanas de 2 minutos
-              para cada intento de subida.
+              {proofCount > 0
+                ? "Tu comprobante ya está en revisión. Guardá el enlace de seguimiento para ver cuando confirmemos el pago."
+                : "Transfiere el valor exacto y sube el comprobante. Tienes ventanas de 2 minutos para cada intento de subida."}
             </p>
             <div className="mt-6">
               <TransferenciaCheckoutPanel
@@ -219,6 +229,8 @@ export function StoreOrderDetailPanel({
                 instructions={instructions}
                 orderLines={orderLines}
                 embedded
+                initialProofCount={proofCount}
+                onProofUploaded={onProofUploaded}
               />
             </div>
           </section>

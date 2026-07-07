@@ -15,6 +15,17 @@ const ALLOWED_TYPES = new Set([
   "application/pdf",
 ]);
 
+function inferMime(file: File): string {
+  const fromType = (file.type || "").toLowerCase();
+  if (fromType) return fromType;
+  const name = (file.name || "").toLowerCase();
+  if (name.endsWith(".jpg") || name.endsWith(".jpeg")) return "image/jpeg";
+  if (name.endsWith(".png")) return "image/png";
+  if (name.endsWith(".webp")) return "image/webp";
+  if (name.endsWith(".pdf")) return "application/pdf";
+  return "";
+}
+
 function extFromMime(mime: string): string | null {
   if (mime === "image/jpeg") return "jpg";
   if (mime === "image/png") return "png";
@@ -71,7 +82,7 @@ export async function openTransferProofUploadWindow(
 }
 
 export type UploadTransferProofResult =
-  | { ok: true }
+  | { ok: true; proofCount: number }
   | { ok: false; error: string };
 
 export async function getTransferProofDeadline(
@@ -123,7 +134,7 @@ export async function uploadTransferProof(
   if (file.size > MAX_BYTES) {
     return { ok: false, error: "El archivo supera 5 MB." };
   }
-  const mime = (file.type || "").toLowerCase();
+  const mime = inferMime(file);
   if (!ALLOWED_TYPES.has(mime)) {
     return { ok: false, error: "Solo se permiten JPG, PNG, WebP o PDF." };
   }
@@ -194,9 +205,20 @@ export async function uploadTransferProof(
     return { ok: false, error: "No se pudo registrar el comprobante." };
   }
 
+  await supabase
+    .from("orders")
+    .update({ transfer_upload_deadline_at: null })
+    .eq("id", orderId)
+    .eq("transfer_session_token", tid);
+
+  const { count: proofCount } = await supabase
+    .from("order_transfer_proofs")
+    .select("id", { count: "exact", head: true })
+    .eq("order_id", orderId);
+
   revalidatePath(`/admin/orders/${orderId}`);
   revalidatePath("/admin/ventas");
   revalidatePath("/pedido");
 
-  return { ok: true };
+  return { ok: true, proofCount: proofCount ?? 1 };
 }

@@ -30,6 +30,8 @@ type Props = {
   orderLines: TransferOrderLine[];
   /** Dentro de la página de detalle del pedido: solo datos bancarios y subida. */
   embedded?: boolean;
+  initialProofCount?: number;
+  onProofUploaded?: (proofCount: number) => void;
 };
 
 function secondsRemaining(deadlineIso: string | null): number {
@@ -102,10 +104,13 @@ export function TransferenciaCheckoutPanel({
   instructions,
   orderLines,
   embedded = false,
+  initialProofCount = 0,
+  onProofUploaded,
 }: Props) {
   const router = useRouter();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [deadlineIso, setDeadlineIso] = useState<string | null>(null);
+  const [proofCount, setProofCount] = useState(initialProofCount);
   const [tick, setTick] = useState(0);
   const [pending, startTransition] = useTransition();
   const [uploadState, uploadAction, uploadPending] = useActionState(
@@ -144,15 +149,23 @@ export function TransferenciaCheckoutPanel({
   }, [deadlineIso]);
 
   useEffect(() => {
+    setProofCount(initialProofCount);
+  }, [initialProofCount]);
+
+  useEffect(() => {
     if (uploadState?.ok) {
       const input = document.getElementById("transfer-proof-file") as HTMLInputElement | null;
       if (input) input.value = "";
+      setDeadlineIso(null);
+      const nextCount = uploadState.proofCount;
+      setProofCount(nextCount);
+      onProofUploaded?.(nextCount);
       if (embedded) {
         closeModal();
         router.refresh();
       }
     }
-  }, [uploadState, embedded, closeModal, router]);
+  }, [uploadState, embedded, closeModal, router, onProofUploaded]);
 
   const remain = secondsRemaining(deadlineIso);
   void tick;
@@ -172,6 +185,7 @@ export function TransferenciaCheckoutPanel({
 
   const activeWindow = deadlineIso !== null && remain > 0;
   const expiredWindow = deadlineIso !== null && remain <= 0;
+  const hasProof = proofCount > 0;
 
   const copyValue = async (value: string) => {
     const v = value.trim();
@@ -277,35 +291,58 @@ export function TransferenciaCheckoutPanel({
           </section>
 
           <div className="rounded-xl border border-stone-200 bg-white p-4 sm:p-5">
-            <div className="flex flex-wrap items-center gap-3">
-              {!activeWindow ? (
+            {hasProof ? (
+              <div className="space-y-3">
+                <p
+                  className="rounded-lg border border-emerald-200/90 bg-emerald-50/90 px-3 py-3 text-sm font-medium leading-relaxed text-emerald-900"
+                  role="status"
+                >
+                  Comprobante recibido. Revisaremos tu pago y actualizaremos el estado del
+                  pedido en este mismo enlace.
+                </p>
+                <p className="text-xs leading-relaxed text-stone-500">
+                  Si necesitás enviar otro archivo, podés subir uno adicional.
+                </p>
                 <button
                   type="button"
                   disabled={pending}
                   onClick={startWindow}
-                  className="inline-flex flex-1 items-center justify-center bg-[var(--store-accent)] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-[var(--store-accent-hover)] disabled:opacity-60 sm:min-w-[220px]"
+                  className="inline-flex w-full items-center justify-center border border-stone-300 bg-white px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-700 transition hover:bg-stone-50 disabled:opacity-60 sm:w-auto"
                 >
-                  {expiredWindow ? "Habilitar de nuevo (2 min)" : "Subir comprobante"}
+                  Subir otro comprobante
                 </button>
-              ) : (
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={openModal}
-                  className="inline-flex flex-1 items-center justify-center border border-[var(--store-accent)] bg-white px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-accent)] transition hover:bg-[#fff8fb] disabled:opacity-60 sm:min-w-[220px]"
-                >
-                  Abrir formulario de subida
-                </button>
-              )}
-              {activeWindow ? (
-                <p className="text-xs text-stone-600" role="status">
-                  Ventana activa:{" "}
-                  <strong className="tabular-nums text-[var(--store-brand)]">
-                    {formatMmSs(remain)}
-                  </strong>
-                </p>
-              ) : null}
-            </div>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center gap-3">
+                {!activeWindow ? (
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={startWindow}
+                    className="inline-flex flex-1 items-center justify-center bg-[var(--store-accent)] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-[var(--store-accent-hover)] disabled:opacity-60 sm:min-w-[220px]"
+                  >
+                    {expiredWindow ? "Habilitar de nuevo (2 min)" : "Subir comprobante"}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={openModal}
+                    className="inline-flex flex-1 items-center justify-center border border-[var(--store-accent)] bg-white px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-accent)] transition hover:bg-[#fff8fb] disabled:opacity-60 sm:min-w-[220px]"
+                  >
+                    Abrir formulario de subida
+                  </button>
+                )}
+                {activeWindow ? (
+                  <p className="text-xs text-stone-600" role="status">
+                    Ventana activa:{" "}
+                    <strong className="tabular-nums text-[var(--store-brand)]">
+                      {formatMmSs(remain)}
+                    </strong>
+                  </p>
+                ) : null}
+              </div>
+            )}
             {windowError ? (
               <p className="mt-3 text-sm text-red-700" role="alert">
                 {windowError}
@@ -378,17 +415,29 @@ export function TransferenciaCheckoutPanel({
                     }
                     role="status"
                   >
-                    {uploadState.ok ? "Comprobante recibido. Gracias." : uploadState.error}
+                    {uploadState.ok
+                      ? "Comprobante recibido. Ya podés cerrar este cuadro."
+                      : uploadState.error}
                   </p>
                 ) : null}
                 <div className="flex flex-wrap gap-2">
-                  <button
-                    type="submit"
-                    disabled={!activeWindow || pending || uploadPending}
-                    className="flex-1 rounded-lg bg-[var(--store-accent)] py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--store-accent-hover)] disabled:opacity-50"
-                  >
-                    {uploadPending ? "Enviando…" : "Enviar comprobante"}
-                  </button>
+                  {uploadState?.ok ? (
+                    <button
+                      type="button"
+                      className="flex-1 rounded-lg bg-[var(--store-accent)] py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--store-accent-hover)]"
+                      onClick={closeModal}
+                    >
+                      Listo
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      disabled={!activeWindow || pending || uploadPending}
+                      className="flex-1 rounded-lg bg-[var(--store-accent)] py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--store-accent-hover)] disabled:opacity-50"
+                    >
+                      {uploadPending ? "Enviando…" : "Enviar comprobante"}
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="rounded-lg border border-stone-300 px-4 py-2.5 text-sm font-medium text-stone-800 hover:bg-stone-50"
