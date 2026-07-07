@@ -3,6 +3,7 @@ import {
   OrderInvoicePrintButton,
   OrderInvoiceStatusSelect,
 } from "@/components/admin/OrderInvoiceHeaderControls";
+import { OrderInvoiceFulfillmentSelect } from "@/components/admin/OrderInvoiceFulfillmentSelect";
 import { adminOwnerDisplayName } from "@/lib/admin-owner";
 import {
   invoiceLegalName,
@@ -77,6 +78,7 @@ export type OrderInvoiceDetailViewProps = {
     filename: string | null;
   }[];
   checkoutPaymentMethod?: string | null;
+  fulfillmentStatus?: string | null;
   /** Enlace al listado Ventas (p. ej. misma página y filtros). */
   ventasListHref?: string;
 };
@@ -197,8 +199,11 @@ export function OrderInvoiceDetailView(props: OrderInvoiceDetailViewProps) {
     lines,
     transferProofAttachments = [],
     checkoutPaymentMethod = null,
+    fulfillmentStatus = null,
     ventasListHref = "/admin/ventas",
   } = props;
+
+  const isTransferWeb = checkoutPaymentMethod === "transfer";
 
   const pagoBadge = ventaFormaPagoBadge(wompiReference, {
     checkoutPaymentMethod: checkoutPaymentMethod ?? undefined,
@@ -430,16 +435,27 @@ export function OrderInvoiceDetailView(props: OrderInvoiceDetailViewProps) {
               />
             </div>
           </div>
+          {isTransferWeb && status !== "cancelled" ? (
+            <div className="min-w-0 print:hidden sm:col-span-2 xl:col-span-1 xl:text-right">
+              <p className={`${labelClass} xl:text-right`}>Estado del envío</p>
+              <div className="mt-2 xl:ml-auto xl:max-w-[min(100%,220px)]">
+                <OrderInvoiceFulfillmentSelect
+                  orderId={orderId}
+                  currentStatus={fulfillmentStatus}
+                />
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
 
-      {status === "pending" &&
+      {(status === "pending" || status === "paid") &&
       checkoutPaymentMethod === "transfer" &&
       transferProofAttachments.length > 0 ? (
         <div className="rounded-2xl border border-sky-200/90 bg-sky-50/40 p-5 shadow-[0_1px_0_0_rgb(24_24_27/0.04)] dark:border-sky-800/60 dark:bg-sky-950/25 dark:shadow-none md:p-7 print:hidden">
           <p className={labelClass}>Comprobantes de transferencia</p>
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-            Archivos enviados por el cliente mientras el pedido está pendiente de pago.
+            Archivos enviados por el cliente desde la tienda web.
           </p>
           <ul className="mt-5 grid gap-4 sm:grid-cols-2">
             {transferProofAttachments.map((att, idx) => {

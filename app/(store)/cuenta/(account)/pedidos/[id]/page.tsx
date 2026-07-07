@@ -2,26 +2,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatCop } from "@/lib/money";
+import {
+  storeOrderTrackingHint,
+  storeOrderTrackingLabel,
+} from "@/lib/order-fulfillment";
 import { formatStoreDateTime } from "@/lib/store-datetime-format";
 
 export const metadata = {
   title: "Detalle del pedido",
 };
-
-function orderStatusLabel(status: string) {
-  switch (status) {
-    case "pending":
-      return "Pendiente de pago";
-    case "paid":
-      return "Pagado";
-    case "failed":
-      return "Pago fallido";
-    case "cancelled":
-      return "Cancelado";
-    default:
-      return status;
-  }
-}
 
 export default async function CuentaPedidoDetallePage({
   params,
@@ -34,7 +23,7 @@ export default async function CuentaPedidoDetallePage({
   const { data: order, error: oErr } = await supabase
     .from("orders")
     .select(
-      "id, status, total_cents, currency, created_at, customer_name, customer_email, shipping_address, shipping_city, shipping_postal_code, shipping_phone",
+      "id, status, fulfillment_status, checkout_payment_method, total_cents, currency, created_at, customer_name, customer_email, shipping_address, shipping_city, shipping_postal_code, shipping_phone",
     )
     .eq("id", id)
     .maybeSingle();
@@ -51,6 +40,24 @@ export default async function CuentaPedidoDetallePage({
     .eq("order_id", id);
 
   const lines = items ?? [];
+  const trackingLabel = storeOrderTrackingLabel({
+    paymentStatus: String(order.status),
+    fulfillmentStatus:
+      order.fulfillment_status != null ? String(order.fulfillment_status) : null,
+    checkoutPaymentMethod:
+      order.checkout_payment_method != null
+        ? String(order.checkout_payment_method)
+        : null,
+  });
+  const trackingHint = storeOrderTrackingHint({
+    paymentStatus: String(order.status),
+    fulfillmentStatus:
+      order.fulfillment_status != null ? String(order.fulfillment_status) : null,
+    checkoutPaymentMethod:
+      order.checkout_payment_method != null
+        ? String(order.checkout_payment_method)
+        : null,
+  });
 
   return (
     <div className="space-y-8">
@@ -76,12 +83,13 @@ export default async function CuentaPedidoDetallePage({
           Pedido {order.id.slice(0, 8)}…
         </h1>
         <p className="mt-2 text-sm text-stone-600">
-          {orderStatusLabel(order.status)} ·{" "}
+          {trackingLabel} ·{" "}
           {formatStoreDateTime(order.created_at, {
             dateStyle: "full",
             timeStyle: "short",
           })}
         </p>
+        <p className="mt-2 text-sm leading-relaxed text-stone-500">{trackingHint}</p>
       </div>
 
       <section className="rounded-xl border border-stone-200/90 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-6">

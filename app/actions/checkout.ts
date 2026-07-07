@@ -333,6 +333,7 @@ export async function startCheckout(formData: FormData) {
       shipping_phone: shippingPhone,
       checkout_payment_method: useTransfer ? "transfer" : "wompi",
       transfer_session_token: transferSessionToken,
+      fulfillment_status: useTransfer ? "awaiting_payment" : null,
     })
     .select("id")
     .single();

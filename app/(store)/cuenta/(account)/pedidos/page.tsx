@@ -1,32 +1,20 @@
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatCop } from "@/lib/money";
+import { storeOrderTrackingLabel } from "@/lib/order-fulfillment";
 import { formatStoreDateTime } from "@/lib/store-datetime-format";
 
 export const metadata = {
   title: "Mis pedidos",
 };
 
-function orderStatusLabel(status: string) {
-  switch (status) {
-    case "pending":
-      return "Pendiente de pago";
-    case "paid":
-      return "Pagado";
-    case "failed":
-      return "Pago fallido";
-    case "cancelled":
-      return "Cancelado";
-    default:
-      return status;
-  }
-}
-
 export default async function CuentaPedidosPage() {
   const supabase = await createSupabaseServerClient();
   const { data: orders } = await supabase
     .from("orders")
-    .select("id, status, total_cents, created_at, customer_name")
+    .select(
+      "id, status, fulfillment_status, checkout_payment_method, total_cents, created_at, customer_name",
+    )
     .order("created_at", { ascending: false });
 
   const list = orders ?? [];
@@ -82,7 +70,17 @@ export default async function CuentaPedidosPage() {
                     {formatCop(o.total_cents)}
                   </p>
                   <p className="text-sm text-stone-600">
-                    {orderStatusLabel(o.status)}
+                    {storeOrderTrackingLabel({
+                      paymentStatus: String(o.status),
+                      fulfillmentStatus:
+                        o.fulfillment_status != null
+                          ? String(o.fulfillment_status)
+                          : null,
+                      checkoutPaymentMethod:
+                        o.checkout_payment_method != null
+                          ? String(o.checkout_payment_method)
+                          : null,
+                    })}
                   </p>
                 </div>
               </Link>

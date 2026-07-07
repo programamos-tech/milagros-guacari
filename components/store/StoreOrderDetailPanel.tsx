@@ -11,15 +11,19 @@ import { StorePostCheckoutRegisterModal } from "@/components/store/StorePostChec
 import type { TransferBankInstructions } from "@/lib/transfer-bank-instructions";
 import { formatCop } from "@/lib/money";
 import {
-  storeOrderStatusHint,
-  storeOrderStatusLabel,
-} from "@/lib/store-order-status";
+  isOrderFulfillmentStatus,
+  orderFulfillmentBadgeClass,
+  storeOrderTrackingHint,
+  storeOrderTrackingLabel,
+} from "@/lib/order-fulfillment";
 
 type Props = {
   orderId: string;
   token: string;
   trackingUrl: string;
   status: string;
+  fulfillmentStatus: string | null;
+  checkoutPaymentMethod: string | null;
   createdAtLabel: string;
   totalCents: number;
   customerName: string;
@@ -35,7 +39,18 @@ type Props = {
   proofCount: number;
 };
 
-function statusBadgeClass(status: string): string {
+function statusBadgeClass(
+  status: string,
+  fulfillmentStatus: string | null,
+  checkoutPaymentMethod: string | null,
+): string {
+  if (
+    checkoutPaymentMethod === "transfer" &&
+    fulfillmentStatus &&
+    isOrderFulfillmentStatus(fulfillmentStatus)
+  ) {
+    return `border-transparent ${orderFulfillmentBadgeClass(fulfillmentStatus)}`;
+  }
   switch (status) {
     case "paid":
       return "border-emerald-200 bg-emerald-50 text-emerald-900";
@@ -54,6 +69,8 @@ export function StoreOrderDetailPanel({
   token,
   trackingUrl,
   status,
+  fulfillmentStatus: initialFulfillmentStatus,
+  checkoutPaymentMethod,
   createdAtLabel,
   totalCents,
   customerName,
@@ -69,14 +86,42 @@ export function StoreOrderDetailPanel({
   proofCount: initialProofCount,
 }: Props) {
   const [proofCount, setProofCount] = useState(initialProofCount);
+  const [paymentStatus, setPaymentStatus] = useState(status);
+  const [fulfillmentStatus, setFulfillmentStatus] = useState(initialFulfillmentStatus);
   useEffect(() => {
     setProofCount(initialProofCount);
   }, [initialProofCount]);
+  useEffect(() => {
+    setPaymentStatus(status);
+    setFulfillmentStatus(initialFulfillmentStatus);
+  }, [status, initialFulfillmentStatus]);
+
   const onProofUploaded = useCallback((count: number) => {
     setProofCount(count);
+    setPaymentStatus("paid");
+    setFulfillmentStatus("preparing");
   }, []);
 
-  const isPendingTransfer = status === "pending";
+  const showTransferSection =
+    checkoutPaymentMethod === "transfer" &&
+    fulfillmentStatus !== "shipped" &&
+    fulfillmentStatus !== "completed" &&
+    (fulfillmentStatus === "awaiting_payment" ||
+      fulfillmentStatus === "preparing" ||
+      (fulfillmentStatus === null && paymentStatus === "pending"));
+
+  const displayStatus = storeOrderTrackingLabel({
+    paymentStatus,
+    fulfillmentStatus,
+    checkoutPaymentMethod,
+    proofCount,
+  });
+  const displayHint = storeOrderTrackingHint({
+    paymentStatus,
+    fulfillmentStatus,
+    checkoutPaymentMethod,
+    proofCount,
+  });
   const shortRef = orderId.slice(0, 8);
 
   return (
@@ -91,16 +136,16 @@ export function StoreOrderDetailPanel({
               Tu pedido está registrado
             </h2>
             <span
-              className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-wide ${statusBadgeClass(status)}`}
+              className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-wide ${statusBadgeClass(paymentStatus, fulfillmentStatus, checkoutPaymentMethod)}`}
             >
-              {storeOrderStatusLabel(status)}
+              {displayStatus}
             </span>
           </div>
           <p className="text-sm text-stone-600">{createdAtLabel}</p>
           <p className="max-w-2xl text-sm leading-relaxed text-stone-600">
-            {storeOrderStatusHint(status)}
+            {displayHint}
           </p>
-          {proofCount > 0 && isPendingTransfer ? (
+          {proofCount > 0 && fulfillmentStatus === "preparing" ? (
             <p
               className="max-w-2xl rounded-lg border border-emerald-200/90 bg-emerald-50/90 px-3 py-2 text-sm font-medium text-emerald-900"
               role="status"
@@ -210,14 +255,14 @@ export function StoreOrderDetailPanel({
           </div>
         </div>
 
-        {isPendingTransfer ? (
+        {showTransferSection ? (
           <section className="border-t border-stone-200 pt-10">
             <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-brand)]">
               Pago por transferencia
             </h3>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-stone-600">
               {proofCount > 0
-                ? "Tu comprobante ya está en revisión. Guardá el enlace de seguimiento para ver cuando confirmemos el pago."
+                ? "Podés subir otro comprobante si lo necesitás. Guardá el enlace de seguimiento para ver el progreso."
                 : "Transfiere el valor exacto y sube el comprobante. Tienes ventanas de 2 minutos para cada intento de subida."}
             </p>
             <div className="mt-6">

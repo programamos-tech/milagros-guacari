@@ -75,8 +75,7 @@ export default async function AdminOrderDetailPage({ params, searchParams }: Pro
       ? String(order.checkout_payment_method)
       : null;
 
-  const needsTransferProofs =
-    String(order.status) === "pending" && checkoutPm === "transfer";
+  const needsTransferProofs = checkoutPm === "transfer";
 
   const [customerRes, proofsRes] = await Promise.all([
     customerId
@@ -184,6 +183,11 @@ export default async function AdminOrderDetailPage({ params, searchParams }: Pro
         lines={lines}
         transferProofAttachments={transferProofAttachments}
         checkoutPaymentMethod={checkoutPm}
+        fulfillmentStatus={
+          "fulfillment_status" in order && order.fulfillment_status != null
+            ? String(order.fulfillment_status)
+            : null
+        }
         ventasListHref={ventasListHref}
       />
     </div>

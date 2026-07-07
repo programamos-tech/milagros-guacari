@@ -168,7 +168,7 @@ export async function updateAdminOrderStatus(
 
   const { data: orderBefore } = await supabase
     .from("orders")
-    .select("status, stock_restored_at")
+    .select("status, stock_restored_at, checkout_payment_method, fulfillment_status")
     .eq("id", id)
     .maybeSingle();
 
@@ -221,6 +221,9 @@ export async function updateAdminOrderStatus(
     revalidatePath(`/admin/orders/${id}`);
     revalidatePath("/admin/orders");
     revalidatePath("/admin/ventas");
+    revalidatePath("/pedido");
+    revalidatePath("/cuenta/pedidos");
+    revalidatePath(`/cuenta/pedidos/${id}`);
     if (stockWasRestored) {
       revalidatePath("/admin/products");
     }
@@ -229,11 +232,26 @@ export async function updateAdminOrderStatus(
 
   payload = { status: next, cancellation_reason: null };
 
-  const { error } = await supabase.from("orders").update(payload).eq("id", id);
+  const extra: Record<string, unknown> = {};
+  if (String(orderBefore.checkout_payment_method) === "transfer") {
+    if (next === "paid") {
+      extra.fulfillment_status = "completed";
+    } else if (next === "pending") {
+      extra.fulfillment_status = "awaiting_payment";
+    }
+  }
+
+  const { error } = await supabase
+    .from("orders")
+    .update({ ...payload, ...extra })
+    .eq("id", id);
   if (error) return { ok: false as const, error: "db" as const };
 
   revalidatePath(`/admin/orders/${id}`);
   revalidatePath("/admin/orders");
   revalidatePath("/admin/ventas");
+  revalidatePath("/pedido");
+  revalidatePath("/cuenta/pedidos");
+  revalidatePath(`/cuenta/pedidos/${id}`);
   return { ok: true as const };
 }

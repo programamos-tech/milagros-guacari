@@ -15,6 +15,13 @@ const ALLOWED_TYPES = new Set([
   "application/pdf",
 ]);
 
+function transferProofUploadAllowed(status: string, fulfillmentStatus: string | null): boolean {
+  if (status === "cancelled" || status === "failed") return false;
+  if (status === "pending") return true;
+  if (status === "paid" && fulfillmentStatus === "preparing") return true;
+  return false;
+}
+
 function inferMime(file: File): string {
   const fromType = (file.type || "").toLowerCase();
   if (fromType) return fromType;
@@ -50,7 +57,7 @@ export async function openTransferProofUploadWindow(
   const supabase = createSupabaseServiceClient();
   const { data: row, error } = await supabase
     .from("orders")
-    .select("id, checkout_payment_method, transfer_session_token, status")
+    .select("id, checkout_payment_method, transfer_session_token, status, fulfillment_status")
     .eq("id", orderId)
     .maybeSingle();
 
@@ -63,8 +70,10 @@ export async function openTransferProofUploadWindow(
   if (String(row.transfer_session_token) !== tid) {
     return { ok: false, error: "Enlace inválido o vencido." };
   }
-  if (String(row.status) !== "pending") {
-    return { ok: false, error: "Este pedido ya no está pendiente de pago." };
+  const fulfillment =
+    row.fulfillment_status != null ? String(row.fulfillment_status) : null;
+  if (!transferProofUploadAllowed(String(row.status), fulfillment)) {
+    return { ok: false, error: "Este pedido ya no admite comprobante por transferencia." };
   }
 
   const deadline = new Date(Date.now() + WINDOW_MS).toISOString();
@@ -96,7 +105,7 @@ export async function getTransferProofDeadline(
   const { data: row, error } = await supabase
     .from("orders")
     .select(
-      "transfer_session_token, transfer_upload_deadline_at, checkout_payment_method, status",
+      "transfer_session_token, transfer_upload_deadline_at, checkout_payment_method, status, fulfillment_status",
     )
     .eq("id", orderId)
     .maybeSingle();
@@ -106,7 +115,9 @@ export async function getTransferProofDeadline(
   if (String(row.checkout_payment_method) !== "transfer") {
     return { error: "Pedido no válido." };
   }
-  if (String(row.status) !== "pending") {
+  const fulfillment =
+    row.fulfillment_status != null ? String(row.fulfillment_status) : null;
+  if (!transferProofUploadAllowed(String(row.status), fulfillment)) {
     return { deadlineIso: null };
   }
 
@@ -147,7 +158,7 @@ export async function uploadTransferProof(
   const { data: row, error } = await supabase
     .from("orders")
     .select(
-      "id, checkout_payment_method, transfer_session_token, status, transfer_upload_deadline_at",
+      "id, checkout_payment_method, transfer_session_token, status, fulfillment_status, transfer_upload_deadline_at",
     )
     .eq("id", orderId)
     .maybeSingle();
@@ -161,8 +172,10 @@ export async function uploadTransferProof(
   if (String(row.transfer_session_token) !== tid) {
     return { ok: false, error: "Enlace inválido." };
   }
-  if (String(row.status) !== "pending") {
-    return { ok: false, error: "Este pedido ya no está pendiente de pago." };
+  const fulfillment =
+    row.fulfillment_status != null ? String(row.fulfillment_status) : null;
+  if (!transferProofUploadAllowed(String(row.status), fulfillment)) {
+    return { ok: false, error: "Este pedido ya no admite comprobante por transferencia." };
   }
 
   const deadlineRaw = row.transfer_upload_deadline_at as string | null;
@@ -207,7 +220,11 @@ export async function uploadTransferProof(
 
   await supabase
     .from("orders")
-    .update({ transfer_upload_deadline_at: null })
+    .update({
+      transfer_upload_deadline_at: null,
+      status: "paid",
+      fulfillment_status: "preparing",
+    })
     .eq("id", orderId)
     .eq("transfer_session_token", tid);
 
@@ -219,6 +236,8 @@ export async function uploadTransferProof(
   revalidatePath(`/admin/orders/${orderId}`);
   revalidatePath("/admin/ventas");
   revalidatePath("/pedido");
+  revalidatePath("/cuenta/pedidos");
+  revalidatePath(`/cuenta/pedidos/${orderId}`);
 
   return { ok: true, proofCount: proofCount ?? 1 };
 }
