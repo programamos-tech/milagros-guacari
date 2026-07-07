@@ -196,6 +196,7 @@ export async function uploadTransferProof(
 
   revalidatePath(`/admin/orders/${orderId}`);
   revalidatePath("/admin/ventas");
+  revalidatePath("/pedido");
 
   return { ok: true };
 }

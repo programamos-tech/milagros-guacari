@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { updateStoreCustomerBirthDateAction } from "@/app/actions/store-customer-birthday";
+import { StoreDateInput } from "@/components/store/StoreDateInput";
 import { storeShellClass } from "@/lib/store-theme";
 
 const STORAGE_KEY = "tiendas_account_bday_banner_dismissed";
@@ -18,7 +19,7 @@ function readDismissedFromStorage(): boolean {
 }
 
 const inputClass =
-  "w-full max-w-[11.5rem] rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 shadow-[0_1px_0_0_rgb(24_24_27/0.04)] focus:border-stone-500 focus:outline-none focus:ring-2 focus:ring-stone-400/25";
+  "w-full max-w-[11.5rem]";
 
 const btnPrimary =
   "inline-flex shrink-0 items-center justify-center border border-[var(--store-accent)] bg-[var(--store-accent)] px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white transition hover:bg-[var(--store-accent-hover)] disabled:opacity-50";
@@ -33,6 +34,7 @@ const btnGhost =
 export function StoreAccountBirthdayBanner({ birthDate }: { birthDate: string | null }) {
   const [localDismissed, setLocalDismissed] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [formBirthDate, setFormBirthDate] = useState("");
   const searchParams = useSearchParams();
   const cumple = searchParams.get("cumple");
 
@@ -118,10 +120,11 @@ export function StoreAccountBirthdayBanner({ birthDate }: { birthDate: string | 
                 <label htmlFor="store-bday-input" className="sr-only">
                   Fecha de cumpleaños
                 </label>
-                <input
+                <StoreDateInput
                   id="store-bday-input"
-                  type="date"
                   name="birth_date"
+                  value={formBirthDate}
+                  onChange={setFormBirthDate}
                   required
                   min="1900-01-01"
                   max={maxDate}

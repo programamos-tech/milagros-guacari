@@ -376,7 +376,7 @@ export async function startCheckout(formData: FormData) {
   if (useTransfer && transferSessionToken) {
     await setCart([]);
     redirect(
-      `/checkout/transferencia?order_id=${encodeURIComponent(orderId)}&t=${encodeURIComponent(transferSessionToken)}`,
+      `/pedido?order_id=${encodeURIComponent(orderId)}&t=${encodeURIComponent(transferSessionToken)}`,
     );
   }
 

@@ -22,6 +22,7 @@ function isPublicStorePath(path: string): boolean {
   if (path === "/kits" || path.startsWith("/kits/")) return true;
   if (path === "/favoritos" || path === "/cart") return true;
   if (path === "/checkout" || path.startsWith("/checkout/")) return true;
+  if (path === "/pedido") return true;
   if (PUBLIC_STORE_STATIC.has(path)) return true;
   if (path.startsWith("/api/store/")) return true;
   return false;

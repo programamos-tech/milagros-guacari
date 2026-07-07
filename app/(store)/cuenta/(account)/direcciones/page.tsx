@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { updateStoreCustomerBirthDateAction } from "@/app/actions/store-customer-birthday";
 import { StoreAddressesManager } from "@/components/store/StoreAddressesManager";
+import { StoreBirthDateForm } from "@/components/store/StoreBirthDateForm";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { storeBrand, storeSupportEmail, storeWhatsAppUrl } from "@/lib/brand";
 
@@ -16,10 +16,6 @@ const btnOutline =
   "inline-flex shrink-0 items-center justify-center border border-[var(--store-accent)] bg-white px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--store-accent)] transition hover:bg-[var(--store-accent)] hover:text-white";
 const labelMuted = "text-[11px] font-semibold uppercase tracking-[0.1em] text-stone-500";
 const valueText = "mt-1 text-sm text-stone-900";
-const dateInputClass =
-  "mt-2 w-full max-w-[12rem] rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 shadow-[0_1px_0_0_rgb(24_24_27/0.04)] focus:border-[var(--store-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--store-accent)]/20";
-const btnSaveClass =
-  "inline-flex shrink-0 items-center justify-center border border-[var(--store-accent)] bg-[var(--store-accent)] px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-white transition hover:bg-[var(--store-accent-hover)]";
 
 function profileLocationLine(
   city: string | null | undefined,
@@ -137,30 +133,11 @@ export default async function CuentaDireccionesPage({
                     : "No pudimos guardar. Intentá de nuevo."}
               </p>
             ) : null}
-            <form
-              action={updateStoreCustomerBirthDateAction}
-              className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end"
-            >
-              <input type="hidden" name="next" value="/cuenta/direcciones" readOnly />
-              <div className="min-w-0">
-                <label htmlFor="cuenta-birth-date" className="sr-only">
-                  Fecha de cumpleaños
-                </label>
-                <input
-                  id="cuenta-birth-date"
-                  type="date"
-                  name="birth_date"
-                  required
-                  min="1900-01-01"
-                  max={maxBirth}
-                  defaultValue={birthIso || undefined}
-                  className={dateInputClass}
-                />
-              </div>
-              <button type="submit" className={btnSaveClass}>
-                Guardar fecha
-              </button>
-            </form>
+            <StoreBirthDateForm
+              initialValue={birthIso}
+              maxDate={maxBirth}
+              nextPath="/cuenta/direcciones"
+            />
             <p className="mt-3 text-xs leading-relaxed text-stone-500">
               Podés cambiarla cuando quieras. Los datos de nombre y correo siguen gestionándose por{" "}
               <Link href={waEdit} className="font-medium text-stone-700 underline underline-offset-2">

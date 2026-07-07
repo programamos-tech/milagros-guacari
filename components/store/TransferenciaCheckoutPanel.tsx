@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   getTransferProofDeadline,
   openTransferProofUploadWindow,
@@ -27,6 +28,8 @@ type Props = {
   customerName: string;
   instructions: TransferBankInstructions;
   orderLines: TransferOrderLine[];
+  /** Dentro de la página de detalle del pedido: solo datos bancarios y subida. */
+  embedded?: boolean;
 };
 
 function secondsRemaining(deadlineIso: string | null): number {
@@ -98,7 +101,9 @@ export function TransferenciaCheckoutPanel({
   customerName,
   instructions,
   orderLines,
+  embedded = false,
 }: Props) {
+  const router = useRouter();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [deadlineIso, setDeadlineIso] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
@@ -108,6 +113,14 @@ export function TransferenciaCheckoutPanel({
     null as UploadTransferProofResult | null,
   );
   const [windowError, setWindowError] = useState<string | null>(null);
+
+  const closeModal = useCallback(() => {
+    dialogRef.current?.close();
+  }, []);
+
+  const openModal = useCallback(() => {
+    dialogRef.current?.showModal();
+  }, []);
 
   const refreshDeadline = useCallback(() => {
     startTransition(async () => {
@@ -134,19 +147,15 @@ export function TransferenciaCheckoutPanel({
     if (uploadState?.ok) {
       const input = document.getElementById("transfer-proof-file") as HTMLInputElement | null;
       if (input) input.value = "";
+      if (embedded) {
+        closeModal();
+        router.refresh();
+      }
     }
-  }, [uploadState]);
+  }, [uploadState, embedded, closeModal, router]);
 
   const remain = secondsRemaining(deadlineIso);
   void tick;
-
-  const openModal = () => {
-    dialogRef.current?.showModal();
-  };
-
-  const closeModal = () => {
-    dialogRef.current?.close();
-  };
 
   const startWindow = () => {
     setWindowError(null);
@@ -176,17 +185,37 @@ export function TransferenciaCheckoutPanel({
 
   return (
     <>
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-8 lg:items-start">
-        <div className="space-y-5">
-          <div className="rounded-xl border border-emerald-100 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-950">
-            <p className="font-semibold">Pedido registrado</p>
-            <p className="mt-1 leading-relaxed">
-              Transfiere el valor exacto y sube el comprobante. Tienes{" "}
-              <strong>2 minutos</strong> por ventana; si vence, pulsa{" "}
-              <strong>Habilitar de nuevo</strong>.
-            </p>
-          </div>
+      <div
+        className={
+          embedded
+            ? "space-y-5"
+            : "grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-8 lg:items-start"
+        }
+      >
+        {!embedded ? (
+          <div className="space-y-5">
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-950">
+              <p className="font-semibold">Pedido registrado</p>
+              <p className="mt-1 leading-relaxed">
+                Transfiere el valor exacto y sube el comprobante. Tienes{" "}
+                <strong>2 minutos</strong> por ventana; si vence, pulsa{" "}
+                <strong>Habilitar de nuevo</strong>.
+              </p>
+            </div>
 
+            <div className="rounded-xl border border-stone-200 bg-white px-4 py-4 sm:px-5">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-brand)]">
+                Total a transferir
+              </p>
+              <p className="mt-1 text-3xl font-semibold tabular-nums text-stone-900">
+                {formatCop(totalCents)}
+              </p>
+              <p className="mt-1 text-sm text-stone-600">A nombre de: {customerName}</p>
+            </div>
+
+            <TransferOrderSummary lines={orderLines} totalCents={totalCents} />
+          </div>
+        ) : (
           <div className="rounded-xl border border-stone-200 bg-white px-4 py-4 sm:px-5">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-brand)]">
               Total a transferir
@@ -196,9 +225,7 @@ export function TransferenciaCheckoutPanel({
             </p>
             <p className="mt-1 text-sm text-stone-600">A nombre de: {customerName}</p>
           </div>
-
-          <TransferOrderSummary lines={orderLines} totalCents={totalCents} />
-        </div>
+        )}
 
         <div className="space-y-5">
           <section className="rounded-xl border border-stone-200 bg-stone-50/80 p-4 sm:p-5">
