@@ -14,7 +14,10 @@ export default async function AdminDashboardLayout({
   const allowedNavHrefs = adminNavAllowedHrefList(perm.permissions);
 
   return (
-    <AdminDashboardShell allowedNavHrefs={allowedNavHrefs}>
+    <AdminDashboardShell
+      allowedNavHrefs={allowedNavHrefs}
+      notifyNewWebOrders={perm.permissions.ventas_ver}
+    >
       {children}
     </AdminDashboardShell>
   );

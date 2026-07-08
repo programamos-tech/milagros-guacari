@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AdminGlobalSearch } from "@/components/admin/AdminGlobalSearch";
+import { AdminNotificationBell } from "@/components/admin/AdminNotificationBell";
 import { AdminThemeToggle } from "@/components/admin/AdminThemeToggle";
 import { AdminUserMenu } from "@/components/admin/AdminUserMenu";
 import { CustomerAvatar } from "@/components/admin/CustomerAvatar";
@@ -35,15 +36,6 @@ function IconSliders() {
   );
 }
 
-function IconBell() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.65} strokeLinecap="round" strokeLinejoin="round" className="size-5" aria-hidden>
-      <path d="M6 8a6 6 0 1 1 12 0c0 7 3 7 3 7H3s3 0 3-7" />
-      <path d="M10.3 21a1.9 1.9 0 0 0 3.4 0" />
-    </svg>
-  );
-}
-
 function IconMenu() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="size-6" aria-hidden>
@@ -57,9 +49,14 @@ function IconMenu() {
 type AdminTopBarProps = {
   onMenuClick?: () => void;
   menuOpen?: boolean;
+  showOrderNotifications?: boolean;
 };
 
-export function AdminTopBar({ onMenuClick, menuOpen }: AdminTopBarProps = {}) {
+export function AdminTopBar({
+  onMenuClick,
+  menuOpen,
+  showOrderNotifications = false,
+}: AdminTopBarProps = {}) {
   return (
     <header className="sticky top-0 z-50 w-full min-w-0 overflow-visible border-b border-rose-200/50 bg-white/88 backdrop-blur-md print:hidden dark:border-zinc-800 dark:bg-zinc-900/90">
       <div className="flex h-14 min-w-0 items-center gap-2 overflow-visible px-3 sm:h-16 sm:gap-3 sm:px-6">
@@ -92,6 +89,9 @@ export function AdminTopBar({ onMenuClick, menuOpen }: AdminTopBarProps = {}) {
           >
             +
           </Link>
+          {showOrderNotifications ? (
+            <AdminNotificationBell className="lg:hidden" />
+          ) : null}
           <div className="ml-0.5 hidden items-center gap-0.5 border-l border-rose-200/55 pl-2 dark:border-zinc-700 lg:flex">
             <AdminThemeToggle />
             <button
@@ -115,13 +115,7 @@ export function AdminTopBar({ onMenuClick, menuOpen }: AdminTopBarProps = {}) {
             >
               <IconSliders />
             </Link>
-            <button
-              type="button"
-              className="rounded-lg p-2 text-rose-900/45 transition hover:bg-rose-100/55 hover:text-rose-950 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-              title="Notificaciones"
-            >
-              <IconBell />
-            </button>
+            {showOrderNotifications ? <AdminNotificationBell /> : null}
           </div>
 
           <AdminUserMenu

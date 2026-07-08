@@ -1,16 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AdminOrderNotificationsProvider } from "@/components/admin/AdminOrderNotificationsProvider";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { AdminTopBar } from "@/components/admin/AdminTopBar";
 
 export function AdminDashboardShell({
   children,
   allowedNavHrefs,
+  notifyNewWebOrders = false,
 }: {
   children: React.ReactNode;
   /** Hrefs del menú lateral permitidos para esta sesión (incluye `/admin/cuenta` y `/`). */
   allowedNavHrefs: string[];
+  notifyNewWebOrders?: boolean;
 }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
@@ -35,7 +38,8 @@ export function AdminDashboardShell({
   const closeNav = () => setMobileNavOpen(false);
 
   return (
-    <div className="isolate flex min-h-screen items-stretch antialiased">
+    <AdminOrderNotificationsProvider enabled={notifyNewWebOrders}>
+      <div className="isolate flex min-h-screen items-stretch antialiased">
       {mobileNavOpen ? (
         <button
           type="button"
@@ -55,11 +59,13 @@ export function AdminDashboardShell({
         <AdminTopBar
           menuOpen={mobileNavOpen}
           onMenuClick={() => setMobileNavOpen(true)}
+          showOrderNotifications={notifyNewWebOrders}
         />
         <main className="flex-1 p-3 sm:p-4 md:p-6 print:bg-white print:p-8">
           {children}
         </main>
       </div>
     </div>
+    </AdminOrderNotificationsProvider>
   );
 }
