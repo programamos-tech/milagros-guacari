@@ -39,13 +39,19 @@ import {
   type CheckoutSavedAddress,
   type CheckoutShippingInitial,
 } from "@/components/store/CheckoutShippingFields";
+import {
+  CheckoutCitySelect,
+  CheckoutShippingTotals,
+  CheckoutSubmitButton,
+} from "@/components/store/CheckoutCitySelect";
+import { CheckoutShippingProvider } from "@/components/store/CheckoutShippingProvider";
 import { CheckoutLineControls } from "@/components/store/CheckoutLineControls";
 import { CartUpsellScroller } from "@/components/store/CartUpsellScroller";
 import {
   CART_DRAWER_UPSELL_LIMIT,
   loadStoreCartUpsells,
 } from "@/lib/store-cart-upsells";
-import { freeShippingProgress } from "@/lib/store-free-shipping";
+import type { StoreShippingMunicipalityPublic } from "@/lib/store-shipping";
 
 const labelClass =
   "mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-900";
@@ -88,7 +94,9 @@ function CheckoutErrorBanner({
       {error === "missing_name" && "Ingresa nombre y apellido."}
       {error === "invalid_email" && "Email inválido."}
       {error === "missing_shipping" &&
-        "Completa dirección, ciudad y teléfono de contacto."}
+        "Completa dirección y teléfono de contacto."}
+      {error === "shipping_municipality" &&
+        "Selecciona un municipio de envío de la lista. Si el tuyo no aparece, contáctanos por WhatsApp."}
       {error === "products" &&
         "No se pudieron cargar los productos del pedido. Si persiste, revisa la conexión o prueba más tarde."}
       {error === "unpublished" &&
@@ -111,6 +119,7 @@ function CheckoutErrorBanner({
         "missing_name",
         "invalid_email",
         "missing_shipping",
+        "shipping_municipality",
         "products",
         "unpublished",
         "coupon_invalid",
@@ -458,7 +467,22 @@ export default async function CheckoutPage({
     productIds,
     CART_DRAWER_UPSELL_LIMIT,
   );
-  const shippingProgress = freeShippingProgress(totalGross);
+
+  const { data: municipalityRows } = await supabase
+    .from("store_shipping_municipalities")
+    .select("id, name, department, rate_cents")
+    .eq("is_enabled", true)
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true });
+
+  const municipalities: StoreShippingMunicipalityPublic[] = (
+    municipalityRows ?? []
+  ).map((m) => ({
+    id: String(m.id),
+    name: String(m.name),
+    department: m.department != null ? String(m.department) : null,
+    rate_cents: Math.max(0, Number(m.rate_cents ?? 0)),
+  }));
 
   return (
     <div className="min-h-[calc(100vh-8rem)] bg-white">
@@ -497,6 +521,11 @@ export default async function CheckoutPage({
         />
 
         <form action={startCheckout}>
+          <CheckoutShippingProvider
+            municipalities={municipalities}
+            subtotalCents={totalGross}
+            initialCity={shippingInitial.city}
+          >
           <div className="mt-10 grid gap-12 lg:grid-cols-[1fr_min(100%,340px)] lg:items-start xl:gap-16">
             <div className="min-w-0 space-y-14">
               <section>
@@ -717,16 +746,13 @@ export default async function CheckoutPage({
                         className={inputClass}
                       />
                     </label>
-                    <label className="block sm:col-span-1">
-                      <span className={labelClass}>Ciudad</span>
-                      <input
-                        name="city"
-                        required
-                        autoComplete="address-level2"
-                        placeholder="Escribe aquí…"
-                        className={inputClass}
+                    <div className="sm:col-span-2">
+                      <CheckoutCitySelect
+                        labelClass={labelClass}
+                        inputClass={inputClass}
+                        selectClass={selectClass}
                       />
-                    </label>
+                    </div>
                     <label className="block sm:col-span-1">
                       <span className={labelClass}>Código postal</span>
                       <input
@@ -847,32 +873,16 @@ export default async function CheckoutPage({
                     {formatCop(totalGross)}
                   </dd>
                 </div>
-                <div className="flex justify-between gap-4">
-                  <dt className="text-stone-600">Envío</dt>
-                  <dd
-                    className={`shrink-0 text-xs font-medium uppercase tracking-wide ${
-                      shippingProgress.qualified
-                        ? "font-semibold text-emerald-700"
-                        : "text-stone-500"
-                    }`}
-                  >
-                    {shippingProgress.qualified ? "Gratis" : "Por confirmar"}
-                  </dd>
-                </div>
-                <div className="flex justify-between gap-4 border-t border-stone-400 pt-4 text-[15px] font-semibold text-stone-900">
-                  <dt>Total a pagar</dt>
-                  <dd className="tabular-nums">{formatCop(totalGross)}</dd>
-                </div>
+                <CheckoutShippingTotals />
               </dl>
 
-              <button type="submit" className={primaryBtnClass}>
-                Finalizar compra
-              </button>
+              <CheckoutSubmitButton className={primaryBtnClass} />
               <Link href="/products" className={secondaryBtnClass}>
                 Seguir comprando
               </Link>
             </aside>
           </div>
+          </CheckoutShippingProvider>
         </form>
       </div>
     </div>

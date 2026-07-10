@@ -30,7 +30,7 @@ export default async function PedidoSeguimientoPage({ searchParams }: Props) {
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "id, checkout_payment_method, transfer_session_token, status, fulfillment_status, total_cents, customer_name, customer_email, shipping_address, shipping_city, shipping_postal_code, shipping_phone, created_at",
+      "id, checkout_payment_method, transfer_session_token, status, fulfillment_status, total_cents, shipping_cents, customer_name, customer_email, shipping_address, shipping_city, shipping_postal_code, shipping_phone, created_at",
     )
     .eq("id", orderId)
     .maybeSingle();
@@ -134,6 +134,7 @@ export default async function PedidoSeguimientoPage({ searchParams }: Props) {
             shippingPostalCode={
               order.shipping_postal_code ? String(order.shipping_postal_code) : null
             }
+            shippingCents={Number(order.shipping_cents ?? 0)}
             orderLines={orderLines}
             instructions={instructions}
             isGuest={showRegisterModal}

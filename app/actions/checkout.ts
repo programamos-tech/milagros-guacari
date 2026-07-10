@@ -30,6 +30,11 @@ import {
 } from "@/lib/customer-wholesale-pricing";
 import { storefrontPayableUnitGrossCents } from "@/lib/storefront-gross-price";
 import { findActiveStoreCouponForCheckout } from "@/lib/store-coupons";
+import { freeShippingProgress } from "@/lib/store-free-shipping";
+import {
+  resolveCheckoutShippingCents,
+  SHIPPING_CITY_OTHER,
+} from "@/lib/store-shipping";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { deductOrderItemsStock, deductTransferWebOrderStock } from "@/lib/storefront-order-stock";
 import { randomUUID } from "node:crypto";
@@ -49,6 +54,9 @@ export async function startCheckout(formData: FormData) {
   const resolvedName = customerName || legacyName;
 
   const shippingAddress = String(formData.get("address") ?? "").trim();
+  const shippingMunicipalityId = String(
+    formData.get("shipping_municipality_id") ?? "",
+  ).trim();
   const shippingCity = String(formData.get("city") ?? "").trim();
   const shippingPostalCode = String(formData.get("zipCode") ?? "").trim();
   const shippingPhone = String(formData.get("mobile") ?? "").trim();
@@ -59,7 +67,13 @@ export async function startCheckout(formData: FormData) {
   if (!resolvedName) {
     redirect("/checkout?error=missing_name");
   }
-  if (!shippingAddress || !shippingCity || !shippingPhone) {
+  if (
+    !shippingMunicipalityId ||
+    shippingMunicipalityId === SHIPPING_CITY_OTHER
+  ) {
+    redirect("/checkout?error=shipping_municipality");
+  }
+  if (!shippingAddress || !shippingPhone) {
     redirect("/checkout?error=missing_shipping");
   }
 
@@ -276,6 +290,30 @@ export async function startCheckout(formData: FormData) {
   }
   const totalWithDiscount = Math.max(0, total - discount);
 
+  const { data: municipalityRow } = await supabase
+    .from("store_shipping_municipalities")
+    .select("id, name, rate_cents, is_enabled")
+    .eq("id", shippingMunicipalityId)
+    .maybeSingle();
+
+  if (!municipalityRow || municipalityRow.is_enabled !== true) {
+    redirect("/checkout?error=shipping_municipality");
+  }
+
+  const resolvedShippingCity =
+    String(municipalityRow.name ?? "").trim() || shippingCity;
+  if (!resolvedShippingCity) {
+    redirect("/checkout?error=shipping_municipality");
+  }
+
+  const freeShippingQualified = freeShippingProgress(total).qualified;
+  const shippingCents = resolveCheckoutShippingCents({
+    rateCents: Number(municipalityRow.rate_cents ?? 0),
+    subtotalCents: total,
+    freeShippingQualified,
+  });
+  const orderTotalCents = totalWithDiscount + shippingCents;
+
   const firstProduct = normalizedProducts[0]
     ? byId.get(normalizedProducts[0].productId)
     : null;
@@ -291,7 +329,7 @@ export async function startCheckout(formData: FormData) {
         name: resolvedName,
         phone: shippingPhone,
         shipping_address: shippingAddress,
-        shipping_city: shippingCity,
+        shipping_city: resolvedShippingCity,
         shipping_postal_code: shippingPostalCode || null,
       })
       .eq("id", customerId);
@@ -303,7 +341,7 @@ export async function startCheckout(formData: FormData) {
         email: emailLc,
         phone: shippingPhone,
         shipping_address: shippingAddress,
-        shipping_city: shippingCity,
+        shipping_city: resolvedShippingCity,
         shipping_postal_code: shippingPostalCode || null,
         source: "storefront",
       })
@@ -324,13 +362,15 @@ export async function startCheckout(formData: FormData) {
       customer_id: customerId,
       customer_email: customerEmailForOrder,
       customer_name: resolvedName,
-      total_cents: totalWithDiscount,
+      total_cents: orderTotalCents,
       currency,
       status: "pending",
       shipping_address: shippingAddress,
-      shipping_city: shippingCity,
+      shipping_city: resolvedShippingCity,
       shipping_postal_code: shippingPostalCode || null,
       shipping_phone: shippingPhone,
+      shipping_cents: shippingCents,
+      shipping_municipality_id: municipalityRow.id,
       checkout_payment_method: useTransfer ? "transfer" : "wompi",
       transfer_session_token: transferSessionToken,
       fulfillment_status: useTransfer ? "awaiting_payment" : null,
@@ -406,7 +446,7 @@ export async function startCheckout(formData: FormData) {
   const link = await createPaymentLink({
     name: `${storeBrand} · Pedido`,
     description: `Pedido ${orderId}`,
-    amountInCents: totalWithDiscount,
+    amountInCents: orderTotalCents,
     currency,
     redirectUrl: returnUrl,
     sku: orderId,

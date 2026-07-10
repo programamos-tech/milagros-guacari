@@ -191,6 +191,18 @@ const navSections: {
         ),
       },
       {
+        href: "/admin/envios",
+        label: "Envíos",
+        icon: (
+          <Icon>
+            <path d="M3 7h11v10H3z" />
+            <path d="M14 10h4l3 3v4h-7V10z" />
+            <circle cx="7" cy="18" r="2" />
+            <circle cx="17" cy="18" r="2" />
+          </Icon>
+        ),
+      },
+      {
         href: "/admin/settings",
         label: "Ajustes",
         icon: (

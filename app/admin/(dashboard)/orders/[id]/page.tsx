@@ -169,6 +169,9 @@ export default async function AdminOrderDetailPage({ params, searchParams }: Pro
         shippingCity={
           order.shipping_city != null ? String(order.shipping_city) : null
         }
+        shippingCents={Number(
+          "shipping_cents" in order ? (order.shipping_cents ?? 0) : 0,
+        )}
         customerDocumentId={customerDocumentId}
         customerPhone={customerPhone}
         customerAddress={customerAddress}

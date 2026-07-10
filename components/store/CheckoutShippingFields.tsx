@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { CheckoutCitySelect } from "@/components/store/CheckoutCitySelect";
 
 export type CheckoutSavedAddress = {
   id: string;
@@ -77,7 +78,6 @@ export function CheckoutShippingFields({
   const [address, setAddress] = useState(
     savedAddresses[0]?.address_line.trim() || profileLine || "",
   );
-  const [city, setCity] = useState(initial.city);
   const [zipCode, setZipCode] = useState(initial.zipCode);
   const [mobile, setMobile] = useState(initial.mobile);
 
@@ -85,7 +85,6 @@ export function CheckoutShippingFields({
     setSelection(next);
     if (next === "profile") {
       setAddress(profileLine);
-      setCity(initial.city);
       setZipCode(initial.zipCode);
       setMobile(initial.mobile);
       setFirstName(initial.firstName);
@@ -101,7 +100,6 @@ export function CheckoutShippingFields({
       if (row) {
         setAddress(row.address_line.trim());
       }
-      setCity(initial.city);
       setZipCode(initial.zipCode);
       setMobile(initial.mobile);
       setFirstName(initial.firstName);
@@ -132,8 +130,8 @@ export function CheckoutShippingFields({
             ))}
           </select>
           <p className="mt-1.5 text-xs text-stone-500">
-            Elige una dirección guardada o la del perfil. Ciudad, código postal y
-            teléfono vienen de tu cuenta; puedes ajustarlos antes de pagar.
+            Elige una dirección guardada o la del perfil. El municipio de envío y el
+            teléfono puedes ajustarlos antes de pagar.
           </p>
         </div>
       ) : null}
@@ -175,18 +173,13 @@ export function CheckoutShippingFields({
             onChange={(e) => setAddress(e.target.value)}
           />
         </label>
-        <label className="block sm:col-span-1">
-          <span className={labelClass}>Ciudad</span>
-          <input
-            name="city"
-            required
-            autoComplete="address-level2"
-            placeholder="Escribe aquí…"
-            className={inputClass}
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
+        <div className="sm:col-span-2">
+          <CheckoutCitySelect
+            labelClass={labelClass}
+            inputClass={inputClass}
+            selectClass={selectClass}
           />
-        </label>
+        </div>
         <label className="block sm:col-span-1">
           <span className={labelClass}>Código postal</span>
           <input

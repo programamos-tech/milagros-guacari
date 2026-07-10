@@ -69,6 +69,8 @@ export type OrderInvoiceDetailViewProps = {
   shippingAddress: string | null;
   shippingCity: string | null;
   shippingPhone: string | null;
+  /** Costo de envío cobrado (0 = gratis o no aplica). */
+  shippingCents?: number;
   /** Motivo registrado al anular desde el panel. */
   cancellationReason: string | null;
   lines: Line[];
@@ -195,6 +197,7 @@ export function OrderInvoiceDetailView(props: OrderInvoiceDetailViewProps) {
     shippingAddress,
     shippingCity,
     shippingPhone,
+    shippingCents = 0,
     cancellationReason,
     lines,
     transferProofAttachments = [],
@@ -215,7 +218,11 @@ export function OrderInvoiceDetailView(props: OrderInvoiceDetailViewProps) {
     (s, l) => s + l.unitPriceCents * l.quantity,
     0,
   );
-  const totalsMatch = subtotalLines === totalCents;
+  const expectedTotal = subtotalLines + Math.max(0, shippingCents);
+  const totalsMatch = expectedTotal === totalCents;
+  const showShippingRow =
+    shippingCents > 0 ||
+    (Boolean(shippingCity?.trim()) && checkoutPaymentMethod === "transfer");
 
   const hasShipping =
     Boolean(shippingAddress?.trim()) || Boolean(shippingCity?.trim());
@@ -603,7 +610,7 @@ export function OrderInvoiceDetailView(props: OrderInvoiceDetailViewProps) {
 
             <div className="mt-6 flex justify-end print:mt-2 print:break-inside-avoid">
               <div className="w-full max-w-xs rounded-xl border border-zinc-200 bg-zinc-50/80 px-5 py-4 dark:border-zinc-700 dark:bg-zinc-950/80 print:max-w-none print:border-0 print:bg-white print:px-0 print:py-0">
-                {totalsMatch ? (
+                {totalsMatch && !showShippingRow ? (
                   <div className="flex justify-between gap-4 border-t-2 border-black pt-2 print:pt-2 dark:border-zinc-700/90">
                     <span className="font-bold text-zinc-900 print:text-[12px] print:text-black dark:text-zinc-200">
                       TOTAL
@@ -622,6 +629,19 @@ export function OrderInvoiceDetailView(props: OrderInvoiceDetailViewProps) {
                         {formatCop(subtotalLines)}
                       </span>
                     </div>
+                    {showShippingRow ? (
+                      <div className="mt-2 flex justify-between gap-4 text-sm print:text-[11px]">
+                        <span className="font-semibold text-zinc-700 print:text-black">
+                          Envío
+                          {shippingCity?.trim()
+                            ? ` · ${shippingCity.trim()}`
+                            : ""}
+                        </span>
+                        <span className="font-bold tabular-nums text-zinc-900 print:text-black">
+                          {shippingCents > 0 ? formatCop(shippingCents) : "Gratis"}
+                        </span>
+                      </div>
+                    ) : null}
                     <div className="mt-3 flex justify-between gap-4 border-t-2 border-black pt-3 print:border-zinc-800 dark:border-zinc-700/90">
                       <span className="font-bold text-zinc-900 print:text-[11px] print:text-black dark:text-zinc-200">
                         Total a pagar

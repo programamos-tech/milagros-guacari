@@ -32,6 +32,7 @@ type Props = {
   shippingAddress: string | null;
   shippingCity: string | null;
   shippingPostalCode: string | null;
+  shippingCents?: number;
   orderLines: TransferOrderLine[];
   instructions: TransferBankInstructions;
   isGuest: boolean;
@@ -79,6 +80,7 @@ export function StoreOrderDetailPanel({
   shippingAddress,
   shippingCity,
   shippingPostalCode,
+  shippingCents = 0,
   orderLines,
   instructions,
   isGuest,
@@ -228,9 +230,24 @@ export function StoreOrderDetailPanel({
                   </li>
                 ))}
               </ul>
-              <div className="mt-3 flex items-center justify-between border-t border-stone-200 pt-3 text-base font-semibold text-stone-900">
-                <span>Total</span>
-                <span className="tabular-nums">{formatCop(totalCents)}</span>
+              <div className="mt-3 space-y-2 border-t border-stone-200 pt-3 text-sm text-stone-700">
+                {shippingCents > 0 ? (
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Envío</span>
+                    <span className="tabular-nums">{formatCop(shippingCents)}</span>
+                  </div>
+                ) : shippingCity ? (
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Envío</span>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                      Gratis
+                    </span>
+                  </div>
+                ) : null}
+                <div className="flex items-center justify-between text-base font-semibold text-stone-900">
+                  <span>Total</span>
+                  <span className="tabular-nums">{formatCop(totalCents)}</span>
+                </div>
               </div>
             </section>
           </div>

@@ -129,7 +129,7 @@ export const PERMISSION_MODULES: PermissionModule[] = [
   {
     id: "tienda",
     label: "Tienda",
-    items: [{ key: "ajustes_tienda_ver", label: "Ajustes de tienda y bienvenida" }],
+    items: [{ key: "ajustes_tienda_ver", label: "Ajustes de tienda, bienvenida y envíos" }],
   },
 ];
 
