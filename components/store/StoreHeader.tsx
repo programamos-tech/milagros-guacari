@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import {
@@ -11,6 +10,7 @@ import { getStorefrontCartItemCount } from "@/lib/storefront-cart";
 import { storeBrand, storeLogoPath } from "@/lib/brand";
 import { StoreAnnouncementBar } from "@/components/store/StoreAnnouncementBar";
 import { StoreHeaderActions } from "@/components/store/StoreHeaderActions";
+import { StoreLogoLink } from "@/components/store/StoreLogoLink";
 import { StoreNavDropdowns } from "@/components/store/StoreNavDropdowns";
 import { StoreSearch } from "@/components/store/StoreSearch";
 import { getCachedStoreCategoriesWithCounts } from "@/lib/store-public-cache";
@@ -58,19 +58,11 @@ export async function StoreHeader() {
           </div>
 
           <div className="flex min-w-0 justify-center px-1 sm:px-2">
-            <Link
-              href="/"
+            <StoreLogoLink
+              brand={storeBrand}
+              logoPath={storeLogoPath}
               className="block w-full max-w-[min(100%,18rem)] outline-none focus-visible:ring-2 focus-visible:ring-white/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--store-header-bg)] sm:max-w-[min(100%,20rem)] lg:max-w-[22rem] xl:max-w-[24rem]"
-            >
-              <Image
-                src={storeLogoPath}
-                alt={storeBrand}
-                width={420}
-                height={230}
-                className="mx-auto h-11 w-full object-contain object-center sm:h-12 lg:h-[4.25rem]"
-                priority
-              />
-            </Link>
+            />
           </div>
 
           <div className="flex min-w-0 items-center justify-end gap-0.5 sm:gap-1 md:gap-2 lg:justify-end lg:gap-4 lg:pl-4">
