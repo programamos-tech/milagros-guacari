@@ -301,6 +301,7 @@ export default async function CheckoutPage({
     city: "",
     zipCode: "",
     mobile: "",
+    municipalityId: "",
   };
   let savedAddresses: CheckoutSavedAddress[] = [];
   let wholesaleDisplayPct = 0;
@@ -335,7 +336,7 @@ export default async function CheckoutPage({
     const { data: cust } = await sessionSb
       .from("customers")
       .select(
-        "name, phone, shipping_address, shipping_city, shipping_postal_code, customer_kind, wholesale_discount_percent",
+        "id, name, phone, shipping_address, shipping_city, shipping_postal_code, customer_kind, wholesale_discount_percent",
       )
       .eq("auth_user_id", checkoutUser.id)
       .maybeSingle();
@@ -350,7 +351,22 @@ export default async function CheckoutPage({
     }
 
     if (cust) {
-      const nm = cust.name?.trim() ?? "";
+      const customerId = String(cust.id);
+
+      // Último pedido web/tienda: mejor fuente de dirección y municipio.
+      const { data: lastOrder } = await sessionSb
+        .from("orders")
+        .select(
+          "customer_name, shipping_address, shipping_city, shipping_postal_code, shipping_phone, shipping_municipality_id",
+        )
+        .eq("customer_id", customerId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const orderName = lastOrder?.customer_name?.trim() ?? "";
+      const profileName = cust.name?.trim() ?? "";
+      const nm = orderName || profileName;
       if (nm) {
         const parts = nm.split(/\s+/).filter(Boolean);
         shippingInitial.firstName = parts[0] ?? defaultFirst;
@@ -360,14 +376,31 @@ export default async function CheckoutPage({
         shippingInitial.firstName = defaultFirst;
         shippingInitial.lastName = defaultLast;
       }
-      shippingInitial.profileAddressLine = cust.shipping_address?.trim() ?? "";
-      shippingInitial.city = cust.shipping_city?.trim() ?? "";
-      shippingInitial.zipCode = cust.shipping_postal_code?.trim() ?? "";
-      shippingInitial.mobile = cust.phone?.trim() ?? "";
+
+      shippingInitial.profileAddressLine =
+        lastOrder?.shipping_address?.trim() ||
+        cust.shipping_address?.trim() ||
+        "";
+      shippingInitial.city =
+        lastOrder?.shipping_city?.trim() || cust.shipping_city?.trim() || "";
+      shippingInitial.zipCode =
+        lastOrder?.shipping_postal_code?.trim() ||
+        cust.shipping_postal_code?.trim() ||
+        "";
+      shippingInitial.mobile =
+        lastOrder?.shipping_phone?.trim() ||
+        cust.phone?.trim() ||
+        checkoutUser.phone?.trim() ||
+        "";
+      shippingInitial.municipalityId =
+        lastOrder?.shipping_municipality_id != null
+          ? String(lastOrder.shipping_municipality_id)
+          : "";
 
       const { data: addrs } = await sessionSb
         .from("customer_addresses")
         .select("id, label, address_line, reference, sort_order")
+        .eq("customer_id", customerId)
         .order("sort_order", { ascending: true });
       savedAddresses = (addrs ?? []) as CheckoutSavedAddress[];
     } else {
@@ -525,6 +558,7 @@ export default async function CheckoutPage({
             municipalities={municipalities}
             subtotalCents={totalGross}
             initialCity={shippingInitial.city}
+            initialMunicipalityId={shippingInitial.municipalityId}
           >
           <div className="mt-10 grid gap-12 lg:grid-cols-[1fr_min(100%,340px)] lg:items-start xl:gap-16">
             <div className="min-w-0 space-y-14">

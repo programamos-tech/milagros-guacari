@@ -43,19 +43,25 @@ export function CheckoutShippingProvider({
   municipalities,
   subtotalCents,
   initialCity = "",
+  initialMunicipalityId = "",
   children,
 }: {
   municipalities: StoreShippingMunicipalityPublic[];
   subtotalCents: number;
   initialCity?: string;
+  initialMunicipalityId?: string;
   children: ReactNode;
 }) {
   const initialMatch = useMemo(() => {
+    const byId = initialMunicipalityId.trim();
+    if (byId && municipalities.some((m) => m.id === byId)) {
+      return byId;
+    }
     const needle = initialCity.trim().toLowerCase();
     if (!needle) return "";
     const hit = municipalities.find((m) => m.name.trim().toLowerCase() === needle);
     return hit?.id ?? "";
-  }, [initialCity, municipalities]);
+  }, [initialCity, initialMunicipalityId, municipalities]);
 
   const [cityValue, setCityValueState] = useState(initialMatch);
 

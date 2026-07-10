@@ -13,11 +13,13 @@ export type CheckoutSavedAddress = {
 export type CheckoutShippingInitial = {
   firstName: string;
   lastName: string;
-  /** `customers.shipping_address` (perfil), independiente de direcciones guardadas */
+  /** Dirección principal a prellenar (perfil o último pedido). */
   profileAddressLine: string;
   city: string;
   zipCode: string;
   mobile: string;
+  /** Id de municipio tarifado del último pedido, si existe. */
+  municipalityId?: string;
 };
 
 type Props = {
@@ -48,8 +50,8 @@ export function CheckoutShippingFields({
       {
         value: "profile",
         label: profileLine
-          ? `Perfil · ${profileLine.slice(0, 48)}${profileLine.length > 48 ? "…" : ""}`
-          : "Perfil · dirección principal",
+          ? `Última · ${profileLine.slice(0, 48)}${profileLine.length > 48 ? "…" : ""}`
+          : "Última dirección / perfil",
       },
     ];
     for (const a of savedAddresses) {
@@ -66,18 +68,16 @@ export function CheckoutShippingFields({
   }, [savedAddresses, profileLine]);
 
   const defaultSelection = useMemo(() => {
-    if (savedAddresses.length > 0) {
-      return `addr:${savedAddresses[0].id}`;
-    }
+    // Preferir la dirección ya resuelta (último pedido / perfil) sobre la primera guardada.
+    if (profileLine) return "profile";
+    if (savedAddresses.length > 0) return `addr:${savedAddresses[0].id}`;
     return "profile";
-  }, [savedAddresses]);
+  }, [savedAddresses, profileLine]);
 
   const [selection, setSelection] = useState(defaultSelection);
   const [firstName, setFirstName] = useState(initial.firstName);
   const [lastName, setLastName] = useState(initial.lastName);
-  const [address, setAddress] = useState(
-    savedAddresses[0]?.address_line.trim() || profileLine || "",
-  );
+  const [address, setAddress] = useState(profileLine || savedAddresses[0]?.address_line.trim() || "");
   const [zipCode, setZipCode] = useState(initial.zipCode);
   const [mobile, setMobile] = useState(initial.mobile);
 
@@ -130,8 +130,8 @@ export function CheckoutShippingFields({
             ))}
           </select>
           <p className="mt-1.5 text-xs text-stone-500">
-            Elige una dirección guardada o la del perfil. El municipio de envío y el
-            teléfono puedes ajustarlos antes de pagar.
+            Traemos tu última dirección. Puedes cambiarla o elegir otra guardada antes de
+            pagar.
           </p>
         </div>
       ) : null}
