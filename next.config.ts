@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "6mb",
     },
+    // Transiciones suaves entre rutas (View Transitions API).
+    viewTransition: true,
   },
   images: {
     remotePatterns: [

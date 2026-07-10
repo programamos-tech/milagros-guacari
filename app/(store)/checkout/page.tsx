@@ -520,8 +520,8 @@ export default async function CheckoutPage({
 
   return (
     <div className="min-h-[calc(100vh-8rem)] bg-white">
-      <div className="mx-auto max-w-6xl px-4 pb-14 pt-10 sm:px-6 lg:pb-16 lg:pt-12">
-        <nav aria-label="Migas de pan" className="mb-8 text-[11px] uppercase tracking-[0.12em] text-stone-400">
+      <div className="store-reveal-stagger mx-auto max-w-6xl px-4 pb-14 pt-10 sm:px-6 lg:pb-16 lg:pt-12">
+        <nav aria-label="Migas de pan" className="store-reveal mb-8 text-[11px] uppercase tracking-[0.12em] text-stone-400">
           <ol className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 sm:justify-start">
             <li>
               <Link href="/" className="transition hover:text-stone-800">
@@ -535,7 +535,7 @@ export default async function CheckoutPage({
           </ol>
         </nav>
 
-        <h1 className="text-center text-sm font-semibold uppercase tracking-[0.22em] text-[var(--store-brand)] sm:text-left sm:text-[15px] sm:tracking-[0.26em]">
+        <h1 className="store-reveal text-center text-sm font-semibold uppercase tracking-[0.22em] text-[var(--store-brand)] sm:text-left sm:text-[15px] sm:tracking-[0.26em]">
           Bolsa de compras
         </h1>
 
@@ -562,9 +562,9 @@ export default async function CheckoutPage({
             initialCity={shippingInitial.city}
             initialMunicipalityId={shippingInitial.municipalityId}
           >
-          <div className="mt-10 grid gap-12 lg:grid-cols-[1fr_min(100%,340px)] lg:items-start xl:gap-16">
-            <div className="min-w-0 space-y-14">
-              <section>
+          <div className="store-reveal mt-10 grid gap-12 lg:grid-cols-[1fr_min(100%,340px)] lg:items-start xl:gap-16">
+            <div className="store-reveal-stagger min-w-0 space-y-14">
+              <section className="store-reveal">
                 <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-brand)]">
                   Carrito
                 </h2>
@@ -731,7 +731,7 @@ export default async function CheckoutPage({
                 />
               </section>
 
-              <section className="border-t border-stone-200 pt-12">
+              <section className="store-reveal border-t border-stone-200 pt-12">
                 <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-brand)]">
                   Datos de envío
                 </h2>
@@ -824,7 +824,7 @@ export default async function CheckoutPage({
                 )}
               </section>
 
-              <section className="border-t border-stone-200 pt-12">
+              <section className="store-reveal border-t border-stone-200 pt-12">
                 <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-brand)]">
                   Forma de pago
                 </h2>
@@ -846,7 +846,7 @@ export default async function CheckoutPage({
               </section>
             </div>
 
-            <aside className="sticky top-28 space-y-6 bg-[#f4f4f3] p-6 lg:p-8">
+            <aside className="store-reveal sticky top-28 space-y-6 bg-[#f4f4f3] p-6 lg:p-8">
               <details className="group border-b border-stone-300/80 pb-5 open:pb-4">
                 <summary className="cursor-pointer list-none text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-brand)] marker:hidden [&::-webkit-details-marker]:hidden">
                   <span className="flex items-center justify-between gap-2">
