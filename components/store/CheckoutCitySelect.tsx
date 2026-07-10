@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useId, useRef, useState } from "react";
 import { useCheckoutShipping } from "@/components/store/CheckoutShippingProvider";
 import { formatCop } from "@/lib/money";
 import {
@@ -10,10 +11,11 @@ import {
 } from "@/lib/store-shipping";
 import { storeWhatsAppUrl } from "@/lib/brand";
 
+const triggerClass =
+  "flex w-full cursor-pointer items-center justify-between gap-3 rounded-2xl border border-stone-300 bg-white py-3 pl-4 pr-3.5 text-left text-[13px] text-stone-900 shadow-sm outline-none transition hover:border-stone-400 focus:border-[var(--store-accent)] focus:ring-2 focus:ring-[var(--store-accent)]/20";
+
 export function CheckoutCitySelect({
   labelClass,
-  inputClass,
-  selectClass,
   required = true,
 }: {
   labelClass: string;
@@ -31,6 +33,28 @@ export function CheckoutCitySelect({
     freeShippingQualified,
   } = useCheckoutShipping();
 
+  const listId = useId();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (ev: MouseEvent) => {
+      const t = ev.target as Node;
+      if (rootRef.current?.contains(t)) return;
+      setOpen(false);
+    };
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
   const waHref =
     storeWhatsAppUrl === "#"
       ? null
@@ -38,48 +62,124 @@ export function CheckoutCitySelect({
           "Hola, quiero hacer un pedido pero mi municipio no aparece en las opciones de envío de la tienda.",
         )}`;
 
+  const triggerLabel = isOtherCity
+    ? "Mi municipio no aparece"
+    : selectedMunicipality
+      ? municipalityDisplayLabel(selectedMunicipality)
+      : "Selecciona tu municipio…";
+
+  function pick(value: string) {
+    setCityValue(value);
+    setOpen(false);
+  }
+
   return (
     <div className="space-y-3">
-      <label className="block">
-        <span className={labelClass}>Municipio / ciudad de envío</span>
-        <select
-          name="shipping_municipality_id"
-          required={required}
-          value={cityValue}
-          onChange={(e) => setCityValue(e.target.value)}
-          className={selectClass ?? inputClass}
-        >
-          <option value="">Selecciona tu municipio…</option>
-          {municipalities.map((m) => (
-            <option key={m.id} value={m.id}>
-              {municipalityDisplayLabel(m)} — {formatShippingRateLabel(m.rate_cents)}
-            </option>
-          ))}
-          <option value={SHIPPING_CITY_OTHER}>Mi municipio no aparece</option>
-        </select>
-      </label>
+      <div ref={rootRef} className="relative">
+        <span className={labelClass} id={`${listId}-label`}>
+          Municipio / ciudad de envío
+        </span>
 
-      {/* Ciudad legible para el pedido / perfil */}
-      <input
-        type="hidden"
-        name="city"
-        value={isOtherCity ? "" : (selectedMunicipality?.name ?? "")}
-        readOnly
-      />
+        <input
+          type="hidden"
+          name="shipping_municipality_id"
+          value={cityValue}
+          required={required}
+        />
+        <input
+          type="hidden"
+          name="city"
+          value={isOtherCity ? "" : (selectedMunicipality?.name ?? "")}
+          readOnly
+        />
+
+        <button
+          type="button"
+          className={`${triggerClass} mt-1.5`}
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          aria-labelledby={`${listId}-label`}
+          onClick={() => setOpen((v) => !v)}
+        >
+          <span className={cityValue ? "text-stone-900" : "text-stone-400"}>
+            {triggerLabel}
+          </span>
+          <svg
+            viewBox="0 0 24 24"
+            className={`size-[18px] shrink-0 text-stone-500 transition ${open ? "rotate-180" : ""}`}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.5}
+            aria-hidden
+          >
+            <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+
+        {open ? (
+          <ul
+            id={listId}
+            role="listbox"
+            aria-labelledby={`${listId}-label`}
+            className="absolute z-30 mt-2 max-h-64 w-full overflow-auto rounded-2xl border border-stone-200 bg-white py-1.5 shadow-[0_12px_40px_-12px_rgb(24_24_27/0.28)]"
+          >
+            {municipalities.map((m) => {
+              const selected = cityValue === m.id;
+              return (
+                <li key={m.id} role="option" aria-selected={selected}>
+                  <button
+                    type="button"
+                    className={`flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-[13px] transition ${
+                      selected
+                        ? "bg-[var(--store-accent)]/10 font-medium text-[var(--store-brand)]"
+                        : "text-stone-800 hover:bg-[#fff8fb]"
+                    }`}
+                    onClick={() => pick(m.id)}
+                  >
+                    <span>{municipalityDisplayLabel(m)}</span>
+                    {selected ? (
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--store-accent)]">
+                        Elegido
+                      </span>
+                    ) : null}
+                  </button>
+                </li>
+              );
+            })}
+            <li role="option" aria-selected={isOtherCity} className="mt-1 border-t border-stone-100 pt-1">
+              <button
+                type="button"
+                className={`flex w-full items-center gap-2 px-4 py-2.5 text-left text-[13px] transition ${
+                  isOtherCity
+                    ? "bg-amber-50 font-medium text-amber-950"
+                    : "text-stone-600 hover:bg-stone-50"
+                }`}
+                onClick={() => pick(SHIPPING_CITY_OTHER)}
+              >
+                Mi municipio no aparece
+              </button>
+            </li>
+          </ul>
+        ) : null}
+      </div>
 
       {selectedMunicipality && !isOtherCity ? (
-        <p className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-700">
-          Envío a <strong>{municipalityDisplayLabel(selectedMunicipality)}</strong>:{" "}
-          <strong className="tabular-nums">
+        <p className="rounded-2xl border border-stone-200 bg-[#faf9f8] px-4 py-3 text-sm text-stone-700">
+          Envío a{" "}
+          <span className="font-medium text-stone-900">
+            {municipalityDisplayLabel(selectedMunicipality)}
+          </span>
+          :{" "}
+          <span className="font-semibold tabular-nums text-[var(--store-brand)]">
             {freeShippingQualified && selectedMunicipality.rate_cents > 0
               ? `Gratis (antes ${formatCop(selectedMunicipality.rate_cents)})`
               : formatShippingRateLabel(shippingCents)}
-          </strong>
+          </span>
         </p>
       ) : null}
 
       {isOtherCity ? (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-950">
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
           <p className="font-medium">¿No encuentras tu municipio?</p>
           <p className="mt-1 leading-relaxed text-amber-900/90">
             Escríbenos por WhatsApp para cotizar el envío y completar tu pedido.
