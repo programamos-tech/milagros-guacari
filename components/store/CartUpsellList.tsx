@@ -74,14 +74,14 @@ export function CartUpsellList({
 
   const listClass =
     layout === "scroll"
-      ? "store-cart-suggestions-scroll -mx-1 flex list-none gap-3 px-1 pb-2"
+      ? "store-cart-suggestions-scroll -mx-1 flex list-none items-stretch gap-3 px-1 pb-2"
       : layout === "bump"
         ? "space-y-3"
         : "divide-y divide-stone-200/90";
 
   const itemClass =
     layout === "scroll"
-      ? "w-[7.25rem] shrink-0 sm:w-[7.75rem]"
+      ? "flex w-[7.25rem] shrink-0 flex-col sm:w-[7.75rem]"
       : layout === "bump"
         ? "rounded-lg border border-stone-200/80 bg-white p-2.5"
         : "py-4 first:pt-0 last:pb-0";
@@ -245,7 +245,7 @@ export function CartUpsellList({
                 <div
                   className={
                     layout === "scroll"
-                      ? "flex flex-1 flex-col pt-2"
+                      ? "flex min-h-0 flex-1 flex-col pt-2"
                       : "flex min-w-0 flex-1 flex-col justify-between gap-3"
                   }
                 >
@@ -254,7 +254,7 @@ export function CartUpsellList({
                       href={`/products/${product.id}`}
                       className={`line-clamp-2 font-semibold leading-snug text-[var(--store-brand)] transition hover:text-[var(--store-brand-hover)] ${
                         layout === "scroll"
-                          ? "text-[10px] uppercase tracking-[0.08em]"
+                          ? "min-h-[2.75em] text-[10px] uppercase tracking-[0.08em]"
                           : "text-[14px]"
                       }`}
                     >
@@ -270,7 +270,7 @@ export function CartUpsellList({
                   </div>
 
                   {hasVariants ? (
-                    <label className="block max-w-[14rem]">
+                    <label className="mt-2 block max-w-[14rem]">
                       <span className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-stone-500">
                         Fragancia / tono
                       </span>
@@ -299,7 +299,7 @@ export function CartUpsellList({
                     onClick={() => handleQuickAdd(product)}
                     className={`inline-flex items-center justify-center bg-[var(--store-accent)] text-[10px] font-semibold uppercase tracking-[0.12em] text-white transition hover:bg-[var(--store-accent-hover)] disabled:cursor-wait disabled:opacity-60 ${
                       layout === "scroll"
-                        ? "mt-2 w-full px-2 py-2"
+                        ? "mt-auto w-full px-2 py-2"
                         : "w-full max-w-[14rem] px-4 py-2.5"
                     }`}
                   >
