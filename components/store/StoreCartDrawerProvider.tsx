@@ -272,23 +272,16 @@ export function StoreCartDrawerProvider({
   const goToCheckout = useCallback(() => {
     setGoingCheckout(true);
     setOpen(false);
-    router.prefetch("/checkout");
-    router.push("/checkout");
-  }, [router]);
+    // Navegación dura: evita flash del home (layout) mientras carga el RSC de checkout.
+    window.location.assign("/checkout");
+  }, []);
 
-  // El provider vive en el layout: hay que apagar el overlay al llegar a checkout.
+  // El provider vive en el layout: apagar overlay solo al estar en checkout.
   useEffect(() => {
     if (pathname.startsWith("/checkout")) {
       setGoingCheckout(false);
     }
   }, [pathname]);
-
-  // Red de seguridad: no dejar el overlay colgado si la navegación tarda.
-  useEffect(() => {
-    if (!goingCheckout) return;
-    const t = window.setTimeout(() => setGoingCheckout(false), 1600);
-    return () => window.clearTimeout(t);
-  }, [goingCheckout]);
 
   useEffect(() => {
     if (!open) return;
