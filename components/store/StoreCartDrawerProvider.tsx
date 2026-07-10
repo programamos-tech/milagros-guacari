@@ -48,6 +48,7 @@ type StoreCartSuggestion = StoreCartUpsellProduct;
 type StoreCartDrawerContextValue = {
   openCart: () => void;
   closeCart: () => void;
+  isOpen: boolean;
 };
 
 const StoreCartDrawerContext =
@@ -335,8 +336,8 @@ export function StoreCartDrawerProvider({
   }, [open, closeCart]);
 
   const value = useMemo(
-    () => ({ openCart, closeCart }),
-    [openCart, closeCart],
+    () => ({ openCart, closeCart, isOpen: open }),
+    [openCart, closeCart, open],
   );
 
   const [linePending, startLineTransition] = useTransition();

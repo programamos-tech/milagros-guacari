@@ -5,27 +5,31 @@ import {
   storeWhatsAppPrefilledText,
   storeWhatsAppUrl,
 } from "@/lib/brand";
+import { useStoreCartDrawer } from "@/components/store/StoreCartDrawerProvider";
 
+/** Glifo oficial simplificado (sin trazo que genere línea negra al antialias). */
 function WhatsAppGlyph({ className }: { className?: string }) {
   return (
     <svg
       className={className}
       viewBox="0 0 24 24"
       fill="currentColor"
+      xmlns="http://www.w3.org/2000/svg"
       aria-hidden
     >
-      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.591-5.314c0-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+      <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.89.49 3.73 1.42 5.35L2 22l4.89-1.28a9.86 9.86 0 0 0 5.15 1.41h.01c5.46 0 9.91-4.45 9.91-9.91C21.96 6.45 17.5 2 12.04 2zm5.79 14.12c-.24.68-1.41 1.25-1.95 1.33-.5.08-1.13.11-1.82-.11-.42-.14-.96-.32-1.65-.63-2.9-1.26-4.79-4.19-4.93-4.38-.14-.19-1.16-1.54-1.16-2.94s.73-2.08 1-.25c.09.17.2.36.3.55.1.19.14.32.22.53.08.21.04.39-.02.55-.07.17-.13.27-.26.42l-.38.44c-.13.14-.26.29-.11.57.14.28.66 1.09 1.42 1.76 1.01.89 1.82 1.17 2.08 1.3.26.13.41.11.56-.07.15-.17.65-.76.83-1.02.17-.26.35-.22.59-.13.24.09 1.52.72 1.78.85.26.13.44.2.5.31.07.11.07.64-.17 1.32z" />
     </svg>
   );
 }
 
 export function StoreWhatsAppFloatingButton() {
+  const { isOpen: cartOpen } = useStoreCartDrawer();
   const href =
     storeWhatsAppUrl === "#"
       ? null
       : `${storeWhatsAppUrl}?text=${encodeURIComponent(storeWhatsAppPrefilledText)}`;
 
-  if (!href) return null;
+  if (!href || cartOpen) return null;
 
   return (
     <div
@@ -39,7 +43,7 @@ export function StoreWhatsAppFloatingButton() {
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="pointer-events-auto flex size-14 shrink-0 items-center justify-center rounded-full border border-[#1da851]/90 bg-[#25D366] text-white shadow-[0_14px_36px_-10px_rgba(37,211,102,0.55),0_4px_12px_-4px_rgba(0,0,0,0.12)] transition hover:bg-[#20BD5A] hover:shadow-[0_18px_40px_-10px_rgba(37,211,102,0.5)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#25D366] active:scale-[0.97] sm:size-[3.25rem]"
+        className="pointer-events-auto flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#25D366] text-white shadow-[0_14px_36px_-10px_rgba(37,211,102,0.55),0_4px_12px_-4px_rgba(0,0,0,0.12)] transition hover:bg-[#20BD5A] hover:shadow-[0_18px_40px_-10px_rgba(37,211,102,0.5)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#25D366] active:scale-[0.97] sm:size-[3.25rem]"
         aria-label={`Escribir por WhatsApp a ${storeSupportPhone}`}
       >
         <WhatsAppGlyph className="size-7 text-white sm:size-[1.45rem]" />
