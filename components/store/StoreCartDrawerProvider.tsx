@@ -16,6 +16,10 @@ import { useRouter } from "next/navigation";
 import { Minus, Plus } from "lucide-react";
 import { setKitLineQuantity, setLineQuantity } from "@/app/actions/cart";
 import { CartUpsellScroller } from "@/components/store/CartUpsellScroller";
+import {
+  STORE_CHECKOUT_ROUTE_MESSAGES,
+  StoreMotivationalOverlay,
+} from "@/components/store/StoreMotivationalOverlay";
 import { formatCop } from "@/lib/money";
 import type { StoreCartUpsellProduct } from "@/lib/store-cart-upsells";
 import {
@@ -183,47 +187,92 @@ export function StoreCartDrawerProvider({
   const [subtotalNetCents, setSubtotalNetCents] = useState(0);
   const [subtotalVatCents, setSubtotalVatCents] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [goingCheckout, setGoingCheckout] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const hasCachedItemsRef = useRef(false);
 
-  const reloadCart = useCallback(async (mode: "full" | "quiet" = "full") => {
-    if (mode === "full") setLoading(true);
-    try {
-      const res = await fetch("/api/store/cart", {
-        cache: "no-store",
-      });
-      if (!res.ok) {
-        setItems([]);
-        setSuggestions([]);
-        setSubtotalCents(0);
-        setSubtotalNetCents(0);
-        setSubtotalVatCents(0);
-        return;
-      }
-      const body = (await res.json()) as {
-        items?: StoreCartDrawerItem[];
-        subtotalCents?: number;
-        subtotalNetCents?: number;
-        subtotalVatCents?: number;
-        suggestions?: StoreCartSuggestion[];
-      };
-      setItems(body.items ?? []);
+  const applyCartBody = useCallback(
+    (body: {
+      items?: StoreCartDrawerItem[];
+      subtotalCents?: number;
+      subtotalNetCents?: number;
+      subtotalVatCents?: number;
+      suggestions?: StoreCartSuggestion[];
+    }, opts?: { keepSuggestions?: boolean }) => {
+      const nextItems = body.items ?? [];
+      setItems(nextItems);
+      hasCachedItemsRef.current = nextItems.length > 0;
       setSubtotalCents(Number(body.subtotalCents ?? 0));
       setSubtotalNetCents(Number(body.subtotalNetCents ?? 0));
       setSubtotalVatCents(Number(body.subtotalVatCents ?? 0));
-      setSuggestions(body.suggestions ?? []);
-    } finally {
-      if (mode === "full") setLoading(false);
-    }
-  }, []);
+      if (!opts?.keepSuggestions) {
+        setSuggestions(body.suggestions ?? []);
+      }
+    },
+    [],
+  );
+
+  const reloadCart = useCallback(
+    async (mode: "full" | "quiet" = "full") => {
+      const showSpinner = mode === "full" && !hasCachedItemsRef.current;
+      if (showSpinner) setLoading(true);
+      try {
+        // Primero ítems (rápido); sugerencias en segundo request.
+        const res = await fetch("/api/store/cart?suggestions=0", {
+          cache: "no-store",
+        });
+        if (!res.ok) {
+          setItems([]);
+          setSuggestions([]);
+          setSubtotalCents(0);
+          setSubtotalNetCents(0);
+          setSubtotalVatCents(0);
+          hasCachedItemsRef.current = false;
+          return;
+        }
+        const body = (await res.json()) as {
+          items?: StoreCartDrawerItem[];
+          subtotalCents?: number;
+          subtotalNetCents?: number;
+          subtotalVatCents?: number;
+          suggestions?: StoreCartSuggestion[];
+        };
+        applyCartBody(body, { keepSuggestions: true });
+        if (showSpinner) setLoading(false);
+
+        void fetch("/api/store/cart?only=suggestions", { cache: "no-store" })
+          .then(async (sugRes) => {
+            if (!sugRes.ok) return;
+            const sugBody = (await sugRes.json()) as {
+              suggestions?: StoreCartSuggestion[];
+            };
+            setSuggestions(sugBody.suggestions ?? []);
+          })
+          .catch(() => {
+            /* ignore */
+          });
+      } finally {
+        if (showSpinner) setLoading(false);
+      }
+    },
+    [applyCartBody],
+  );
 
   const openCart = useCallback(() => {
     setOpen(true);
-    void reloadCart("full");
-  }, [reloadCart]);
+    router.prefetch("/checkout");
+    void reloadCart(hasCachedItemsRef.current ? "quiet" : "full");
+  }, [reloadCart, router]);
 
   const closeCart = useCallback(() => {
     setOpen(false);
   }, []);
+
+  const goToCheckout = useCallback(() => {
+    setGoingCheckout(true);
+    setOpen(false);
+    router.push("/checkout");
+  }, [router]);
 
   useEffect(() => {
     if (!open) return;
@@ -279,6 +328,11 @@ export function StoreCartDrawerProvider({
   return (
     <StoreCartDrawerContext.Provider value={value}>
       {children}
+      <StoreMotivationalOverlay
+        active={goingCheckout}
+        messages={STORE_CHECKOUT_ROUTE_MESSAGES}
+        zIndexClass="z-[120]"
+      />
       {open ? (
         <>
           <button
@@ -389,13 +443,14 @@ export function StoreCartDrawerProvider({
                     </dd>
                   </div>
                 </dl>
-                <Link
-                  href="/checkout"
-                  onClick={closeCart}
-                  className="mt-5 flex w-full items-center justify-center bg-[var(--store-accent)] py-4 text-center text-[11px] font-semibold uppercase tracking-[0.22em] text-white transition hover:bg-[var(--store-accent-hover)]"
+                <button
+                  type="button"
+                  onClick={goToCheckout}
+                  disabled={goingCheckout}
+                  className="mt-5 flex w-full items-center justify-center bg-[var(--store-accent)] py-4 text-center text-[11px] font-semibold uppercase tracking-[0.22em] text-white transition hover:bg-[var(--store-accent-hover)] disabled:cursor-wait disabled:opacity-80"
                 >
-                  Revisar y finalizar compra
-                </Link>
+                  {goingCheckout ? "Llevándote…" : "Revisar y finalizar compra"}
+                </button>
                 <Link
                   href="/products"
                   onClick={closeCart}

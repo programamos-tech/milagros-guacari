@@ -74,17 +74,50 @@ async function loggedStoreCustomerWholesalePercent(
 }
 
 /** Líneas del carrito + ítems enriquecidos para el drawer (y `lines` compat). */
-export async function GET() {
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const includeSuggestions = url.searchParams.get("suggestions") !== "0";
+  const onlySuggestions = url.searchParams.get("only") === "suggestions";
+
   const lines = await getStorefrontCartLines();
   const supabase = await createSupabaseServerClient();
-  const wholesalePct = await loggedStoreCustomerWholesalePercent(supabase);
+
+  const productLines = lines.filter(isCartProductLine);
+  const kitLines = lines.filter(isCartKitLine);
+  const ids = [...new Set(productLines.map((l) => l.productId))];
+
+  if (onlySuggestions) {
+    const suggestions = await loadStoreCartUpsells(
+      supabase,
+      ids,
+      CART_DRAWER_UPSELL_LIMIT,
+    );
+    return NextResponse.json({ suggestions });
+  }
+
+  const [wholesalePct, productsRes, kits, suggestions] = await Promise.all([
+    loggedStoreCustomerWholesalePercent(supabase),
+    ids.length > 0
+      ? supabase
+          .from("products")
+          .select(
+            "id,name,price_cents,has_vat,image_path,fragrance_option_images,colors,stock_quantity",
+          )
+          .in("id", ids)
+          .eq("is_published", true)
+      : Promise.resolve({ data: [] as unknown[] }),
+    kitLines.length > 0
+      ? fetchKitsWithItems(supabase, { publishedOnly: true })
+      : Promise.resolve([]),
+    includeSuggestions
+      ? loadStoreCartUpsells(supabase, ids, CART_DRAWER_UPSELL_LIMIT)
+      : Promise.resolve([] as StoreCartUpsellProduct[]),
+  ]);
 
   if (lines.length === 0) {
-    const empty: CartDrawerItem[] = [];
-    const suggestions = await loadStoreCartUpsells(supabase, [], CART_DRAWER_UPSELL_LIMIT);
     return NextResponse.json({
       lines: [],
-      items: empty,
+      items: [] as CartDrawerItem[],
       subtotalCents: 0,
       subtotalNetCents: 0,
       subtotalVatCents: 0,
@@ -93,35 +126,17 @@ export async function GET() {
     });
   }
 
-  const productLines = lines.filter(isCartProductLine);
-  const kitLines = lines.filter(isCartKitLine);
-  const ids = [...new Set(productLines.map((l) => l.productId))];
-
-  const { data: products } =
-    ids.length > 0
-      ? await supabase
-          .from("products")
-          .select(
-            "id,name,price_cents,has_vat,image_path,fragrance_option_images,colors,stock_quantity",
-          )
-          .in("id", ids)
-          .eq("is_published", true)
-      : { data: [] };
-
   const byId = new Map(
-    (products ?? []).map((p) => [
-      p.id,
-      p as {
-        id: string;
-        name: string;
-        price_cents: number;
-        has_vat?: boolean | null;
-        image_path: string | null;
-        fragrance_option_images: unknown;
-        colors: unknown;
-        stock_quantity: number | null;
-      },
-    ]),
+    ((productsRes.data ?? []) as {
+      id: string;
+      name: string;
+      price_cents: number;
+      has_vat?: boolean | null;
+      image_path: string | null;
+      fragrance_option_images: unknown;
+      colors: unknown;
+      stock_quantity: number | null;
+    }[]).map((p) => [p.id, p]),
   );
 
   const items: CartDrawerItem[] = [];
@@ -168,15 +183,11 @@ export async function GET() {
         wholesalePct > 0 && listLineTotalCents > lineTotalCents
           ? listLineTotalCents
           : null,
-      maxStock: Math.max(
-        0,
-        Math.floor(Number(p.stock_quantity ?? 0)),
-      ),
+      maxStock: Math.max(0, Math.floor(Number(p.stock_quantity ?? 0))),
     });
   }
 
   if (kitLines.length > 0) {
-    const kits = await fetchKitsWithItems(supabase, { publishedOnly: true });
     const kitsById = new Map(kits.map((k) => [k.id, k]));
     for (const line of kitLines) {
       const kit = kitsById.get(line.kitId);
@@ -199,12 +210,6 @@ export async function GET() {
       });
     }
   }
-
-  const suggestions = await loadStoreCartUpsells(
-    supabase,
-    ids,
-    CART_DRAWER_UPSELL_LIMIT,
-  );
 
   return NextResponse.json({
     lines,
