@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
+import { useFormStatus } from "react-dom";
 import { useCheckoutShipping } from "@/components/store/CheckoutShippingProvider";
 import { formatCop } from "@/lib/money";
 import {
@@ -246,6 +247,7 @@ export function CheckoutShippingTotals() {
 }
 
 export function CheckoutSubmitButton({ className }: { className: string }) {
+  const { pending } = useFormStatus();
   const { cityValue, isOtherCity, selectedMunicipality } = useCheckoutShipping();
   const canSubmit =
     Boolean(cityValue) && !isOtherCity && selectedMunicipality != null;
@@ -255,9 +257,9 @@ export function CheckoutSubmitButton({ className }: { className: string }) {
       <button
         type="submit"
         className={`${className} disabled:cursor-not-allowed disabled:opacity-50`}
-        disabled={!canSubmit}
+        disabled={!canSubmit || pending}
       >
-        Finalizar compra
+        {pending ? "Procesando…" : "Finalizar compra"}
       </button>
       {!canSubmit && isOtherCity ? (
         <p className="text-center text-xs leading-relaxed text-stone-500">

@@ -45,6 +45,7 @@ import {
   CheckoutSubmitButton,
 } from "@/components/store/CheckoutCitySelect";
 import { CheckoutShippingProvider } from "@/components/store/CheckoutShippingProvider";
+import { CheckoutSubmittingOverlay } from "@/components/store/CheckoutSubmittingOverlay";
 import { CheckoutLineControls } from "@/components/store/CheckoutLineControls";
 import { CartUpsellScroller } from "@/components/store/CartUpsellScroller";
 import {
@@ -554,6 +555,7 @@ export default async function CheckoutPage({
         />
 
         <form action={startCheckout}>
+          <CheckoutSubmittingOverlay />
           <CheckoutShippingProvider
             municipalities={municipalities}
             subtotalCents={totalGross}
