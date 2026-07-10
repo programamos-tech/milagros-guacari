@@ -12,7 +12,7 @@ import {
   useState,
   useTransition,
 } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Minus, Plus } from "lucide-react";
 import { setKitLineQuantity, setLineQuantity } from "@/app/actions/cart";
 import { CartUpsellScroller } from "@/components/store/CartUpsellScroller";
@@ -180,6 +180,7 @@ export function StoreCartDrawerProvider({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname() || "/";
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<StoreCartDrawerItem[]>([]);
   const [suggestions, setSuggestions] = useState<StoreCartSuggestion[]>([]);
@@ -271,8 +272,23 @@ export function StoreCartDrawerProvider({
   const goToCheckout = useCallback(() => {
     setGoingCheckout(true);
     setOpen(false);
+    router.prefetch("/checkout");
     router.push("/checkout");
   }, [router]);
+
+  // El provider vive en el layout: hay que apagar el overlay al llegar a checkout.
+  useEffect(() => {
+    if (pathname.startsWith("/checkout")) {
+      setGoingCheckout(false);
+    }
+  }, [pathname]);
+
+  // Red de seguridad: no dejar el overlay colgado si la navegación tarda.
+  useEffect(() => {
+    if (!goingCheckout) return;
+    const t = window.setTimeout(() => setGoingCheckout(false), 1600);
+    return () => window.clearTimeout(t);
+  }, [goingCheckout]);
 
   useEffect(() => {
     if (!open) return;

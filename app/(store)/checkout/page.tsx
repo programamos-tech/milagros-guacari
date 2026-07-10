@@ -354,16 +354,22 @@ export default async function CheckoutPage({
     if (cust) {
       const customerId = String(cust.id);
 
-      // Último pedido web/tienda: mejor fuente de dirección y municipio.
-      const { data: lastOrder } = await sessionSb
-        .from("orders")
-        .select(
-          "customer_name, shipping_address, shipping_city, shipping_postal_code, shipping_phone, shipping_municipality_id",
-        )
-        .eq("customer_id", customerId)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const [{ data: lastOrder }, { data: addrs }] = await Promise.all([
+        sessionSb
+          .from("orders")
+          .select(
+            "customer_name, shipping_address, shipping_city, shipping_postal_code, shipping_phone, shipping_municipality_id",
+          )
+          .eq("customer_id", customerId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        sessionSb
+          .from("customer_addresses")
+          .select("id, label, address_line, reference, sort_order")
+          .eq("customer_id", customerId)
+          .order("sort_order", { ascending: true }),
+      ]);
 
       const orderName = lastOrder?.customer_name?.trim() ?? "";
       const profileName = cust.name?.trim() ?? "";
@@ -398,11 +404,6 @@ export default async function CheckoutPage({
           ? String(lastOrder.shipping_municipality_id)
           : "";
 
-      const { data: addrs } = await sessionSb
-        .from("customer_addresses")
-        .select("id, label, address_line, reference, sort_order")
-        .eq("customer_id", customerId)
-        .order("sort_order", { ascending: true });
       savedAddresses = (addrs ?? []) as CheckoutSavedAddress[];
     } else {
       shippingInitial.firstName = defaultFirst;
@@ -446,12 +447,23 @@ export default async function CheckoutPage({
   const cartAdjusted =
     JSON.stringify(productLines) !== JSON.stringify(normalizedProducts);
 
-  const kitsById = new Map(
-    (await fetchKitsWithItems(supabase, { publishedOnly: true })).map((k) => [
-      k.id,
-      k,
-    ]),
-  );
+  const kitsPromise =
+    kitLines.length > 0
+      ? fetchKitsWithItems(supabase, { publishedOnly: true })
+      : Promise.resolve([]);
+
+  const [kits, cartUpsellProducts, municipalityRes] = await Promise.all([
+    kitsPromise,
+    loadStoreCartUpsells(sessionSb, productIds, CART_DRAWER_UPSELL_LIMIT),
+    supabase
+      .from("store_shipping_municipalities")
+      .select("id, name, department, rate_cents")
+      .eq("is_enabled", true)
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true }),
+  ]);
+
+  const kitsById = new Map(kits.map((k) => [k.id, k]));
 
   const rows = normalizedProducts.map((line) => {
     const p = byId.get(line.productId)!;
@@ -496,19 +508,7 @@ export default async function CheckoutPage({
   const totalVat = Math.max(0, totalGross - totalNet);
   const wholesaleSavingCents = Math.max(0, catalogListTotalGross - totalGross);
 
-  const cartUpsellProducts = await loadStoreCartUpsells(
-    sessionSb,
-    productIds,
-    CART_DRAWER_UPSELL_LIMIT,
-  );
-
-  const { data: municipalityRows } = await supabase
-    .from("store_shipping_municipalities")
-    .select("id, name, department, rate_cents")
-    .eq("is_enabled", true)
-    .order("sort_order", { ascending: true })
-    .order("name", { ascending: true });
-
+  const municipalityRows = municipalityRes.data;
   const municipalities: StoreShippingMunicipalityPublic[] = (
     municipalityRows ?? []
   ).map((m) => ({
