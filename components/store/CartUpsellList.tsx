@@ -303,7 +303,7 @@ export function CartUpsellList({
                         : "w-full max-w-[14rem] px-4 py-2.5"
                     }`}
                   >
-                    {busy ? "Agregando…" : "Agregar al carrito"}
+                    {busy ? "…" : "Agregar"}
                   </button>
                 </div>
               </div>
