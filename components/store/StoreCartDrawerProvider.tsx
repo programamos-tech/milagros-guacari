@@ -218,10 +218,7 @@ export function StoreCartDrawerProvider({
       const showSpinner = mode === "full" && !hasCachedItemsRef.current;
       if (showSpinner) setLoading(true);
       try {
-        // Primero ítems (rápido); sugerencias en segundo request.
-        const res = await fetch("/api/store/cart?suggestions=0", {
-          cache: "no-store",
-        });
+        const res = await fetch("/api/store/cart", { cache: "no-store" });
         if (!res.ok) {
           setItems([]);
           setSuggestions([]);
@@ -236,12 +233,18 @@ export function StoreCartDrawerProvider({
           subtotalCents?: number;
           subtotalNetCents?: number;
           subtotalVatCents?: number;
-          suggestions?: StoreCartSuggestion[];
         };
         applyCartBody(body, { keepSuggestions: true });
         if (showSpinner) setLoading(false);
 
-        void fetch("/api/store/cart?only=suggestions", { cache: "no-store" })
+        const exclude = (body.items ?? [])
+          .map((i) => i.productId)
+          .filter((id): id is string => Boolean(id))
+          .join(",");
+        void fetch(
+          `/api/store/cart?only=suggestions&exclude=${encodeURIComponent(exclude)}`,
+          { cache: "no-store" },
+        )
           .then(async (sugRes) => {
             if (!sugRes.ok) return;
             const sugBody = (await sugRes.json()) as {
@@ -259,9 +262,34 @@ export function StoreCartDrawerProvider({
     [applyCartBody],
   );
 
+  // Precarga en idle: la primera apertura ya tiene datos.
+  useEffect(() => {
+    let cancelled = false;
+    const run = () => {
+      if (!cancelled) void reloadCart("quiet");
+    };
+    const w = window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    if (typeof w.requestIdleCallback === "function") {
+      const id = w.requestIdleCallback(run, { timeout: 2500 });
+      return () => {
+        cancelled = true;
+        w.cancelIdleCallback?.(id);
+      };
+    }
+    const t = window.setTimeout(run, 1200);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
+  }, [reloadCart]);
+
   const openCart = useCallback(() => {
     setOpen(true);
     router.prefetch("/checkout");
+    // Siempre quiet si ya hay cache: la UI abre al instante.
     void reloadCart(hasCachedItemsRef.current ? "quiet" : "full");
   }, [reloadCart, router]);
 
@@ -376,9 +404,18 @@ export function StoreCartDrawerProvider({
 
             <div className="store-cart-drawer-body-scroll flex min-h-0 flex-1 flex-col px-6 sm:px-8">
               {loading && items.length === 0 ? (
-                <p className="py-12 text-center text-sm text-stone-500">
-                  Cargando…
-                </p>
+                <div className="space-y-4 py-6" aria-busy="true" aria-label="Cargando bolsa">
+                  {[0, 1].map((i) => (
+                    <div key={i} className="flex gap-4 border-b border-stone-100 pb-6">
+                      <div className="aspect-[3/4] w-[4.75rem] shrink-0 animate-pulse bg-stone-100 sm:w-20" />
+                      <div className="min-w-0 flex-1 space-y-3 pt-1">
+                        <div className="h-3 w-3/4 animate-pulse rounded bg-stone-100" />
+                        <div className="h-3 w-1/2 animate-pulse rounded bg-stone-100" />
+                        <div className="h-8 w-24 animate-pulse rounded bg-stone-100" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               ) : items.length === 0 ? (
                 <>
                   <div className="flex flex-1 flex-col items-center justify-center gap-6 py-12 text-center">

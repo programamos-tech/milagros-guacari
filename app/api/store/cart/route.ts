@@ -1,20 +1,21 @@
 import { NextResponse } from "next/server";
-import { imagePathForProductLine } from "@/lib/product-line-image";
 import {
-  unitPriceAfterWholesaleCents,
-  wholesaleDiscountPercentFromRow,
-} from "@/lib/customer-wholesale-pricing";
+  getCart,
+  isCartKitLine,
+  isCartProductLine,
+  normalizeCartForCheckout,
+} from "@/lib/cart";
+import { imagePathForProductLine } from "@/lib/product-line-image";
+import { fetchKitsByIdsWithItems } from "@/lib/load-product-kits";
+import {
+  kitIsAvailable,
+  maxKitsAvailableFromItems,
+  resolveKitSalePriceCents,
+} from "@/lib/product-kits";
 import {
   storefrontListGrossUnitCents,
   storefrontPayableUnitGrossCents,
 } from "@/lib/storefront-gross-price";
-import { isCartKitLine, isCartProductLine } from "@/lib/cart";
-import { fetchKitsWithItems } from "@/lib/load-product-kits";
-import {
-  maxKitsAvailableFromItems,
-  resolveKitSalePriceCents,
-} from "@/lib/product-kits";
-import { getStorefrontCartLines } from "@/lib/storefront-cart";
 import {
   CART_DRAWER_UPSELL_LIMIT,
   loadStoreCartUpsells,
@@ -31,7 +32,6 @@ export type CartDrawerItem = {
   fragrance: string | null;
   name: string;
   priceCents: number;
-  /** Precio de catálogo por unidad (solo si hay descuento mayorista). */
   listPriceCents?: number | null;
   imagePath: string | null;
   firstColor: string | null;
@@ -48,116 +48,106 @@ function firstColorLabel(colors: unknown): string | null {
   return typeof c === "string" && c.trim() ? c.trim() : null;
 }
 
-async function loggedStoreCustomerWholesalePercent(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-): Promise<number> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user?.id) return 0;
-  const { data: prof } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (prof) return 0;
-  const { data: c } = await supabase
-    .from("customers")
-    .select("customer_kind, wholesale_discount_percent")
-    .maybeSingle();
-  return wholesaleDiscountPercentFromRow(
-    (c ?? {}) as {
-      customer_kind?: string | null;
-      wholesale_discount_percent?: number | null;
-    },
-  );
-}
-
-/** Líneas del carrito + ítems enriquecidos para el drawer (y `lines` compat). */
+/**
+ * Drawer de bolsa: lectura rápida del cookie + 1 query de productos
+ * (y kits solo por id). Sin getUser/mayorista ni normalización doble.
+ */
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const includeSuggestions = url.searchParams.get("suggestions") !== "0";
   const onlySuggestions = url.searchParams.get("only") === "suggestions";
-
-  const lines = await getStorefrontCartLines();
   const supabase = await createSupabaseServerClient();
 
-  const productLines = lines.filter(isCartProductLine);
-  const kitLines = lines.filter(isCartKitLine);
-  const ids = [...new Set(productLines.map((l) => l.productId))];
-
   if (onlySuggestions) {
+    const exclude = String(url.searchParams.get("exclude") ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
     const suggestions = await loadStoreCartUpsells(
       supabase,
-      ids,
+      exclude,
       CART_DRAWER_UPSELL_LIMIT,
     );
     return NextResponse.json({ suggestions });
   }
 
-  const [wholesalePct, productsRes, kits, suggestions] = await Promise.all([
-    loggedStoreCustomerWholesalePercent(supabase),
-    ids.length > 0
-      ? supabase
-          .from("products")
-          .select(
-            "id,name,price_cents,has_vat,image_path,fragrance_option_images,colors,stock_quantity",
-          )
-          .in("id", ids)
-          .eq("is_published", true)
-      : Promise.resolve({ data: [] as unknown[] }),
-    kitLines.length > 0
-      ? fetchKitsWithItems(supabase, { publishedOnly: true })
-      : Promise.resolve([]),
-    includeSuggestions
-      ? loadStoreCartUpsells(supabase, ids, CART_DRAWER_UPSELL_LIMIT)
-      : Promise.resolve([] as StoreCartUpsellProduct[]),
-  ]);
+  // Cookie cruda: evita getStorefrontCartLines (que re-consulta productos + TODOS los kits).
+  const rawLines = await getCart();
+  const productLinesRaw = rawLines.filter(isCartProductLine);
+  const kitLinesRaw = rawLines.filter(isCartKitLine);
+  const productIds = [...new Set(productLinesRaw.map((l) => l.productId))];
+  const kitIds = [...new Set(kitLinesRaw.map((l) => l.kitId))];
 
-  if (lines.length === 0) {
+  if (rawLines.length === 0) {
     return NextResponse.json({
       lines: [],
       items: [] as CartDrawerItem[],
       subtotalCents: 0,
       subtotalNetCents: 0,
       subtotalVatCents: 0,
-      wholesaleDiscountPercent: wholesalePct,
-      suggestions,
+      wholesaleDiscountPercent: 0,
+      suggestions: [] as StoreCartUpsellProduct[],
     });
   }
 
-  const byId = new Map(
-    ((productsRes.data ?? []) as {
-      id: string;
-      name: string;
-      price_cents: number;
-      has_vat?: boolean | null;
-      image_path: string | null;
-      fragrance_option_images: unknown;
-      colors: unknown;
-      stock_quantity: number | null;
-    }[]).map((p) => [p.id, p]),
+  const [productsRes, kits] = await Promise.all([
+    productIds.length > 0
+      ? supabase
+          .from("products")
+          .select(
+            "id,name,price_cents,has_vat,image_path,fragrance_option_images,colors,stock_quantity,is_published",
+          )
+          .in("id", productIds)
+      : Promise.resolve({ data: [] as unknown[] }),
+    kitIds.length > 0
+      ? fetchKitsByIdsWithItems(supabase, kitIds)
+      : Promise.resolve([]),
+  ]);
+
+  const productRows = (productsRes.data ?? []) as {
+    id: string;
+    name: string;
+    price_cents: number;
+    has_vat?: boolean | null;
+    image_path: string | null;
+    fragrance_option_images: unknown;
+    colors: unknown;
+    stock_quantity: number | null;
+    is_published: boolean | null;
+  }[];
+
+  const byId = new Map(productRows.map((p) => [p.id, p]));
+  const stockMap = new Map(
+    productRows.map((p) => [
+      p.id,
+      {
+        is_published: p.is_published,
+        stock_quantity: p.stock_quantity,
+      },
+    ]),
   );
+
+  const productLines = normalizeCartForCheckout(productLinesRaw, stockMap);
 
   const items: CartDrawerItem[] = [];
   let subtotalCents = 0;
   let subtotalNetCents = 0;
   let subtotalVatCents = 0;
 
+  // Precio de lista en drawer (mayorista se aplica en checkout).
+  const wholesalePct = 0;
+
   for (const line of productLines) {
     const p = byId.get(line.productId);
     if (!p) continue;
     const listUnitNet = p.price_cents;
-    const netUnit = unitPriceAfterWholesaleCents(listUnitNet, wholesalePct);
     const payableGrossUnit = storefrontPayableUnitGrossCents(
       listUnitNet,
       p.has_vat,
       wholesalePct,
     );
     const listGrossUnit = storefrontListGrossUnitCents(listUnitNet, p.has_vat);
-    const lineNetCents = netUnit * line.quantity;
+    const lineNetCents = listUnitNet * line.quantity;
     const lineTotalCents = payableGrossUnit * line.quantity;
-    const listLineTotalCents = listGrossUnit * line.quantity;
     subtotalCents += lineTotalCents;
     subtotalNetCents += lineNetCents;
     subtotalVatCents += Math.max(0, lineTotalCents - lineNetCents);
@@ -168,10 +158,7 @@ export async function GET(request: Request) {
       fragrance: frag,
       name: p.name,
       priceCents: payableGrossUnit,
-      listPriceCents:
-        wholesalePct > 0 && payableGrossUnit < listGrossUnit
-          ? listGrossUnit
-          : null,
+      listPriceCents: null,
       imagePath: imagePathForProductLine(
         p.image_path,
         p.fragrance_option_images,
@@ -179,45 +166,44 @@ export async function GET(request: Request) {
       ),
       firstColor: firstColorLabel(p.colors),
       lineTotalCents,
-      listLineTotalCents:
-        wholesalePct > 0 && listLineTotalCents > lineTotalCents
-          ? listLineTotalCents
-          : null,
+      listLineTotalCents: null,
       maxStock: Math.max(0, Math.floor(Number(p.stock_quantity ?? 0))),
     });
   }
 
-  if (kitLines.length > 0) {
-    const kitsById = new Map(kits.map((k) => [k.id, k]));
-    for (const line of kitLines) {
-      const kit = kitsById.get(line.kitId);
-      if (!kit) continue;
-      const kitItems = kit.items ?? [];
-      const unit = resolveKitSalePriceCents(kit, kitItems, "storefront");
-      const lineTotalCents = unit * line.quantity;
-      subtotalCents += lineTotalCents;
-      subtotalNetCents += lineTotalCents;
-      items.push({
-        kitId: kit.id,
-        quantity: line.quantity,
-        fragrance: null,
-        name: kit.name,
-        priceCents: unit,
-        imagePath: kit.image_path,
-        firstColor: null,
-        lineTotalCents,
-        maxStock: maxKitsAvailableFromItems(kitItems, "storefront"),
-      });
-    }
+  const kitsById = new Map(kits.map((k) => [k.id, k]));
+  const normalizedKitLines: { kitId: string; quantity: number }[] = [];
+  for (const line of kitLinesRaw) {
+    const kit = kitsById.get(line.kitId);
+    if (!kit || !kitIsAvailable(kit, "storefront")) continue;
+    const maxK = maxKitsAvailableFromItems(kit.items ?? [], "storefront");
+    const q = Math.min(line.quantity, maxK);
+    if (q <= 0) continue;
+    normalizedKitLines.push({ kitId: kit.id, quantity: q });
+    const unit = resolveKitSalePriceCents(kit, kit.items ?? [], "storefront");
+    const lineTotalCents = unit * q;
+    subtotalCents += lineTotalCents;
+    subtotalNetCents += lineTotalCents;
+    items.push({
+      kitId: kit.id,
+      quantity: q,
+      fragrance: null,
+      name: kit.name,
+      priceCents: unit,
+      imagePath: kit.image_path,
+      firstColor: null,
+      lineTotalCents,
+      maxStock: maxK,
+    });
   }
 
   return NextResponse.json({
-    lines,
+    lines: [...productLines, ...normalizedKitLines],
     items,
     subtotalCents,
     subtotalNetCents,
     subtotalVatCents,
-    wholesaleDiscountPercent: wholesalePct,
-    suggestions,
+    wholesaleDiscountPercent: 0,
+    suggestions: [] as StoreCartUpsellProduct[],
   });
 }
