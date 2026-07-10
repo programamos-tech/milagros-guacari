@@ -20,26 +20,30 @@ export async function GET(
 
   const { supabase } = gate;
 
-  const { data: customer, error: cErr } = await supabase
-    .from("customers")
-    .select(
-      "id,name,email,phone,document_id,shipping_address,customer_kind,wholesale_discount_percent",
-    )
-    .eq("id", customerId)
-    .maybeSingle();
+  const [customerRes, addressesRes] = await Promise.all([
+    supabase
+      .from("customers")
+      .select(
+        "id,name,email,phone,document_id,shipping_address,customer_kind,wholesale_discount_percent",
+      )
+      .eq("id", customerId)
+      .maybeSingle(),
+    supabase
+      .from("customer_addresses")
+      .select("id,label,address_line,reference,sort_order")
+      .eq("customer_id", customerId)
+      .order("sort_order", { ascending: true }),
+  ]);
 
-  if (cErr) {
-    return NextResponse.json({ error: cErr.message }, { status: 500 });
+  if (customerRes.error) {
+    return NextResponse.json({ error: customerRes.error.message }, { status: 500 });
   }
-  if (!customer) {
+  if (!customerRes.data) {
     return NextResponse.json({ error: "No encontrado" }, { status: 404 });
   }
 
-  const { data: rows } = await supabase
-    .from("customer_addresses")
-    .select("id,label,address_line,reference,sort_order")
-    .eq("customer_id", customerId)
-    .order("sort_order", { ascending: true });
+  const customer = customerRes.data;
+  const rows = addressesRes.data ?? [];
 
   const shipOptions: PosShipOption[] = [
     {
@@ -50,7 +54,7 @@ export async function GET(
     },
   ];
 
-  for (const r of rows ?? []) {
+  for (const r of rows) {
     const line = [r.address_line, r.reference].filter(Boolean).join(" · ");
     shipOptions.push({
       kind: "address",
@@ -61,7 +65,7 @@ export async function GET(
   }
 
   const ship = customer.shipping_address?.trim();
-  if ((rows?.length ?? 0) === 0 && ship) {
+  if (rows.length === 0 && ship) {
     shipOptions.push({
       kind: "address",
       id: "primary-shipping",

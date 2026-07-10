@@ -71,6 +71,13 @@ type ShipOption =
   | { kind: "pickup"; id: "pickup"; label: string; detail: string }
   | { kind: "address"; id: string; label: string; detail: string };
 
+const PICKUP_SHIP_OPTION: Extract<ShipOption, { kind: "pickup" }> = {
+  kind: "pickup",
+  id: "pickup",
+  label: "Retiro en tienda",
+  detail: "El cliente recoge en sucursal.",
+};
+
 type LineDiscountMode = "none" | "percent" | "amount";
 
 type CartLine = {
@@ -299,6 +306,9 @@ export function NewInvoiceForm({
   const [shipOptions, setShipOptions] = useState<ShipOption[]>([]);
   const [shipChoice, setShipChoice] = useState<string | null>(null);
   const [shipLoading, setShipLoading] = useState(false);
+  /** Evita un segundo fetch de pos-profile cuando ya aplicamos el perfil (p. ej. ?customer=). */
+  const profileAppliedForIdRef = useRef<string | null>(null);
+  const shipLoadGenRef = useRef(0);
 
   const [lines, setLines] = useState<CartLine[]>([]);
   const [kitLines, setKitLines] = useState<KitCartLine[]>([]);
@@ -315,35 +325,63 @@ export function NewInvoiceForm({
     setQuickDocument("");
   }, []);
 
-  const loadCustomerProfile = useCallback(async (id: string) => {
-    setShipLoading(true);
-    setShipChoice(null);
-    try {
-      const res = await fetch(`/api/admin/customers/${id}/pos-profile`, {
-        cache: "no-store",
-      });
-      if (!res.ok) {
-        setShipOptions([]);
-        setCustomerWholesalePct(0);
-        setPosCustomerKind("retail");
-        return;
-      }
-      const json = (await res.json()) as {
-        shipOptions?: ShipOption[];
-        customer?: {
-          customer_kind?: string | null;
-          wholesale_discount_percent?: number | null;
-        };
+  const applyPosProfile = useCallback(
+    (json: {
+      shipOptions?: ShipOption[];
+      customer?: {
+        customer_kind?: string | null;
+        wholesale_discount_percent?: number | null;
       };
-      setShipOptions(json.shipOptions ?? []);
+    }) => {
+      const options =
+        json.shipOptions && json.shipOptions.length > 0
+          ? json.shipOptions
+          : [PICKUP_SHIP_OPTION];
+      setShipOptions(options);
+      setShipChoice((cur) =>
+        cur && options.some((o) => o.id === cur) ? cur : options[0]!.id,
+      );
       setPosCustomerKind(parseStoreCustomerKind(json.customer?.customer_kind));
       setCustomerWholesalePct(
         wholesaleDiscountPercentFromRow(json.customer ?? {}),
       );
-    } finally {
-      setShipLoading(false);
-    }
-  }, []);
+    },
+    [],
+  );
+
+  const loadCustomerProfile = useCallback(
+    async (id: string) => {
+      const gen = ++shipLoadGenRef.current;
+      // Retiro en tienda al instante: no bloquear Envío ni Confirmar.
+      setShipOptions([PICKUP_SHIP_OPTION]);
+      setShipChoice("pickup");
+      setShipLoading(true);
+      try {
+        const res = await fetch(`/api/admin/customers/${id}/pos-profile`, {
+          cache: "no-store",
+        });
+        if (gen !== shipLoadGenRef.current) return;
+        if (!res.ok) {
+          setCustomerWholesalePct(0);
+          setPosCustomerKind("retail");
+          return;
+        }
+        const json = (await res.json()) as {
+          shipOptions?: ShipOption[];
+          customer?: {
+            customer_kind?: string | null;
+            wholesale_discount_percent?: number | null;
+          };
+        };
+        if (gen !== shipLoadGenRef.current) return;
+        applyPosProfile(json);
+        profileAppliedForIdRef.current = id;
+      } finally {
+        if (gen === shipLoadGenRef.current) setShipLoading(false);
+      }
+    },
+    [applyPosProfile],
+  );
 
   const searchCustomers = useCallback(async (q: string, signal?: AbortSignal) => {
     const trimmed = q.trim();
@@ -370,22 +408,31 @@ export function NewInvoiceForm({
   useEffect(() => {
     if (!initialCustomerId) return;
     let cancelled = false;
+    profileAppliedForIdRef.current = null;
+    setShipOptions([PICKUP_SHIP_OPTION]);
+    setShipChoice("pickup");
+    setShipLoading(true);
     void fetch(`/api/admin/customers/${initialCustomerId}/pos-profile`, {
       cache: "no-store",
     })
       .then(async (res) => {
         if (!res.ok || cancelled) return;
         const json = (await res.json()) as {
+          shipOptions?: ShipOption[];
           customer?: {
             id: string;
             name: string;
             email?: string | null;
             phone?: string | null;
             document_id?: string | null;
+            customer_kind?: string | null;
+            wholesale_discount_percent?: number | null;
           };
         };
         const c = json.customer;
         if (!c?.id || cancelled) return;
+        applyPosProfile(json);
+        profileAppliedForIdRef.current = c.id;
         setCustomer({
           id: c.id,
           name: c.name,
@@ -396,29 +443,28 @@ export function NewInvoiceForm({
         setCustomerQuery("");
         setCustomerHits([]);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setShipLoading(false);
+      });
     return () => {
       cancelled = true;
     };
-  }, [initialCustomerId]);
+  }, [initialCustomerId, applyPosProfile]);
 
   useEffect(() => {
-    if (customer) {
-      void loadCustomerProfile(customer.id);
-    } else {
+    if (!customer) {
+      profileAppliedForIdRef.current = null;
       setShipOptions([]);
       setShipChoice(null);
       setPosCustomerKind("retail");
       setCustomerWholesalePct(0);
+      setShipLoading(false);
+      return;
     }
+    if (profileAppliedForIdRef.current === customer.id) return;
+    void loadCustomerProfile(customer.id);
   }, [customer, loadCustomerProfile]);
-
-  useEffect(() => {
-    if (!customer || shipOptions.length === 0) return;
-    setShipChoice((cur) =>
-      cur && shipOptions.some((o) => o.id === cur) ? cur : shipOptions[0]!.id,
-    );
-  }, [customer, shipOptions]);
 
   useEffect(() => {
     if (!quickModalOpen) return;
@@ -647,7 +693,6 @@ export function NewInvoiceForm({
     totalCents > 0 &&
     shipChoice !== null &&
     shipChoice !== "" &&
-    !shipLoading &&
     !cartStockExceeded &&
     paymentOk;
 
@@ -1287,25 +1332,28 @@ export function NewInvoiceForm({
                 <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">
                   Selecciona un cliente para habilitar el envío
                 </p>
-              ) : shipLoading ? (
-                <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">
-                  Cargando direcciones…
-                </p>
               ) : (
                 <div className="mt-4 space-y-3">
+                  {shipLoading ? (
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Actualizando direcciones…
+                    </p>
+                  ) : null}
                   <div>
                     <label className={labelClass}>Entrega</label>
                     <select
-                      value={shipChoice ?? shipOptions[0]?.id ?? ""}
+                      value={shipChoice ?? shipOptions[0]?.id ?? "pickup"}
                       onChange={(e) => setShipChoice(e.target.value || null)}
                       className={inputClass}
                     >
-                      {shipOptions.map((o) => (
-                        <option key={o.id} value={o.id}>
-                          {o.label}
-                          {o.kind === "address" ? ` — ${o.detail}` : ""}
-                        </option>
-                      ))}
+                      {(shipOptions.length > 0 ? shipOptions : [PICKUP_SHIP_OPTION]).map(
+                        (o) => (
+                          <option key={o.id} value={o.id}>
+                            {o.label}
+                            {o.kind === "address" ? ` — ${o.detail}` : ""}
+                          </option>
+                        ),
+                      )}
                     </select>
                   </div>
                   {selectedShipOption ? (
