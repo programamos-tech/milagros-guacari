@@ -51,6 +51,7 @@ export function CatalogBrowseSections({
                   >
                     <ProductListingCard
                       accentImageBg={index % 4 === 3}
+                      priority={sectionIndex === 0 && index < 4}
                       cartQuantity={cartQtyByProductId[p.id] ?? 0}
                       couponDiscountPercent={
                         couponPctByProductId[p.id] ?? 0
@@ -59,7 +60,6 @@ export function CatalogBrowseSections({
                         id: p.id,
                         name: p.name,
                         brand: p.brand,
-                        description: p.description,
                         price_cents: p.price_cents,
                         has_vat: p.has_vat,
                         image_path: p.image_path,
@@ -118,13 +118,13 @@ function CatalogRowProductSlot({
       <ProductListingCard
         presentation="editorial"
         accentImageBg={index % 4 === 3}
+        priority={index < 4}
         cartQuantity={cartQtyByProductId[product.id] ?? 0}
         couponDiscountPercent={couponPctByProductId[product.id] ?? 0}
         product={{
           id: product.id,
           name: product.name,
           brand: product.brand,
-          description: product.description,
           price_cents: product.price_cents,
           has_vat: product.has_vat,
           image_path: product.image_path,

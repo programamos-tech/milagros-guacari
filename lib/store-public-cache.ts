@@ -8,7 +8,7 @@ import { fetchBannerStoreCoupon, fetchStorefrontCouponDiscountPercentByProductId
 import { fetchActiveWelcomeModal } from "@/lib/store-welcome-modal";
 import { withStorefrontImage } from "@/lib/storefront-product-image";
 
-const STORE_CACHE_REVALIDATE_SEC = 120;
+const STORE_CACHE_REVALIDATE_SEC = 300;
 
 function publicSupabase(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

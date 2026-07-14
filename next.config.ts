@@ -10,6 +10,9 @@ const nextConfig: NextConfig = {
     viewTransition: true,
   },
   images: {
+    // Evita que next/image pida anchos absurdos (2K–4K) en vitrina.
+    deviceSizes: [640, 750, 828, 1080, 1200, 1400, 1600],
+    imageSizes: [64, 96, 128, 256, 384],
     remotePatterns: [
       {
         protocol: "https",

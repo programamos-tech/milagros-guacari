@@ -11,6 +11,10 @@ import {
   useState,
   type TransitionEvent,
 } from "react";
+import {
+  STORE_BANNER_IMAGE_QUALITY,
+  STORE_BANNER_IMAGE_SIZES,
+} from "@/lib/store-image";
 import { shouldUnoptimizeStorageImageUrl, storagePublicObjectUrl } from "@/lib/storage-public-url";
 
 export type StoreBannerSlide = {
@@ -165,7 +169,7 @@ export function StoreBannerCarousel({
 
   const sizes =
     variant === "hero"
-      ? "100vw"
+      ? STORE_BANNER_IMAGE_SIZES
       : "(max-width: 768px) 100vw, 896px";
 
   const shell =
@@ -213,8 +217,10 @@ export function StoreBannerCarousel({
                 fill
                 className={imageClassName}
                 sizes={sizes}
+                quality={STORE_BANNER_IMAGE_QUALITY}
                 unoptimized={shouldUnoptimizeStorageImageUrl(url)}
                 priority={i === 0}
+                loading={i === 0 ? undefined : "lazy"}
               />
             );
 

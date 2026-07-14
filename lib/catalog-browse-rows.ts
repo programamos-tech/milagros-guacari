@@ -4,16 +4,16 @@ import { expandCategoryIdsFromRows } from "@/lib/store-category-group";
 import { withStorefrontImage } from "@/lib/storefront-product-image";
 
 const PRODUCT_SELECT =
-  "id,name,brand,description,price_cents,has_vat,image_path,stock_quantity,size_options,size_value,size_unit,fragrance_options,created_at";
+  "id,name,brand,price_cents,has_vat,image_path,stock_quantity,size_options,size_value,size_unit,fragrance_options,created_at";
 
 /** Vista previa por categoría en carrusel horizontal. */
-export const CATALOG_ROW_PREVIEW_LIMIT = 12;
+export const CATALOG_ROW_PREVIEW_LIMIT = 8;
 
 export type CatalogBrowseProductRow = {
   id: string;
   name: string;
   brand: string;
-  description: string | null;
+  description?: string | null;
   price_cents: number;
   has_vat?: boolean | null;
   image_path: string | null;

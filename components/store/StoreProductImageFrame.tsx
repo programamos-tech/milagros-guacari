@@ -15,6 +15,8 @@ type Props = {
   imageClassName?: string;
   placeholderClassName?: string;
   dimmed?: boolean;
+  /** Solo LCP / above-the-fold. */
+  priority?: boolean;
 };
 
 /** Foto de producto en vitrina: marco 4:5, imagen cubre todo el cuadro (`object-cover`). */
@@ -26,6 +28,7 @@ export function StoreProductImageFrame({
   imageClassName = "",
   placeholderClassName = "text-3xl text-stone-200",
   dimmed = false,
+  priority = false,
 }: Props) {
   return (
     <div
@@ -42,6 +45,8 @@ export function StoreProductImageFrame({
           quality={STORE_IMAGE_QUALITY}
           className={`${storeProductImageMediaClass} ${imageClassName}`.trim()}
           unoptimized={shouldUnoptimizeStorageImageUrl(src)}
+          priority={priority}
+          loading={priority ? undefined : "lazy"}
         />
       ) : (
         <span

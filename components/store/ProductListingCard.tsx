@@ -30,7 +30,7 @@ import { STORE_PRODUCT_CARD_IMAGE_SIZES } from "@/lib/store-image";
 type Product = {
   id: string;
   name: string;
-  description: string | null;
+  description?: string | null;
   price_cents: number;
   /** Catálogo en BD: neto; si es true, la vitrina muestra bruto con IVA. */
   has_vat?: boolean | null;
@@ -66,11 +66,13 @@ function ShowcaseProductCard({
   product,
   couponDiscountPercent = 0,
   accentImageBg = false,
+  priority = false,
 }: {
   product: Product;
   couponDiscountPercent?: number;
   /** Fondo suave tipo bloque de color en algunas columnas (look editorial). */
   accentImageBg?: boolean;
+  priority?: boolean;
 }) {
   const img = storagePublicObjectUrl(product.image_path);
   const outOfStock = product.stock_quantity <= 0;
@@ -108,6 +110,7 @@ function ShowcaseProductCard({
           sizes={STORE_PRODUCT_CARD_IMAGE_SIZES}
           imageClassName="transition duration-300 group-hover:scale-[1.02]"
           dimmed={outOfStock}
+          priority={priority}
         />
         <div className="space-y-1.5 pt-4 text-left">
           <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-stone-400">
@@ -149,12 +152,14 @@ function CatalogProductCard({
   onCartChange,
   couponDiscountPercent = 0,
   accentImageBg = false,
+  priority = false,
 }: {
   product: Product;
   cartQuantity?: number;
   onCartChange?: () => void;
   couponDiscountPercent?: number;
   accentImageBg?: boolean;
+  priority?: boolean;
 }) {
   const router = useRouter();
   const { openCart } = useStoreCartDrawer();
@@ -207,6 +212,7 @@ function CatalogProductCard({
           imageClassName="transition duration-300 group-hover/image:scale-[1.02]"
           placeholderClassName="text-4xl text-stone-300"
           dimmed={outOfStock}
+          priority={priority}
         />
         <Link
           href={`/products/${product.id}`}
@@ -354,6 +360,7 @@ export function ProductListingCard({
   couponDiscountPercent = 0,
   presentation = "default",
   accentImageBg = false,
+  priority = false,
 }: {
   product: Product;
   cartQuantity?: number;
@@ -361,6 +368,7 @@ export function ProductListingCard({
   couponDiscountPercent?: number;
   presentation?: "default" | "editorial";
   accentImageBg?: boolean;
+  priority?: boolean;
 }) {
   if (presentation === "editorial") {
     return (
@@ -368,6 +376,7 @@ export function ProductListingCard({
         product={product}
         couponDiscountPercent={couponDiscountPercent}
         accentImageBg={accentImageBg}
+        priority={priority}
       />
     );
   }
@@ -379,6 +388,7 @@ export function ProductListingCard({
       onCartChange={onCartChange}
       couponDiscountPercent={couponDiscountPercent}
       accentImageBg={accentImageBg}
+      priority={priority}
     />
   );
 }

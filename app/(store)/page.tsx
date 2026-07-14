@@ -5,9 +5,10 @@ import { RevealOnScroll } from "@/components/store/RevealOnScroll";
 import { storeBrand } from "@/lib/brand";
 import { StoreBannerCarousel } from "@/components/store/StoreBannerCarousel";
 import { getCachedPublishedBanners, getCachedStorefrontCouponDiscounts, getCachedHomeFeaturedProducts } from "@/lib/store-public-cache";
+import { STORE_CARD_PRIORITY_COUNT } from "@/lib/store-image";
 import { storeShellClass } from "@/lib/store-theme";
 
-export const revalidate = 120;
+export const revalidate = 300;
 
 const STORE_HIGHLIGHTS = [
   {
@@ -113,6 +114,7 @@ export default async function HomePage() {
                         <ProductListingCard
                           presentation="editorial"
                           accentImageBg={index % 4 === 3}
+                          priority={index < STORE_CARD_PRIORITY_COUNT}
                           couponDiscountPercent={
                             couponPctByProductId[p.id] ?? 0
                           }

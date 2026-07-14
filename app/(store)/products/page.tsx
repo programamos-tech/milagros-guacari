@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { CatalogBrowseSections } from "@/components/store/CatalogBrowseSections";
 import { CatalogListingHero } from "@/components/store/CatalogListingHero";
+import { CatalogPagination } from "@/components/store/CatalogPagination";
 import { CategoryListingHero } from "@/components/store/CategoryListingHero";
 import { StoreBannerCarousel } from "@/components/store/StoreBannerCarousel";
 import { ProductListingCard } from "@/components/store/ProductListingCard";
@@ -33,11 +34,12 @@ import {
   getCachedListingFacets,
   getCachedPublishedBanners,
 } from "@/lib/store-public-cache";
+import { STORE_CARD_PRIORITY_COUNT } from "@/lib/store-image";
 import { storeShellClass } from "@/lib/store-theme";
 import { withStorefrontImage } from "@/lib/storefront-product-image";
 
-/** Tope de filas en listado filtrado (evita respuestas enormes). */
-const CATALOG_FILTERED_LIST_MAX = 300;
+/** Productos por página en listado filtrado (antes hasta 300 en un solo HTML). */
+const CATALOG_PAGE_SIZE = 24;
 
 /** Legacy (`size_value`/`size_unit`) o cualquier entrada en `size_options`. */
 function productMatchesSizeFilterClause(s: {
@@ -66,6 +68,7 @@ type Props = {
     categories?: string | string[];
     price_min?: string | string[];
     price_max?: string | string[];
+    page?: string | string[];
   }>;
 };
 
@@ -78,6 +81,10 @@ export default async function ProductsPage({ searchParams }: Props) {
     typeof sortRaw === "string" && sortRaw.trim()
       ? sortRaw.trim()
       : "newest";
+  const pageRaw = firstSearchParam(sp.page);
+  const pageParsed = Number.parseInt(pageRaw, 10);
+  const page =
+    Number.isFinite(pageParsed) && pageParsed > 0 ? Math.floor(pageParsed) : 1;
   const categoryId = parseProductsCategoryId(firstSearchParam(sp.category));
   const brandsParam = parseProductsBrandsParam(firstSearchParam(sp.brands));
   const legacyBrand = parseProductsBrandFilter(firstSearchParam(sp.brand));
@@ -187,7 +194,6 @@ export default async function ProductsPage({ searchParams }: Props) {
     id: string;
     name: string;
     brand: string;
-    description: string | null;
     price_cents: number;
     has_vat?: boolean | null;
     image_path: string | null;
@@ -199,14 +205,19 @@ export default async function ProductsPage({ searchParams }: Props) {
     created_at: string;
   };
 
-  async function fetchFilteredList(): Promise<ListProduct[]> {
-    if (catalogBrowseMode) return [];
+  async function fetchFilteredList(pageNum: number): Promise<{
+    products: ListProduct[];
+    total: number;
+  }> {
+    if (catalogBrowseMode) return { products: [], total: 0 };
 
     let query = withStorefrontImage(
       supabase
         .from("products")
         .select(
-          "id,name,brand,description,price_cents,has_vat,image_path,stock_quantity,size_options,size_value,size_unit,fragrance_options,created_at",
+          // Sin `description`: no se muestra en cards y ahorra HTML/RSC.
+          "id,name,brand,price_cents,has_vat,image_path,stock_quantity,size_options,size_value,size_unit,fragrance_options,created_at",
+          { count: "exact" },
         )
         .eq("is_published", true),
     );
@@ -268,16 +279,21 @@ export default async function ProductsPage({ searchParams }: Props) {
         query = query.order("created_at", { ascending: false });
     }
 
-    query = query.limit(CATALOG_FILTERED_LIST_MAX);
-    const { data: products } = await query;
-    return products ?? [];
+    const safePage = Math.max(1, pageNum);
+    const from = (safePage - 1) * CATALOG_PAGE_SIZE;
+    const to = from + CATALOG_PAGE_SIZE - 1;
+    const { data: products, count } = await query.range(from, to);
+    return {
+      products: (products ?? []) as ListProduct[],
+      total: typeof count === "number" ? count : (products?.length ?? 0),
+    };
   }
 
   const [
     listingFacets,
     productsBanners,
     catalogSections,
-    list,
+    listResultInitial,
     cartQtyByProductId,
     couponPctByProductId,
   ] = await Promise.all([
@@ -286,10 +302,21 @@ export default async function ProductsPage({ searchParams }: Props) {
     catalogBrowseMode && allCategoryRows.length
       ? getCachedCatalogBrowseSections(allCategoryRows)
       : Promise.resolve(null),
-    fetchFilteredList(),
+    fetchFilteredList(page),
     getStorefrontCartQuantityByProductId(),
     getCachedStorefrontCouponDiscounts(),
   ]);
+
+  let listResult = listResultInitial;
+  const totalPages = Math.max(
+    1,
+    Math.ceil(listResult.total / CATALOG_PAGE_SIZE) || 1,
+  );
+  const currentPage = Math.min(Math.max(1, page), totalPages);
+  if (currentPage !== page && listResult.total > 0) {
+    listResult = await fetchFilteredList(currentPage);
+  }
+  const list = listResult.products;
 
   const invalidCategory = Boolean(categoryId && !categoryName);
 
@@ -304,6 +331,31 @@ export default async function ProductsPage({ searchParams }: Props) {
     sort,
     q,
   ].join("::");
+
+  const paginationParams = new URLSearchParams();
+  if (q) paginationParams.set("q", q);
+  if (sort !== "newest") paginationParams.set("sort", sort);
+  if (categoryFilterId) paginationParams.set("category", categoryFilterId);
+  if (activeBrands.length === 1) {
+    paginationParams.set("brand", activeBrands[0]!);
+  } else if (activeBrands.length > 1) {
+    paginationParams.set("brands", activeBrands.join(","));
+  }
+  if (activeColors.length) {
+    paginationParams.set("colors", activeColors.join("|"));
+  }
+  if (activeSizes.length) {
+    paginationParams.set(
+      "sizes",
+      activeSizes.map((s) => `${s.value}:${s.unit}`).join("|"),
+    );
+  }
+  if (filterCategoryIds.length) {
+    paginationParams.set("categories", filterCategoryIds.join(","));
+  }
+  if (priceMin != null) paginationParams.set("price_min", String(priceMin));
+  if (priceMax != null) paginationParams.set("price_max", String(priceMax));
+  const paginationBaseQuery = paginationParams.toString();
 
   const catalogHeroBanner = productsBanners[0];
 
@@ -417,36 +469,43 @@ export default async function ProductsPage({ searchParams }: Props) {
                   : "Aún no hay productos publicados. Cárgalos desde el admin."}
           </p>
         ) : (
-          <ul className="grid grid-cols-2 gap-x-5 gap-y-12 sm:grid-cols-2 sm:gap-x-8 lg:grid-cols-3 lg:gap-x-10 xl:grid-cols-4">
-            {list.map((p, index) => (
-              <li key={p.id}>
-                <RevealOnScroll
-                  className="h-full"
-                  delayMs={Math.min(index * 60, 420)}
-                >
-                  <ProductListingCard
-                    accentImageBg={index % 4 === 3}
-                    cartQuantity={cartQtyByProductId[p.id] ?? 0}
-                    couponDiscountPercent={couponPctByProductId[p.id] ?? 0}
-                    product={{
-                      id: p.id,
-                      name: p.name,
-                      brand: p.brand,
-                      description: p.description,
-                      price_cents: p.price_cents,
-                      has_vat: p.has_vat,
-                      image_path: p.image_path,
-                      stock_quantity: p.stock_quantity,
-                      size_options: p.size_options,
-                      size_value: p.size_value,
-                      size_unit: p.size_unit,
-                      fragrance_options: p.fragrance_options,
-                    }}
-                  />
-                </RevealOnScroll>
-              </li>
-            ))}
-          </ul>
+          <div className="space-y-10">
+            <ul className="grid grid-cols-2 gap-x-5 gap-y-12 sm:grid-cols-2 sm:gap-x-8 lg:grid-cols-3 lg:gap-x-10 xl:grid-cols-4">
+              {list.map((p, index) => (
+                <li key={p.id}>
+                  <RevealOnScroll
+                    className="h-full"
+                    delayMs={Math.min(index * 40, 240)}
+                  >
+                    <ProductListingCard
+                      accentImageBg={index % 4 === 3}
+                      priority={index < STORE_CARD_PRIORITY_COUNT}
+                      cartQuantity={cartQtyByProductId[p.id] ?? 0}
+                      couponDiscountPercent={couponPctByProductId[p.id] ?? 0}
+                      product={{
+                        id: p.id,
+                        name: p.name,
+                        brand: p.brand,
+                        price_cents: p.price_cents,
+                        has_vat: p.has_vat,
+                        image_path: p.image_path,
+                        stock_quantity: p.stock_quantity,
+                        size_options: p.size_options,
+                        size_value: p.size_value,
+                        size_unit: p.size_unit,
+                        fragrance_options: p.fragrance_options,
+                      }}
+                    />
+                  </RevealOnScroll>
+                </li>
+              ))}
+            </ul>
+            <CatalogPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              baseQuery={paginationBaseQuery}
+            />
+          </div>
         )}
       </div>
     </div>

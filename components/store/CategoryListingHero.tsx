@@ -2,6 +2,10 @@ import Image from "next/image";
 import {
   resolveCategoryListingHeroSrc,
 } from "@/lib/category-listing-hero-url";
+import {
+  STORE_BANNER_IMAGE_QUALITY,
+  STORE_BANNER_IMAGE_SIZES,
+} from "@/lib/store-image";
 import { shouldUnoptimizeStorageImageUrl } from "@/lib/storage-public-url";
 
 type Props = {
@@ -28,7 +32,8 @@ export function CategoryListingHero({ imagePath, title, alt }: Props) {
           fill
           priority
           className="object-cover object-center"
-          sizes="100vw"
+          sizes={STORE_BANNER_IMAGE_SIZES}
+          quality={STORE_BANNER_IMAGE_QUALITY}
           unoptimized={shouldUnoptimizeStorageImageUrl(src)}
         />
       </div>
