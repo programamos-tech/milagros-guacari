@@ -16,7 +16,7 @@ import {
 } from "@/lib/storefront-gross-price";
 import { pseudoReviewCount } from "@/lib/pseudo-review";
 import {
-  STORE_IMAGE_QUALITY,
+  STORE_PRODUCT_DETAIL_IMAGE_QUALITY,
   STORE_PRODUCT_DETAIL_IMAGE_SIZES,
 } from "@/lib/store-image";
 import { shouldUnoptimizeStorageImageUrl } from "@/lib/storage-public-url";
@@ -235,7 +235,7 @@ export function ProductDetailView({
               fill
               className="object-contain object-center"
               sizes={STORE_PRODUCT_DETAIL_IMAGE_SIZES}
-              quality={STORE_IMAGE_QUALITY}
+              quality={STORE_PRODUCT_DETAIL_IMAGE_QUALITY}
               priority
               unoptimized={unopt}
               onLoad={(e) => {
