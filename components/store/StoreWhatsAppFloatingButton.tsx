@@ -32,22 +32,14 @@ export function StoreWhatsAppFloatingButton() {
   if (!href || cartOpen) return null;
 
   return (
-    <div
-      className="pointer-events-none fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-[72] flex flex-col items-end gap-2 sm:right-6 sm:bottom-[max(1.25rem,env(safe-area-inset-bottom))]"
-      aria-live="polite"
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-[72] flex size-14 items-center justify-center overflow-hidden rounded-full bg-[#25D366] text-white shadow-[0_14px_36px_-10px_rgba(37,211,102,0.55),0_4px_12px_-4px_rgba(0,0,0,0.12)] transition hover:bg-[#20BD5A] hover:shadow-[0_18px_40px_-10px_rgba(37,211,102,0.5)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#25D366] active:scale-[0.97] sm:right-6 sm:bottom-[max(1.25rem,env(safe-area-inset-bottom))] sm:size-[3.25rem]"
+      aria-label={`Escribir por WhatsApp a ${storeSupportPhone}`}
     >
-      <span className="pointer-events-none rounded-full border border-white/80 bg-white/95 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-800 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.18)] ring-1 ring-stone-200/80 backdrop-blur-sm">
-        ¡Contáctanos!
-      </span>
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="pointer-events-auto flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#25D366] text-white shadow-[0_14px_36px_-10px_rgba(37,211,102,0.55),0_4px_12px_-4px_rgba(0,0,0,0.12)] transition hover:bg-[#20BD5A] hover:shadow-[0_18px_40px_-10px_rgba(37,211,102,0.5)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#25D366] active:scale-[0.97] sm:size-[3.25rem]"
-        aria-label={`Escribir por WhatsApp a ${storeSupportPhone}`}
-      >
-        <WhatsAppGlyph className="size-7 text-white sm:size-[1.45rem]" />
-      </a>
-    </div>
+      <WhatsAppGlyph className="size-7 text-white sm:size-[1.45rem]" />
+    </a>
   );
 }
