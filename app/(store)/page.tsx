@@ -1,10 +1,16 @@
 import Link from "next/link";
 import { CalendarDays, Headset, Star } from "lucide-react";
+import { HomeKitsCarousel } from "@/components/store/HomeKitsCarousel";
 import { ProductListingCard } from "@/components/store/ProductListingCard";
 import { RevealOnScroll } from "@/components/store/RevealOnScroll";
 import { storeBrand } from "@/lib/brand";
 import { StoreBannerCarousel } from "@/components/store/StoreBannerCarousel";
-import { getCachedPublishedBanners, getCachedStorefrontCouponDiscounts, getCachedHomeFeaturedProducts } from "@/lib/store-public-cache";
+import {
+  getCachedPublishedBanners,
+  getCachedStorefrontCouponDiscounts,
+  getCachedHomeFeaturedKits,
+  getCachedHomeFeaturedProducts,
+} from "@/lib/store-public-cache";
 import { STORE_CARD_PRIORITY_COUNT } from "@/lib/store-image";
 import { storeShellClass } from "@/lib/store-theme";
 
@@ -26,11 +32,13 @@ const STORE_HIGHLIGHTS = [
 ] as const;
 
 export default async function HomePage() {
-  const [heroBanners, featuredProducts, couponPctByProductId] = await Promise.all([
-    getCachedPublishedBanners("hero"),
-    getCachedHomeFeaturedProducts(),
-    getCachedStorefrontCouponDiscounts(),
-  ]);
+  const [heroBanners, featuredProducts, featuredKits, couponPctByProductId] =
+    await Promise.all([
+      getCachedPublishedBanners("hero"),
+      getCachedHomeFeaturedProducts(),
+      getCachedHomeFeaturedKits(),
+      getCachedStorefrontCouponDiscounts(),
+    ]);
 
   return (
     <div>
@@ -148,6 +156,38 @@ export default async function HomePage() {
               </>
             )}
           </div>
+
+          {featuredKits.length > 0 ? (
+            <div className="mt-20 border-t border-stone-200/70 pt-16 sm:mt-24 sm:pt-20">
+              <RevealOnScroll className="mx-auto max-w-3xl text-center">
+                <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-stone-400 sm:text-xs">
+                  Combos listos para pedir
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold uppercase tracking-[0.06em] text-[var(--store-brand)] sm:text-3xl">
+                  Kits y combos
+                </h2>
+                <p className="mx-auto mt-3 max-w-lg text-sm font-normal leading-relaxed text-stone-500">
+                  Ahorrá con sets armados a precio especial; deslizá para ver más.
+                </p>
+              </RevealOnScroll>
+
+              <RevealOnScroll delayMs={80} className="mt-12 sm:mt-14">
+                <HomeKitsCarousel kits={featuredKits} />
+              </RevealOnScroll>
+
+              <RevealOnScroll
+                delayMs={160}
+                className="mt-12 flex justify-center sm:mt-14"
+              >
+                <Link
+                  href="/kits"
+                  className="inline-flex border border-[var(--store-accent)] bg-white px-10 py-3 text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--store-accent)] transition hover:bg-[var(--store-accent)] hover:text-white"
+                >
+                  Ver todos los kits
+                </Link>
+              </RevealOnScroll>
+            </div>
+          ) : null}
         </div>
       </section>
     </div>

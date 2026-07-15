@@ -2,7 +2,13 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { unstable_cache } from "next/cache";
 import { fetchCatalogBrowseSections } from "@/lib/catalog-browse-rows";
 import { fetchStoreCategoriesWithCounts } from "@/lib/fetch-store-categories";
+import { fetchKitsWithItems } from "@/lib/load-product-kits";
 import { fetchListingFacets } from "@/lib/product-listing-facets";
+import {
+  kitIsAvailable,
+  maxKitsAvailableFromItems,
+  resolveKitSalePriceCents,
+} from "@/lib/product-kits";
 import { fetchPublishedBanners } from "@/lib/store-banners";
 import { fetchBannerStoreCoupon, fetchStorefrontCouponDiscountPercentByProductId } from "@/lib/store-coupons";
 import { fetchActiveWelcomeModal } from "@/lib/store-welcome-modal";
@@ -121,4 +127,41 @@ export const getCachedHomeFeaturedProducts = unstable_cache(
   },
   ["store-home-featured-products"],
   { revalidate: STORE_CACHE_REVALIDATE_SEC, tags: ["store-products"] },
+);
+
+const HOME_KITS_LIMIT = 8;
+
+export type HomeFeaturedKit = {
+  id: string;
+  name: string;
+  description: string;
+  image_path: string | null;
+  price_cents: number;
+  max_stock: number;
+  item_count: number;
+};
+
+export const getCachedHomeFeaturedKits = unstable_cache(
+  async (): Promise<HomeFeaturedKit[]> => {
+    const kits = await fetchKitsWithItems(publicSupabase(), {
+      publishedOnly: true,
+    });
+    return kits
+      .filter((k) => kitIsAvailable(k, "storefront"))
+      .slice(0, HOME_KITS_LIMIT)
+      .map((k) => {
+        const items = k.items ?? [];
+        return {
+          id: k.id as string,
+          name: k.name,
+          description: k.description ?? "",
+          image_path: k.image_path,
+          price_cents: resolveKitSalePriceCents(k, items, "storefront"),
+          max_stock: maxKitsAvailableFromItems(items, "storefront"),
+          item_count: items.length,
+        };
+      });
+  },
+  ["store-home-featured-kits"],
+  { revalidate: STORE_CACHE_REVALIDATE_SEC, tags: ["store-kits"] },
 );

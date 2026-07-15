@@ -10,6 +10,11 @@ export function revalidateStoreProductsTag() {
   updateTag("store-products");
 }
 
+/** Invalida caché pública de kits (home y /kits). */
+export function revalidateStoreKitsTag() {
+  updateTag("store-kits");
+}
+
 export function revalidateStoreBannersTag() {
   updateTag("store-banners");
 }

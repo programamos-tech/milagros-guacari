@@ -14,7 +14,10 @@ import {
 import { assertProductImageSize } from "@/lib/product-image-upload";
 import { assertActionPermission } from "@/lib/require-admin-permission";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { revalidateStoreProductsTag } from "@/lib/revalidate-store-cache";
+import {
+  revalidateStoreKitsTag,
+  revalidateStoreProductsTag,
+} from "@/lib/revalidate-store-cache";
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -89,6 +92,8 @@ async function uploadKitImage(
 
 function revalidateKits() {
   revalidateStoreProductsTag();
+  revalidateStoreKitsTag();
+  revalidatePath("/");
   revalidatePath("/admin/kits");
   revalidatePath("/kits");
   revalidatePath("/products");

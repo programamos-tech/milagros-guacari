@@ -154,17 +154,6 @@ export function StoreNavDropdowns({
               )}
             </li>
             <li>
-              <Link href="/kits" onClick={close} className={drawerLinkClass}>
-                <span className="inline-flex items-center gap-3">
-                  <span className="text-[15px] text-stone-500" aria-hidden>
-                    ✦
-                  </span>
-                  Kits y combos
-                </span>
-                <ChevronRight className="size-4 shrink-0 text-stone-400" strokeWidth={1.5} aria-hidden />
-              </Link>
-            </li>
-            <li>
               <Link href="/favoritos" onClick={close} className={drawerLinkClass}>
                 <span className="inline-flex items-center gap-3">
                   <Heart className="size-[18px] text-stone-500" strokeWidth={1.5} aria-hidden />
@@ -209,6 +198,27 @@ export function StoreNavDropdowns({
               ))}
             </ul>
           )}
+
+          <ul
+            className={`divide-y divide-rose-200/35 ${
+              menuCategories.length > 0 ? "border-t border-rose-200/35" : ""
+            }`}
+          >
+            <li>
+              <Link
+                href="/kits"
+                onClick={close}
+                className="group flex items-center justify-between gap-3 px-4 py-3.5 text-left text-[15px] font-medium text-stone-800 transition hover:bg-white/50 active:bg-white/65"
+              >
+                <span className="min-w-0 leading-snug">Kits y combos</span>
+                <ChevronRight
+                  className="size-4 shrink-0 text-stone-400 transition group-hover:text-[var(--store-brand)]"
+                  strokeWidth={1.5}
+                  aria-hidden
+                />
+              </Link>
+            </li>
+          </ul>
 
           <div className="mx-4 my-2 h-px bg-rose-200/40" aria-hidden />
 
