@@ -220,14 +220,22 @@ export function ProductDetailView({
       >
         {heroImageUrl ? (
           <div
-            className="absolute inset-0 will-change-transform"
-            style={{
-              transform: `scale(${heroZoomScale})`,
-              transformOrigin: `${heroZoomOrigin.x}% ${heroZoomOrigin.y}%`,
-              transition: prefersReducedMotion
-                ? undefined
-                : "transform 120ms ease-out",
-            }}
+            className={`absolute inset-0 ${
+              heroZoomScale > 1 ? "will-change-transform" : ""
+            }`}
+            style={
+              heroZoomScale > 1
+                ? {
+                    transform: `scale(${heroZoomScale})`,
+                    transformOrigin: `${heroZoomOrigin.x}% ${heroZoomOrigin.y}%`,
+                    transition: prefersReducedMotion
+                      ? undefined
+                      : "transform 120ms ease-out",
+                  }
+                : prefersReducedMotion
+                  ? undefined
+                  : { transition: "transform 120ms ease-out" }
+            }
           >
             <Image
               src={heroImageUrl}
