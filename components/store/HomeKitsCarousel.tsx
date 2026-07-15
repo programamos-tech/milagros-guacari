@@ -15,13 +15,16 @@ export function HomeKitsCarousel({ kits }: Props) {
   const scrollerRef = useRef<HTMLUListElement>(null);
   const [canPrev, setCanPrev] = useState(false);
   const [canNext, setCanNext] = useState(false);
+  const [fitsInView, setFitsInView] = useState(true);
 
   const updateEdges = useCallback(() => {
     const el = scrollerRef.current;
     if (!el) return;
     const max = el.scrollWidth - el.clientWidth;
-    setCanPrev(el.scrollLeft > 4);
-    setCanNext(el.scrollLeft < max - 4);
+    const fits = max <= 4;
+    setFitsInView(fits);
+    setCanPrev(!fits && el.scrollLeft > 4);
+    setCanNext(!fits && el.scrollLeft < max - 4);
   }, []);
 
   useEffect(() => {
@@ -41,7 +44,7 @@ export function HomeKitsCarousel({ kits }: Props) {
     const el = scrollerRef.current;
     if (!el) return;
     const card = el.querySelector<HTMLElement>("[data-kit-slide]");
-    const step = card ? card.offsetWidth + 16 : el.clientWidth * 0.75;
+    const step = card ? card.offsetWidth + 24 : el.clientWidth * 0.75;
     el.scrollBy({ left: dir * step, behavior: "smooth" });
   };
 
@@ -51,21 +54,25 @@ export function HomeKitsCarousel({ kits }: Props) {
     <div className="relative">
       <ul
         ref={scrollerRef}
-        className="-mx-1 flex snap-x snap-mandatory gap-4 overflow-x-auto px-1 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-6"
+        className={`-mx-1 flex items-stretch gap-4 overflow-x-auto px-1 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-6 ${
+          fitsInView
+            ? "snap-none justify-center"
+            : "snap-x snap-mandatory justify-start"
+        }`}
         aria-label="Carrusel de kits y combos"
       >
         {kits.map((kit) => (
           <li
             key={kit.id}
             data-kit-slide
-            className="w-[min(68vw,16.5rem)] shrink-0 snap-start sm:w-[14.5rem] lg:w-[16rem]"
+            className="flex w-[min(68vw,16.5rem)] shrink-0 snap-start sm:w-[14.5rem] lg:w-[16rem]"
           >
             <StoreKitCard kit={kit} />
           </li>
         ))}
       </ul>
 
-      {kits.length > 1 ? (
+      {!fitsInView ? (
         <>
           <button
             type="button"

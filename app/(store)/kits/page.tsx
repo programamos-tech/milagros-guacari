@@ -71,9 +71,9 @@ export default async function KitsPage() {
             .
           </p>
         ) : (
-          <ul className="mt-12 grid grid-cols-2 gap-x-6 gap-y-12 sm:grid-cols-3 lg:grid-cols-4">
+          <ul className="mt-12 grid grid-cols-2 items-stretch gap-x-6 gap-y-12 sm:grid-cols-3 lg:grid-cols-4">
             {kits.map((kit) => (
-              <li key={kit.id}>
+              <li key={kit.id} className="h-full">
                 <StoreKitCard
                   kit={kit}
                   cartQty={cartQtyByKitId[kit.id] ?? 0}

@@ -34,9 +34,11 @@ export function StoreKitCard({
   const outOfStock = kit.max_stock < 1;
   const inCart = cartQty > 0;
 
+  const description = kit.description.trim();
+
   return (
-    <article className="flex flex-col">
-      <div className="relative">
+    <article className="flex h-full w-full flex-col">
+      <div className="relative shrink-0">
         <StoreProductImageFrame
           src={img}
           alt={kit.name}
@@ -47,85 +49,90 @@ export function StoreKitCard({
           Kit
         </span>
       </div>
-      <div className="mt-4 flex flex-1 flex-col">
-        <h2 className="text-[13px] font-semibold uppercase leading-snug tracking-wide text-[var(--store-brand)]">
+      <div className="mt-4 flex min-h-0 flex-1 flex-col">
+        <h2 className="line-clamp-2 min-h-[2.6em] text-[13px] font-semibold uppercase leading-snug tracking-wide text-[var(--store-brand)]">
           {kit.name}
         </h2>
-        {kit.description.trim() ? (
-          <p className="mt-2 line-clamp-2 text-[12px] leading-relaxed text-stone-600">
-            {kit.description}
-          </p>
-        ) : null}
+        <p
+          className={`mt-2 line-clamp-2 min-h-[2.75em] text-[12px] leading-relaxed ${
+            description ? "text-stone-600" : "text-transparent"
+          }`}
+          aria-hidden={!description}
+        >
+          {description || "—"}
+        </p>
         <p className="mt-2 text-[12px] text-stone-500">
           {kit.item_count} producto{kit.item_count === 1 ? "" : "s"} incluido
         </p>
         <p className="mt-3 text-[15px] font-medium tabular-nums text-stone-900">
           {formatCop(kit.price_cents)}
         </p>
-        {outOfStock ? (
-          <p className="mt-4 text-[11px] font-semibold uppercase tracking-wide text-stone-400">
-            Agotado
-          </p>
-        ) : inCart ? (
-          <div className="mt-4 inline-flex items-center border border-[var(--store-accent)]/25 bg-white">
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() =>
+        <div className="mt-auto pt-4">
+          {outOfStock ? (
+            <p className="flex h-11 items-center text-[11px] font-semibold uppercase tracking-wide text-stone-400">
+              Agotado
+            </p>
+          ) : inCart ? (
+            <div className="inline-flex h-11 items-center border border-[var(--store-accent)]/25 bg-white">
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() =>
+                  startTransition(() => {
+                    void setKitLineQuantity(kit.id, cartQty - 1).then(() => {
+                      router.refresh();
+                      openCart();
+                    });
+                  })
+                }
+                className="flex size-11 items-center justify-center text-stone-700 transition hover:bg-stone-100 disabled:opacity-40"
+                aria-label={cartQty <= 1 ? "Quitar de la bolsa" : "Menos uno"}
+              >
+                <Minus className="size-3.5" strokeWidth={1.35} aria-hidden />
+              </button>
+              <span className="min-w-[2rem] text-center text-xs font-semibold tabular-nums">
+                {cartQty}
+              </span>
+              <button
+                type="button"
+                disabled={pending || cartQty >= kit.max_stock}
+                onClick={() =>
+                  startTransition(() => {
+                    void setKitLineQuantity(kit.id, cartQty + 1).then(() => {
+                      router.refresh();
+                      openCart();
+                    });
+                  })
+                }
+                className="flex size-11 items-center justify-center text-stone-700 transition hover:bg-stone-100 disabled:opacity-40"
+                aria-label="Más uno"
+              >
+                <Plus className="size-3.5" strokeWidth={1.35} aria-hidden />
+              </button>
+            </div>
+          ) : (
+            <form
+              action={addKitToCartFromForm}
+              className="w-full"
+              onSubmit={() => {
                 startTransition(() => {
-                  void setKitLineQuantity(kit.id, cartQty - 1).then(() => {
-                    router.refresh();
-                    openCart();
-                  });
-                })
-              }
-              className="flex size-9 items-center justify-center text-stone-700 transition hover:bg-stone-100 disabled:opacity-40"
-              aria-label={cartQty <= 1 ? "Quitar de la bolsa" : "Menos uno"}
+                  router.refresh();
+                  openCart();
+                });
+              }}
             >
-              <Minus className="size-3.5" strokeWidth={1.35} aria-hidden />
-            </button>
-            <span className="min-w-[2rem] text-center text-xs font-semibold tabular-nums">
-              {cartQty}
-            </span>
-            <button
-              type="button"
-              disabled={pending || cartQty >= kit.max_stock}
-              onClick={() =>
-                startTransition(() => {
-                  void setKitLineQuantity(kit.id, cartQty + 1).then(() => {
-                    router.refresh();
-                    openCart();
-                  });
-                })
-              }
-              className="flex size-9 items-center justify-center text-stone-700 transition hover:bg-stone-100 disabled:opacity-40"
-              aria-label="Más uno"
-            >
-              <Plus className="size-3.5" strokeWidth={1.35} aria-hidden />
-            </button>
-          </div>
-        ) : (
-          <form
-            action={addKitToCartFromForm}
-            className="mt-4"
-            onSubmit={() => {
-              startTransition(() => {
-                router.refresh();
-                openCart();
-              });
-            }}
-          >
-            <input type="hidden" name="kitId" value={kit.id} />
-            <input type="hidden" name="quantity" value="1" />
-            <button
-              type="submit"
-              disabled={pending}
-              className="w-full border border-[var(--store-accent)] bg-[var(--store-accent)] py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-white transition hover:bg-[var(--store-accent-hover)] disabled:opacity-50"
-            >
-              Agregar kit
-            </button>
-          </form>
-        )}
+              <input type="hidden" name="kitId" value={kit.id} />
+              <input type="hidden" name="quantity" value="1" />
+              <button
+                type="submit"
+                disabled={pending}
+                className="h-11 w-full border border-[var(--store-accent)] bg-[var(--store-accent)] text-[11px] font-semibold uppercase tracking-[0.14em] text-white transition hover:bg-[var(--store-accent-hover)] disabled:opacity-50"
+              >
+                Agregar kit
+              </button>
+            </form>
+          )}
+        </div>
       </div>
     </article>
   );
