@@ -34,20 +34,20 @@ import {
   shouldUnoptimizeStorageImageUrl,
   storagePublicObjectUrl,
 } from "@/lib/storage-public-url";
+import { CartUpsellScroller } from "@/components/store/CartUpsellScroller";
 import {
   CheckoutShippingFields,
   type CheckoutSavedAddress,
   type CheckoutShippingInitial,
 } from "@/components/store/CheckoutShippingFields";
 import {
-  CheckoutCitySelect,
   CheckoutShippingTotals,
   CheckoutSubmitButton,
 } from "@/components/store/CheckoutCitySelect";
+import { CheckoutCouponField } from "@/components/store/CheckoutCouponField";
 import { CheckoutShippingProvider } from "@/components/store/CheckoutShippingProvider";
 import { CheckoutSubmittingOverlay } from "@/components/store/CheckoutSubmittingOverlay";
 import { CheckoutLineControls } from "@/components/store/CheckoutLineControls";
-import { CartUpsellScroller } from "@/components/store/CartUpsellScroller";
 import {
   CART_DRAWER_UPSELL_LIMIT,
   loadStoreCartUpsells,
@@ -180,7 +180,7 @@ function CheckoutBolsaVaciaView({
             : "Explora el catálogo y suma productos a tu bolsa cuando quieras.";
 
   return (
-    <div className="min-h-[calc(100vh-8rem)] bg-white">
+    <div data-checkout-root className="min-h-[calc(100vh-8rem)] bg-white">
       <div className="mx-auto max-w-6xl px-4 pb-14 pt-10 sm:px-6 lg:pb-16 lg:pt-12">
         <nav
           aria-label="Migas de pan"
@@ -300,7 +300,6 @@ export default async function CheckoutPage({
     lastName: "",
     profileAddressLine: "",
     city: "",
-    zipCode: "",
     mobile: "",
     municipalityId: "",
   };
@@ -390,10 +389,6 @@ export default async function CheckoutPage({
         "";
       shippingInitial.city =
         lastOrder?.shipping_city?.trim() || cust.shipping_city?.trim() || "";
-      shippingInitial.zipCode =
-        lastOrder?.shipping_postal_code?.trim() ||
-        cust.shipping_postal_code?.trim() ||
-        "";
       shippingInitial.mobile =
         lastOrder?.shipping_phone?.trim() ||
         cust.phone?.trim() ||
@@ -519,7 +514,7 @@ export default async function CheckoutPage({
   }));
 
   return (
-    <div className="min-h-[calc(100vh-8rem)] bg-white">
+    <div data-checkout-root className="min-h-[calc(100vh-8rem)] bg-white">
       <div className="store-page-stagger mx-auto max-w-6xl px-4 pb-14 pt-10 sm:px-6 lg:pb-16 lg:pt-12">
         <nav aria-label="Migas de pan" className="store-page-stagger-item mb-8 text-[11px] uppercase tracking-[0.12em] text-stone-400">
           <ol className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 sm:justify-start">
@@ -739,89 +734,22 @@ export default async function CheckoutPage({
                   Coordinamos la entrega en Colombia.
                 </p>
 
-                {accountEmail ? (
-                  <CheckoutShippingFields
-                    initial={shippingInitial}
-                    savedAddresses={savedAddresses}
-                    accountEmail={accountEmail}
-                    labelClass={labelClass}
-                    inputClass={inputClass}
-                    selectClass={selectClass}
-                  />
-                ) : (
-                  <div className="mt-8 grid gap-6 sm:grid-cols-2">
-                    <label className="block sm:col-span-1">
-                      <span className={labelClass}>Nombre</span>
-                      <input
-                        name="firstName"
-                        required
-                        autoComplete="given-name"
-                        placeholder="Escribe aquí…"
-                        className={inputClass}
-                        defaultValue={defaultFirst}
-                      />
-                    </label>
-                    <label className="block sm:col-span-1">
-                      <span className={labelClass}>Apellido</span>
-                      <input
-                        name="lastName"
-                        required
-                        autoComplete="family-name"
-                        placeholder="Escribe aquí…"
-                        className={inputClass}
-                        defaultValue={defaultLast}
-                      />
-                    </label>
-                    <label className="block sm:col-span-2">
-                      <span className={labelClass}>Dirección</span>
-                      <input
-                        name="address"
-                        required
-                        autoComplete="street-address"
-                        placeholder="Calle, número, apto…"
-                        className={inputClass}
-                      />
-                    </label>
-                    <div className="sm:col-span-2">
-                      <CheckoutCitySelect
-                        labelClass={labelClass}
-                        inputClass={inputClass}
-                        selectClass={selectClass}
-                      />
-                    </div>
-                    <label className="block sm:col-span-1">
-                      <span className={labelClass}>Código postal</span>
-                      <input
-                        name="zipCode"
-                        autoComplete="postal-code"
-                        placeholder="Opcional"
-                        className={inputClass}
-                      />
-                    </label>
-                    <label className="block sm:col-span-1">
-                      <span className={labelClass}>Teléfono / WhatsApp</span>
-                      <input
-                        name="mobile"
-                        type="tel"
-                        required
-                        autoComplete="tel"
-                        placeholder="Escribe aquí…"
-                        className={inputClass}
-                      />
-                    </label>
-                    <label className="block sm:col-span-1">
-                      <span className={labelClass}>Email</span>
-                      <input
-                        name="email"
-                        type="email"
-                        required
-                        autoComplete="email"
-                        placeholder="correo@ejemplo.com"
-                        className={inputClass}
-                      />
-                    </label>
-                  </div>
-                )}
+                <CheckoutShippingFields
+                  initial={
+                    accountEmail
+                      ? shippingInitial
+                      : {
+                          ...shippingInitial,
+                          firstName: shippingInitial.firstName || defaultFirst,
+                          lastName: shippingInitial.lastName || defaultLast,
+                        }
+                  }
+                  savedAddresses={accountEmail ? savedAddresses : []}
+                  accountEmail={accountEmail}
+                  labelClass={labelClass}
+                  inputClass={inputClass}
+                  selectClass={selectClass}
+                />
               </section>
 
               <section className="store-page-stagger-item border-t border-stone-200 pt-12">
@@ -856,15 +784,7 @@ export default async function CheckoutPage({
                     </span>
                   </span>
                 </summary>
-                <label className="mt-4 block">
-                  <span className="sr-only">Código promocional</span>
-                  <input
-                    name="couponCode"
-                    type="text"
-                    placeholder="Ingresa el código"
-                    className={sidebarInputClass}
-                  />
-                </label>
+                <CheckoutCouponField className={sidebarInputClass} />
                 <p className="mt-2 text-[11px] leading-relaxed text-stone-500">
                   Si tienes un cupón activo para estos productos, ingrésalo aquí antes de pagar.
                 </p>

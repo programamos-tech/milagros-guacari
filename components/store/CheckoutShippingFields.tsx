@@ -1,7 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CheckoutCitySelect } from "@/components/store/CheckoutCitySelect";
+import {
+  readCheckoutFormDraft,
+  writeCheckoutFormDraft,
+} from "@/lib/checkout-form-draft";
 
 export type CheckoutSavedAddress = {
   id: string;
@@ -16,7 +20,6 @@ export type CheckoutShippingInitial = {
   /** Dirección principal a prellenar (perfil o último pedido). */
   profileAddressLine: string;
   city: string;
-  zipCode: string;
   mobile: string;
   /** Id de municipio tarifado del último pedido, si existe. */
   municipalityId?: string;
@@ -34,6 +37,7 @@ type Props = {
 
 /**
  * Campos de envío con selector de direcciones guardadas (cuenta tienda).
+ * Persiste en sessionStorage para sobrevivir refresh y cambios de bolsa.
  */
 export function CheckoutShippingFields({
   initial,
@@ -68,7 +72,6 @@ export function CheckoutShippingFields({
   }, [savedAddresses, profileLine]);
 
   const defaultSelection = useMemo(() => {
-    // Preferir la dirección ya resuelta (último pedido / perfil) sobre la primera guardada.
     if (profileLine) return "profile";
     if (savedAddresses.length > 0) return `addr:${savedAddresses[0].id}`;
     return "profile";
@@ -77,15 +80,51 @@ export function CheckoutShippingFields({
   const [selection, setSelection] = useState(defaultSelection);
   const [firstName, setFirstName] = useState(initial.firstName);
   const [lastName, setLastName] = useState(initial.lastName);
-  const [address, setAddress] = useState(profileLine || savedAddresses[0]?.address_line.trim() || "");
-  const [zipCode, setZipCode] = useState(initial.zipCode);
+  const [address, setAddress] = useState(
+    () => profileLine || savedAddresses[0]?.address_line.trim() || "",
+  );
   const [mobile, setMobile] = useState(initial.mobile);
+  const [email, setEmail] = useState(accountEmail ?? "");
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    const draft = readCheckoutFormDraft();
+    if (draft) {
+      if (draft.firstName) setFirstName(draft.firstName);
+      if (draft.lastName) setLastName(draft.lastName);
+      if (draft.address) setAddress(draft.address);
+      if (draft.mobile) setMobile(draft.mobile);
+      if (!accountEmail && draft.email) setEmail(draft.email);
+      if (draft.addressSelection) setSelection(draft.addressSelection);
+    }
+    setHydrated(true);
+  }, [accountEmail]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    writeCheckoutFormDraft({
+      firstName,
+      lastName,
+      address,
+      mobile,
+      email: accountEmail ?? email,
+      addressSelection: selection,
+    });
+  }, [
+    hydrated,
+    firstName,
+    lastName,
+    address,
+    mobile,
+    email,
+    selection,
+    accountEmail,
+  ]);
 
   function applySelection(next: string) {
     setSelection(next);
     if (next === "profile") {
       setAddress(profileLine);
-      setZipCode(initial.zipCode);
       setMobile(initial.mobile);
       setFirstName(initial.firstName);
       setLastName(initial.lastName);
@@ -100,7 +139,6 @@ export function CheckoutShippingFields({
       if (row) {
         setAddress(row.address_line.trim());
       }
-      setZipCode(initial.zipCode);
       setMobile(initial.mobile);
       setFirstName(initial.firstName);
       setLastName(initial.lastName);
@@ -181,17 +219,6 @@ export function CheckoutShippingFields({
           />
         </div>
         <label className="block sm:col-span-1">
-          <span className={labelClass}>Código postal</span>
-          <input
-            name="zipCode"
-            autoComplete="postal-code"
-            placeholder="Opcional"
-            className={inputClass}
-            value={zipCode}
-            onChange={(e) => setZipCode(e.target.value)}
-          />
-        </label>
-        <label className="block sm:col-span-1">
           <span className={labelClass}>Teléfono / WhatsApp</span>
           <input
             name="mobile"
@@ -213,7 +240,11 @@ export function CheckoutShippingFields({
             autoComplete="email"
             placeholder="correo@ejemplo.com"
             className={inputClass}
-            defaultValue={accountEmail ?? ""}
+            value={email}
+            onChange={(e) => {
+              if (accountEmail) return;
+              setEmail(e.target.value);
+            }}
             readOnly={!!accountEmail}
             title={
               accountEmail

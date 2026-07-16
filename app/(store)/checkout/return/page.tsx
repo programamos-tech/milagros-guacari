@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ClearCheckoutFormDraft } from "@/components/store/ClearCheckoutFormDraft";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { formatCop } from "@/lib/money";
@@ -95,6 +96,7 @@ export default async function CheckoutReturnPage({
 
   return (
     <div className="mx-auto max-w-lg space-y-6 px-4 py-10">
+      <ClearCheckoutFormDraft />
       <h1 className="text-2xl font-semibold text-[var(--store-brand)]">
         Resultado del pago
       </h1>

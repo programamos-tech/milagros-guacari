@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ClearCheckoutFormDraft } from "@/components/store/ClearCheckoutFormDraft";
 import {
   StoreOrderDetailPanel,
 } from "@/components/store/StoreOrderDetailPanel";
@@ -84,6 +85,7 @@ export default async function PedidoSeguimientoPage({ searchParams }: Props) {
 
   return (
     <div className="min-h-[calc(100vh-8rem)] bg-white">
+      <ClearCheckoutFormDraft />
       <div className="store-page-stagger mx-auto max-w-6xl px-4 pb-12 pt-8 sm:px-6 lg:pb-14 lg:pt-10">
         <nav
           aria-label="Migas de pan"

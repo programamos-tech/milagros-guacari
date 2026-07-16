@@ -4,10 +4,15 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
+import {
+  readCheckoutFormDraft,
+  writeCheckoutFormDraft,
+} from "@/lib/checkout-form-draft";
 import type { StoreShippingMunicipalityPublic } from "@/lib/store-shipping";
 import {
   resolveCheckoutShippingCents,
@@ -65,8 +70,21 @@ export function CheckoutShippingProvider({
 
   const [cityValue, setCityValueState] = useState(initialMatch);
 
+  useEffect(() => {
+    const draft = readCheckoutFormDraft();
+    const id = draft?.municipalityId?.trim() ?? "";
+    if (!id) return;
+    if (
+      id === SHIPPING_CITY_OTHER ||
+      municipalities.some((m) => m.id === id)
+    ) {
+      setCityValueState(id);
+    }
+  }, [municipalities]);
+
   const setCityValue = useCallback((v: string) => {
     setCityValueState(v);
+    writeCheckoutFormDraft({ municipalityId: v });
   }, []);
 
   const selectedMunicipality = useMemo(() => {
