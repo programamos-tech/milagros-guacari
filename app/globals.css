@@ -246,28 +246,26 @@ body {
   }
 }
 
-/* Scroll reveal en vitrina (productos, bloques de home) */
+/* Scroll reveal en vitrina (productos, bloques de home) — ligero, solo al entrar */
 .store-reveal {
   transition-property: opacity, transform;
-  transition-duration: 0.72s;
+  transition-duration: 0.52s;
   transition-timing-function: cubic-bezier(0.16, 1, 0.32, 1);
-  will-change: opacity, transform;
 }
 
 .store-reveal-in {
   opacity: 1;
-  transform: translate3d(0, 0, 0) scale(1);
-  will-change: auto;
+  transform: translate3d(0, 0, 0);
 }
 
 .store-reveal-out-below {
   opacity: 0;
-  transform: translate3d(0, 2.25rem, 0) scale(0.96);
+  transform: translate3d(0, 1.35rem, 0);
 }
 
 .store-reveal-out-above {
   opacity: 0;
-  transform: translate3d(0, -2.25rem, 0) scale(0.96);
+  transform: translate3d(0, -1.35rem, 0);
 }
 
 /*
