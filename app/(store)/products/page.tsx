@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { CatalogBrowseSections } from "@/components/store/CatalogBrowseSections";
+import { CatalogKitsSection } from "@/components/store/CatalogKitsSection";
 import { CatalogListingHero } from "@/components/store/CatalogListingHero";
 import { CatalogPagination } from "@/components/store/CatalogPagination";
 import { CategoryListingHero } from "@/components/store/CategoryListingHero";
@@ -25,14 +26,18 @@ import {
   parseProductsPriceMinParam,
   parseProductsSizesParam,
 } from "@/lib/product-list-query";
-import { getStorefrontCartQuantityByProductId } from "@/lib/storefront-cart";
-import { getCachedStorefrontCouponDiscounts } from "@/lib/store-public-cache";
+import {
+  getStorefrontCartQuantityByKitId,
+  getStorefrontCartQuantityByProductId,
+} from "@/lib/storefront-cart";
 import { resolveCategoryListingHeroSrc } from "@/lib/category-listing-hero-url";
 import {
   getCachedAllCategoryRows,
   getCachedCatalogBrowseSections,
+  getCachedCatalogKits,
   getCachedListingFacets,
   getCachedPublishedBanners,
+  getCachedStorefrontCouponDiscounts,
 } from "@/lib/store-public-cache";
 import { STORE_CARD_PRIORITY_COUNT } from "@/lib/store-image";
 import { storeShellClass } from "@/lib/store-theme";
@@ -293,8 +298,10 @@ export default async function ProductsPage({ searchParams }: Props) {
     listingFacets,
     productsBanners,
     catalogSections,
+    catalogKits,
     listResultInitial,
     cartQtyByProductId,
+    cartQtyByKitId,
     couponPctByProductId,
   ] = await Promise.all([
     getCachedListingFacets(facetCategoryIds),
@@ -302,8 +309,14 @@ export default async function ProductsPage({ searchParams }: Props) {
     catalogBrowseMode && allCategoryRows.length
       ? getCachedCatalogBrowseSections(allCategoryRows)
       : Promise.resolve(null),
+    catalogBrowseMode
+      ? getCachedCatalogKits()
+      : Promise.resolve([]),
     fetchFilteredList(page),
     getStorefrontCartQuantityByProductId(),
+    catalogBrowseMode
+      ? getStorefrontCartQuantityByKitId()
+      : Promise.resolve({} as Record<string, number>),
     getCachedStorefrontCouponDiscounts(),
   ]);
 
@@ -447,12 +460,23 @@ export default async function ProductsPage({ searchParams }: Props) {
         ) : null}
 
         {catalogBrowseMode ? (
-          catalogSections && catalogSections.length > 0 ? (
-            <CatalogBrowseSections
-              sections={catalogSections}
-              cartQtyByProductId={cartQtyByProductId}
-              couponPctByProductId={couponPctByProductId}
-            />
+          catalogKits.length > 0 ||
+          (catalogSections && catalogSections.length > 0) ? (
+            <div className="space-y-12 sm:space-y-14">
+              {catalogKits.length > 0 ? (
+                <CatalogKitsSection
+                  kits={catalogKits}
+                  cartQtyByKitId={cartQtyByKitId}
+                />
+              ) : null}
+              {catalogSections && catalogSections.length > 0 ? (
+                <CatalogBrowseSections
+                  sections={catalogSections}
+                  cartQtyByProductId={cartQtyByProductId}
+                  couponPctByProductId={couponPctByProductId}
+                />
+              ) : null}
+            </div>
           ) : (
             <p className="rounded-2xl border border-dashed border-stone-200/80 bg-white/80 p-12 text-center text-stone-500">
               Aún no hay productos publicados. Cárgalos desde el admin.

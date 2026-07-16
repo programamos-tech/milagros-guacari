@@ -141,27 +141,38 @@ export type HomeFeaturedKit = {
   item_count: number;
 };
 
+async function loadAvailableStorefrontKits(): Promise<HomeFeaturedKit[]> {
+  const kits = await fetchKitsWithItems(publicSupabase(), {
+    publishedOnly: true,
+  });
+  return kits
+    .filter((k) => kitIsAvailable(k, "storefront"))
+    .map((k) => {
+      const items = k.items ?? [];
+      return {
+        id: k.id as string,
+        name: k.name,
+        description: k.description ?? "",
+        image_path: k.image_path,
+        price_cents: resolveKitSalePriceCents(k, items, "storefront"),
+        max_stock: maxKitsAvailableFromItems(items, "storefront"),
+        item_count: items.length,
+      };
+    });
+}
+
 export const getCachedHomeFeaturedKits = unstable_cache(
   async (): Promise<HomeFeaturedKit[]> => {
-    const kits = await fetchKitsWithItems(publicSupabase(), {
-      publishedOnly: true,
-    });
-    return kits
-      .filter((k) => kitIsAvailable(k, "storefront"))
-      .slice(0, HOME_KITS_LIMIT)
-      .map((k) => {
-        const items = k.items ?? [];
-        return {
-          id: k.id as string,
-          name: k.name,
-          description: k.description ?? "",
-          image_path: k.image_path,
-          price_cents: resolveKitSalePriceCents(k, items, "storefront"),
-          max_stock: maxKitsAvailableFromItems(items, "storefront"),
-          item_count: items.length,
-        };
-      });
+    const kits = await loadAvailableStorefrontKits();
+    return kits.slice(0, HOME_KITS_LIMIT);
   },
   ["store-home-featured-kits"],
+  { revalidate: STORE_CACHE_REVALIDATE_SEC, tags: ["store-kits"] },
+);
+
+/** Todos los kits disponibles para la sección del catálogo. */
+export const getCachedCatalogKits = unstable_cache(
+  async (): Promise<HomeFeaturedKit[]> => loadAvailableStorefrontKits(),
+  ["store-catalog-kits"],
   { revalidate: STORE_CACHE_REVALIDATE_SEC, tags: ["store-kits"] },
 );
