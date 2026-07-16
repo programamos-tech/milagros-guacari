@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { formatCop } from "@/lib/money";
-import {
-  storeOrderTrackingHint,
-  storeOrderTrackingLabel,
-} from "@/lib/order-fulfillment";
+import { StoreOrderDetailPanel } from "@/components/store/StoreOrderDetailPanel";
+import { getTransferBankInstructions } from "@/lib/transfer-bank-instructions";
+import { buildStoreOrderTrackingUrl } from "@/lib/store-order-tracking-url";
 import { formatStoreDateTime } from "@/lib/store-datetime-format";
+import { loadStoreOrderDetailForAccountUser } from "@/lib/store-order-detail-data";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Detalle del pedido",
@@ -18,49 +18,22 @@ export default async function CuentaPedidoDetallePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = await createSupabaseServerClient();
+  const order = await loadStoreOrderDetailForAccountUser(id);
+  if (!order) notFound();
 
-  const { data: order, error: oErr } = await supabase
-    .from("orders")
-    .select(
-      "id, status, fulfillment_status, checkout_payment_method, total_cents, currency, created_at, customer_name, customer_email, shipping_address, shipping_city, shipping_neighborhood, shipping_reference, shipping_postal_code, shipping_phone",
-    )
-    .eq("id", id)
-    .maybeSingle();
-
-  if (oErr || !order) {
-    notFound();
-  }
-
-  const { data: items } = await supabase
-    .from("order_items")
-    .select(
-      "id, quantity, unit_price_cents, product_name_snapshot",
-    )
-    .eq("order_id", id);
-
-  const lines = items ?? [];
-  const trackingLabel = storeOrderTrackingLabel({
-    paymentStatus: String(order.status),
-    fulfillmentStatus:
-      order.fulfillment_status != null ? String(order.fulfillment_status) : null,
-    checkoutPaymentMethod:
-      order.checkout_payment_method != null
-        ? String(order.checkout_payment_method)
-        : null,
-  });
-  const trackingHint = storeOrderTrackingHint({
-    paymentStatus: String(order.status),
-    fulfillmentStatus:
-      order.fulfillment_status != null ? String(order.fulfillment_status) : null,
-    checkoutPaymentMethod:
-      order.checkout_payment_method != null
-        ? String(order.checkout_payment_method)
-        : null,
+  const token = order.transferSessionToken;
+  const trackingUrl =
+    token && order.checkoutPaymentMethod === "transfer"
+      ? buildStoreOrderTrackingUrl(order.id, token)
+      : null;
+  const instructions = getTransferBankInstructions();
+  const createdAtLabel = formatStoreDateTime(order.createdAt, {
+    dateStyle: "full",
+    timeStyle: "short",
   });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <nav aria-label="Migas de pan" className="text-sm text-stone-500">
         <ol className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <li>
@@ -78,91 +51,30 @@ export default async function CuentaPedidoDetallePage({
         </ol>
       </nav>
 
-      <div>
-        <h1 className="text-2xl font-semibold text-[var(--store-brand)]">
-          Pedido {order.id.slice(0, 8)}…
-        </h1>
-        <p className="mt-2 text-sm text-stone-600">
-          {trackingLabel} ·{" "}
-          {formatStoreDateTime(order.created_at, {
-            dateStyle: "full",
-            timeStyle: "short",
-          })}
-        </p>
-        <p className="mt-2 text-sm leading-relaxed text-stone-500">{trackingHint}</p>
-      </div>
-
-      <section className="rounded-xl border border-stone-200/90 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-6">
-        <h2 className="text-lg font-semibold text-[var(--store-brand)]">Envío</h2>
-        <dl className="mt-4 space-y-2 text-sm text-stone-700">
-          <div>
-            <dt className="text-stone-500">Nombre</dt>
-            <dd>{order.customer_name}</dd>
-          </div>
-          <div>
-            <dt className="text-stone-500">Email</dt>
-            <dd>{order.customer_email}</dd>
-          </div>
-          {order.shipping_phone ? (
-            <div>
-              <dt className="text-stone-500">Teléfono</dt>
-              <dd>{order.shipping_phone}</dd>
-            </div>
-          ) : null}
-          {order.shipping_address ? (
-            <div>
-              <dt className="text-stone-500">Dirección</dt>
-              <dd className="space-y-0.5">
-                <p>
-                  {order.shipping_address}
-                  {order.shipping_neighborhood
-                    ? `, barrio ${order.shipping_neighborhood}`
-                    : ""}
-                  {order.shipping_city ? `, ${order.shipping_city}` : ""}
-                  {order.shipping_postal_code
-                    ? ` · ${order.shipping_postal_code}`
-                    : ""}
-                </p>
-                {order.shipping_reference ? (
-                  <p className="text-stone-600">
-                    Ref.: {order.shipping_reference}
-                  </p>
-                ) : null}
-              </dd>
-            </div>
-          ) : null}
-        </dl>
-      </section>
-
-      <section className="rounded-xl border border-stone-200/90 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-6">
-        <h2 className="text-lg font-semibold text-[var(--store-brand)]">Productos</h2>
-        <ul className="mt-4 divide-y divide-stone-100">
-          {lines.map((line) => (
-            <li
-              key={line.id}
-              className="flex justify-between gap-4 py-3 first:pt-0 last:pb-0"
-            >
-              <div>
-                <p className="font-medium text-stone-900">
-                  {line.product_name_snapshot}
-                </p>
-                <p className="text-sm text-stone-500">
-                  {line.quantity}{" "}
-                  {line.quantity === 1 ? "unidad" : "unidades"} ×{" "}
-                  {formatCop(line.unit_price_cents)}
-                </p>
-              </div>
-              <p className="shrink-0 font-semibold text-stone-900">
-                {formatCop(line.unit_price_cents * line.quantity)}
-              </p>
-            </li>
-          ))}
-        </ul>
-        <div className="mt-4 flex justify-between border-t border-stone-100 pt-4 text-base font-bold text-stone-900">
-          <span>Total</span>
-          <span>{formatCop(order.total_cents)}</span>
-        </div>
-      </section>
+      <StoreOrderDetailPanel
+        orderId={order.id}
+        token={token}
+        trackingUrl={trackingUrl}
+        status={order.status}
+        fulfillmentStatus={order.fulfillmentStatus}
+        checkoutPaymentMethod={order.checkoutPaymentMethod}
+        createdAtLabel={createdAtLabel}
+        totalCents={order.totalCents}
+        customerName={order.customerName}
+        customerEmail={order.customerEmail}
+        shippingPhone={order.shippingPhone}
+        shippingAddress={order.shippingAddress}
+        shippingCity={order.shippingCity}
+        shippingNeighborhood={order.shippingNeighborhood}
+        shippingReference={order.shippingReference}
+        shippingPostalCode={order.shippingPostalCode}
+        shippingCents={order.shippingCents}
+        orderLines={order.orderLines}
+        instructions={instructions}
+        isGuest={false}
+        showAccountLinks
+        proofCount={order.proofCount}
+      />
     </div>
   );
 }

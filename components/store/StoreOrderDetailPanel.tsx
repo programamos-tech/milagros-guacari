@@ -22,8 +22,9 @@ const TRANSFER_SECTION_ID = "pago-comprobante";
 
 type Props = {
   orderId: string;
-  token: string;
-  trackingUrl: string;
+  /** Requerido para transferencia (subida de comprobante / enlace de seguimiento). */
+  token: string | null;
+  trackingUrl: string | null;
   status: string;
   fulfillmentStatus: string | null;
   checkoutPaymentMethod: string | null;
@@ -44,6 +45,12 @@ type Props = {
   showAccountLinks: boolean;
   proofCount: number;
 };
+
+function paymentMethodLabel(method: string | null): string {
+  if (method === "transfer") return "Transferencia bancaria";
+  if (method === "wompi") return "Pago en línea (Wompi)";
+  return method?.trim() ? method : "—";
+}
 
 function statusBadgeClass(
   status: string,
@@ -114,12 +121,16 @@ export function StoreOrderDetailPanel({
   }, []);
 
   const showTransferSection =
+    Boolean(token) &&
     checkoutPaymentMethod === "transfer" &&
     fulfillmentStatus !== "shipped" &&
     fulfillmentStatus !== "completed" &&
+    paymentStatus !== "cancelled" &&
+    paymentStatus !== "failed" &&
     (fulfillmentStatus === "awaiting_payment" ||
       fulfillmentStatus === "preparing" ||
-      (fulfillmentStatus === null && paymentStatus === "pending"));
+      (fulfillmentStatus === null &&
+        (paymentStatus === "pending" || paymentStatus === "paid")));
 
   const needsProofHint = showTransferSection && proofCount === 0;
 
@@ -253,7 +264,9 @@ export function StoreOrderDetailPanel({
                   <dt className="text-[11px] font-semibold uppercase tracking-wide text-stone-500">
                     Forma de pago
                   </dt>
-                  <dd className="mt-0.5">Transferencia bancaria</dd>
+                  <dd className="mt-0.5">
+                    {paymentMethodLabel(checkoutPaymentMethod)}
+                  </dd>
                 </div>
               </dl>
             </section>
@@ -305,7 +318,7 @@ export function StoreOrderDetailPanel({
           </div>
 
           <div className="space-y-6">
-            <StoreOrderTrackingLink url={trackingUrl} />
+            {trackingUrl ? <StoreOrderTrackingLink url={trackingUrl} /> : null}
 
             {!isGuest && showAccountLinks ? (
               <div className="rounded-xl border border-stone-200 bg-[#f4f4f3] p-4 text-sm text-stone-700">
@@ -359,19 +372,21 @@ export function StoreOrderDetailPanel({
                 ? "Puedes subir otro comprobante si lo necesitas. Guarda el enlace de seguimiento para ver el progreso."
                 : "Para confirmar tu pedido es obligatorio transferir el valor exacto y subir el comprobante. Podés hacerlo cuando quieras desde este mismo enlace."}
             </p>
-            <div className="mt-6">
-              <TransferenciaCheckoutPanel
-                orderId={orderId}
-                token={token}
-                totalCents={totalCents}
-                customerName={customerName}
-                instructions={instructions}
-                orderLines={orderLines}
-                embedded
-                initialProofCount={proofCount}
-                onProofUploaded={onProofUploaded}
-              />
-            </div>
+            {token ? (
+              <div className="mt-6">
+                <TransferenciaCheckoutPanel
+                  orderId={orderId}
+                  token={token}
+                  totalCents={totalCents}
+                  customerName={customerName}
+                  instructions={instructions}
+                  orderLines={orderLines}
+                  embedded
+                  initialProofCount={proofCount}
+                  onProofUploaded={onProofUploaded}
+                />
+              </div>
+            ) : null}
           </section>
         ) : null}
 

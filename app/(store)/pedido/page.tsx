@@ -1,15 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ClearCheckoutFormDraft } from "@/components/store/ClearCheckoutFormDraft";
-import {
-  StoreOrderDetailPanel,
-} from "@/components/store/StoreOrderDetailPanel";
-import type { TransferOrderLine } from "@/components/store/TransferenciaCheckoutPanel";
+import { StoreOrderDetailPanel } from "@/components/store/StoreOrderDetailPanel";
 import { getTransferBankInstructions } from "@/lib/transfer-bank-instructions";
 import { buildStoreOrderTrackingUrl } from "@/lib/store-order-tracking-url";
 import { formatStoreDateTime } from "@/lib/store-datetime-format";
+import { loadStoreOrderDetailByTransferToken } from "@/lib/store-order-detail-data";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
 
@@ -27,19 +24,10 @@ export default async function PedidoSeguimientoPage({ searchParams }: Props) {
   const token = typeof sp.t === "string" ? sp.t.trim() : "";
   if (!orderId || !token) notFound();
 
-  const supabase = createSupabaseServiceClient();
-  const { data: order } = await supabase
-    .from("orders")
-    .select(
-      "id, checkout_payment_method, transfer_session_token, status, fulfillment_status, total_cents, shipping_cents, customer_name, customer_email, shipping_address, shipping_city, shipping_neighborhood, shipping_reference, shipping_postal_code, shipping_phone, created_at",
-    )
-    .eq("id", orderId)
-    .maybeSingle();
-
+  const order = await loadStoreOrderDetailByTransferToken(orderId, token);
   if (!order) notFound();
-  if (String(order.transfer_session_token) !== token) notFound();
 
-  const checkoutPm = String(order.checkout_payment_method ?? "");
+  const checkoutPm = order.checkoutPaymentMethod ?? "";
   if (checkoutPm !== "transfer") notFound();
 
   const sessionSb = await createSupabaseServerClient();
@@ -59,26 +47,9 @@ export default async function PedidoSeguimientoPage({ searchParams }: Props) {
     showAccountLinks = !adminProf;
   }
 
-  const { data: itemRows } = await supabase
-    .from("order_items")
-    .select("id, quantity, unit_price_cents, product_name_snapshot")
-    .eq("order_id", orderId);
-
-  const orderLines: TransferOrderLine[] = (itemRows ?? []).map((line) => ({
-    id: String(line.id),
-    name: String(line.product_name_snapshot ?? "Producto"),
-    quantity: Math.max(1, Number(line.quantity ?? 1)),
-    unitPriceCents: Math.max(0, Number(line.unit_price_cents ?? 0)),
-  }));
-
-  const { count: proofCount } = await supabase
-    .from("order_transfer_proofs")
-    .select("id", { count: "exact", head: true })
-    .eq("order_id", orderId);
-
   const trackingUrl = buildStoreOrderTrackingUrl(orderId, token);
   const instructions = getTransferBankInstructions();
-  const createdAtLabel = formatStoreDateTime(String(order.created_at), {
+  const createdAtLabel = formatStoreDateTime(order.createdAt, {
     dateStyle: "full",
     timeStyle: "short",
   });
@@ -121,35 +92,25 @@ export default async function PedidoSeguimientoPage({ searchParams }: Props) {
             orderId={orderId}
             token={token}
             trackingUrl={trackingUrl}
-            status={String(order.status)}
-            fulfillmentStatus={
-              order.fulfillment_status != null ? String(order.fulfillment_status) : null
-            }
+            status={order.status}
+            fulfillmentStatus={order.fulfillmentStatus}
             checkoutPaymentMethod={checkoutPm}
             createdAtLabel={createdAtLabel}
-            totalCents={Number(order.total_cents ?? 0)}
-            customerName={String(order.customer_name ?? "")}
-            customerEmail={String(order.customer_email ?? "")}
-            shippingPhone={order.shipping_phone ? String(order.shipping_phone) : null}
-            shippingAddress={order.shipping_address ? String(order.shipping_address) : null}
-            shippingCity={order.shipping_city ? String(order.shipping_city) : null}
-            shippingNeighborhood={
-              order.shipping_neighborhood
-                ? String(order.shipping_neighborhood)
-                : null
-            }
-            shippingReference={
-              order.shipping_reference ? String(order.shipping_reference) : null
-            }
-            shippingPostalCode={
-              order.shipping_postal_code ? String(order.shipping_postal_code) : null
-            }
-            shippingCents={Number(order.shipping_cents ?? 0)}
-            orderLines={orderLines}
+            totalCents={order.totalCents}
+            customerName={order.customerName}
+            customerEmail={order.customerEmail}
+            shippingPhone={order.shippingPhone}
+            shippingAddress={order.shippingAddress}
+            shippingCity={order.shippingCity}
+            shippingNeighborhood={order.shippingNeighborhood}
+            shippingReference={order.shippingReference}
+            shippingPostalCode={order.shippingPostalCode}
+            shippingCents={order.shippingCents}
+            orderLines={order.orderLines}
             instructions={instructions}
             isGuest={showRegisterModal}
             showAccountLinks={showAccountLinks}
-            proofCount={proofCount ?? 0}
+            proofCount={order.proofCount}
           />
         </div>
       </div>
