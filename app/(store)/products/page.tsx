@@ -1,5 +1,4 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { CatalogBrowseSections } from "@/components/store/CatalogBrowseSections";
 import { CatalogKitsSection } from "@/components/store/CatalogKitsSection";
 import { CatalogListingHero } from "@/components/store/CatalogListingHero";
 import { CatalogPagination } from "@/components/store/CatalogPagination";
@@ -33,7 +32,7 @@ import {
 import { resolveCategoryListingHeroSrc } from "@/lib/category-listing-hero-url";
 import {
   getCachedAllCategoryRows,
-  getCachedCatalogBrowseSections,
+  getCachedAllCatalogProducts,
   getCachedCatalogKits,
   getCachedListingFacets,
   getCachedPublishedBanners,
@@ -297,7 +296,7 @@ export default async function ProductsPage({ searchParams }: Props) {
   const [
     listingFacets,
     productsBanners,
-    catalogSections,
+    catalogProducts,
     catalogKits,
     listResultInitial,
     cartQtyByProductId,
@@ -306,13 +305,15 @@ export default async function ProductsPage({ searchParams }: Props) {
   ] = await Promise.all([
     getCachedListingFacets(facetCategoryIds),
     categoryView ? Promise.resolve([]) : getCachedPublishedBanners("products"),
-    catalogBrowseMode && allCategoryRows.length
-      ? getCachedCatalogBrowseSections(allCategoryRows)
-      : Promise.resolve(null),
+    catalogBrowseMode
+      ? getCachedAllCatalogProducts()
+      : Promise.resolve([]),
     catalogBrowseMode
       ? getCachedCatalogKits()
       : Promise.resolve([]),
-    fetchFilteredList(page),
+    catalogBrowseMode
+      ? Promise.resolve({ products: [] as ListProduct[], total: 0 })
+      : fetchFilteredList(page),
     getStorefrontCartQuantityByProductId(),
     catalogBrowseMode
       ? getStorefrontCartQuantityByKitId()
@@ -460,8 +461,7 @@ export default async function ProductsPage({ searchParams }: Props) {
         ) : null}
 
         {catalogBrowseMode ? (
-          catalogKits.length > 0 ||
-          (catalogSections && catalogSections.length > 0) ? (
+          catalogKits.length > 0 || catalogProducts.length > 0 ? (
             <div className="space-y-12 sm:space-y-14">
               {catalogKits.length > 0 ? (
                 <CatalogKitsSection
@@ -469,12 +469,57 @@ export default async function ProductsPage({ searchParams }: Props) {
                   cartQtyByKitId={cartQtyByKitId}
                 />
               ) : null}
-              {catalogSections && catalogSections.length > 0 ? (
-                <CatalogBrowseSections
-                  sections={catalogSections}
-                  cartQtyByProductId={cartQtyByProductId}
-                  couponPctByProductId={couponPctByProductId}
-                />
+
+              {catalogProducts.length > 0 ? (
+                <section
+                  aria-labelledby="cat-all-products"
+                  className="w-full min-w-0 max-w-full"
+                >
+                  <div className="mb-4 flex flex-wrap items-end justify-between gap-3 sm:mb-5">
+                    <h2
+                      id="cat-all-products"
+                      className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[var(--store-brand)]"
+                    >
+                      Todos los productos
+                    </h2>
+                    <p className="text-[11px] uppercase tracking-[0.12em] text-stone-400">
+                      {catalogProducts.length}{" "}
+                      {catalogProducts.length === 1 ? "producto" : "productos"}
+                    </p>
+                  </div>
+                  <ul className="grid grid-cols-2 gap-x-5 gap-y-12 sm:gap-x-8 lg:grid-cols-3 lg:gap-x-10 xl:grid-cols-4">
+                    {catalogProducts.map((p, index) => (
+                      <li key={p.id}>
+                        <RevealOnScroll
+                          className="h-full"
+                          delayMs={Math.min(index * 36, 220)}
+                        >
+                          <ProductListingCard
+                            accentImageBg={index % 4 === 3}
+                            priority={index < STORE_CARD_PRIORITY_COUNT}
+                            cartQuantity={cartQtyByProductId[p.id] ?? 0}
+                            couponDiscountPercent={
+                              couponPctByProductId[p.id] ?? 0
+                            }
+                            product={{
+                              id: p.id,
+                              name: p.name,
+                              brand: p.brand,
+                              price_cents: p.price_cents,
+                              has_vat: p.has_vat,
+                              image_path: p.image_path,
+                              stock_quantity: p.stock_quantity,
+                              size_options: p.size_options,
+                              size_value: p.size_value,
+                              size_unit: p.size_unit,
+                              fragrance_options: p.fragrance_options,
+                            }}
+                          />
+                        </RevealOnScroll>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
               ) : null}
             </div>
           ) : (

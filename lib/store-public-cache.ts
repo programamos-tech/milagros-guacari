@@ -176,3 +176,36 @@ export const getCachedCatalogKits = unstable_cache(
   ["store-catalog-kits"],
   { revalidate: STORE_CACHE_REVALIDATE_SEC, tags: ["store-kits"] },
 );
+
+export type CatalogGridProduct = {
+  id: string;
+  name: string;
+  brand: string;
+  price_cents: number;
+  has_vat: boolean | null;
+  image_path: string | null;
+  stock_quantity: number;
+  size_options: unknown;
+  size_value: number | null;
+  size_unit: string | null;
+  fragrance_options: string[] | null;
+};
+
+/** Catálogo completo (scroll): todos los productos publicados con imagen. */
+export const getCachedAllCatalogProducts = unstable_cache(
+  async (): Promise<CatalogGridProduct[]> => {
+    const { data } = await withStorefrontImage(
+      publicSupabase()
+        .from("products")
+        .select(
+          "id,name,brand,price_cents,has_vat,image_path,stock_quantity,size_options,size_value,size_unit,fragrance_options",
+        )
+        .eq("is_published", true),
+    )
+      .order("created_at", { ascending: false })
+      .limit(1000);
+    return (data ?? []) as CatalogGridProduct[];
+  },
+  ["store-all-catalog-products"],
+  { revalidate: STORE_CACHE_REVALIDATE_SEC, tags: ["store-products"] },
+);
