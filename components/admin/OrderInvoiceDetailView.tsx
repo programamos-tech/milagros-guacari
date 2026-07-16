@@ -68,6 +68,8 @@ export type OrderInvoiceDetailViewProps = {
   wompiReference: string | null;
   shippingAddress: string | null;
   shippingCity: string | null;
+  shippingNeighborhood?: string | null;
+  shippingReference?: string | null;
   shippingPhone: string | null;
   /** Costo de envío cobrado (0 = gratis o no aplica). */
   shippingCents?: number;
@@ -196,6 +198,8 @@ export function OrderInvoiceDetailView(props: OrderInvoiceDetailViewProps) {
     wompiReference,
     shippingAddress,
     shippingCity,
+    shippingNeighborhood,
+    shippingReference,
     shippingPhone,
     shippingCents = 0,
     cancellationReason,
@@ -227,7 +231,18 @@ export function OrderInvoiceDetailView(props: OrderInvoiceDetailViewProps) {
   const hasShipping =
     Boolean(shippingAddress?.trim()) || Boolean(shippingCity?.trim());
   const ubicacionLine = hasShipping
-    ? [shippingCity, shippingAddress].filter(Boolean).join(" · ")
+    ? [
+        shippingCity,
+        shippingAddress,
+        shippingNeighborhood?.trim()
+          ? `Barrio ${shippingNeighborhood.trim()}`
+          : null,
+        shippingReference?.trim()
+          ? `Ref. ${shippingReference.trim()}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" · ")
     : "Retiro en tienda";
 
   const printDocumentId = customerDocumentId?.trim() || null;

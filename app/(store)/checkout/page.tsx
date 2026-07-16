@@ -95,7 +95,7 @@ function CheckoutErrorBanner({
       {error === "missing_name" && "Ingresa nombre y apellido."}
       {error === "invalid_email" && "Email inválido."}
       {error === "missing_shipping" &&
-        "Completa dirección y teléfono de contacto."}
+        "Completa dirección, barrio y teléfono de contacto."}
       {error === "shipping_municipality" &&
         "Selecciona un municipio de envío de la lista. Si el tuyo no aparece, contáctanos por WhatsApp."}
       {error === "products" &&
@@ -300,6 +300,8 @@ export default async function CheckoutPage({
     lastName: "",
     profileAddressLine: "",
     city: "",
+    neighborhood: "",
+    reference: "",
     mobile: "",
     municipalityId: "",
   };
@@ -336,7 +338,7 @@ export default async function CheckoutPage({
     const { data: cust } = await sessionSb
       .from("customers")
       .select(
-        "id, name, phone, shipping_address, shipping_city, shipping_postal_code, customer_kind, wholesale_discount_percent",
+        "id, name, phone, shipping_address, shipping_city, shipping_neighborhood, shipping_reference, shipping_postal_code, customer_kind, wholesale_discount_percent",
       )
       .eq("auth_user_id", checkoutUser.id)
       .maybeSingle();
@@ -357,7 +359,7 @@ export default async function CheckoutPage({
         sessionSb
           .from("orders")
           .select(
-            "customer_name, shipping_address, shipping_city, shipping_postal_code, shipping_phone, shipping_municipality_id",
+            "customer_name, shipping_address, shipping_city, shipping_neighborhood, shipping_reference, shipping_phone, shipping_municipality_id",
           )
           .eq("customer_id", customerId)
           .order("created_at", { ascending: false })
@@ -389,6 +391,22 @@ export default async function CheckoutPage({
         "";
       shippingInitial.city =
         lastOrder?.shipping_city?.trim() || cust.shipping_city?.trim() || "";
+      shippingInitial.neighborhood =
+        (
+          lastOrder as { shipping_neighborhood?: string | null } | null
+        )?.shipping_neighborhood?.trim() ||
+        (
+          cust as { shipping_neighborhood?: string | null }
+        ).shipping_neighborhood?.trim() ||
+        "";
+      shippingInitial.reference =
+        (
+          lastOrder as { shipping_reference?: string | null } | null
+        )?.shipping_reference?.trim() ||
+        (
+          cust as { shipping_reference?: string | null }
+        ).shipping_reference?.trim() ||
+        "";
       shippingInitial.mobile =
         lastOrder?.shipping_phone?.trim() ||
         cust.phone?.trim() ||

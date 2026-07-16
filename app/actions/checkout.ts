@@ -54,6 +54,8 @@ export async function startCheckout(formData: FormData) {
   const resolvedName = customerName || legacyName;
 
   const shippingAddress = String(formData.get("address") ?? "").trim();
+  const shippingNeighborhood = String(formData.get("neighborhood") ?? "").trim();
+  const shippingReference = String(formData.get("reference") ?? "").trim();
   const shippingMunicipalityId = String(
     formData.get("shipping_municipality_id") ?? "",
   ).trim();
@@ -73,7 +75,7 @@ export async function startCheckout(formData: FormData) {
   ) {
     redirect("/checkout?error=shipping_municipality");
   }
-  if (!shippingAddress || !shippingPhone) {
+  if (!shippingAddress || !shippingPhone || !shippingNeighborhood) {
     redirect("/checkout?error=missing_shipping");
   }
 
@@ -330,6 +332,8 @@ export async function startCheckout(formData: FormData) {
         phone: shippingPhone,
         shipping_address: shippingAddress,
         shipping_city: resolvedShippingCity,
+        shipping_neighborhood: shippingNeighborhood || null,
+        shipping_reference: shippingReference || null,
         shipping_postal_code: shippingPostalCode || null,
       })
       .eq("id", customerId);
@@ -342,6 +346,8 @@ export async function startCheckout(formData: FormData) {
         phone: shippingPhone,
         shipping_address: shippingAddress,
         shipping_city: resolvedShippingCity,
+        shipping_neighborhood: shippingNeighborhood || null,
+        shipping_reference: shippingReference || null,
         shipping_postal_code: shippingPostalCode || null,
         source: "storefront",
       })
@@ -367,6 +373,8 @@ export async function startCheckout(formData: FormData) {
       status: "pending",
       shipping_address: shippingAddress,
       shipping_city: resolvedShippingCity,
+      shipping_neighborhood: shippingNeighborhood || null,
+      shipping_reference: shippingReference || null,
       shipping_postal_code: shippingPostalCode || null,
       shipping_phone: shippingPhone,
       shipping_cents: shippingCents,

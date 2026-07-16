@@ -116,7 +116,20 @@ export default async function AdminOrderDetailPage({ params, searchParams }: Pro
     order.shipping_address != null ? String(order.shipping_address).trim() : "";
   const orderShippingCity =
     order.shipping_city != null ? String(order.shipping_city).trim() : "";
-  const orderAddressLine = [orderShippingCity, orderShippingAddress]
+  const orderShippingNeighborhood =
+    "shipping_neighborhood" in order && order.shipping_neighborhood != null
+      ? String(order.shipping_neighborhood).trim()
+      : "";
+  const orderShippingReference =
+    "shipping_reference" in order && order.shipping_reference != null
+      ? String(order.shipping_reference).trim()
+      : "";
+  const orderAddressLine = [
+    orderShippingCity,
+    orderShippingAddress,
+    orderShippingNeighborhood ? `Barrio ${orderShippingNeighborhood}` : "",
+    orderShippingReference ? `Ref. ${orderShippingReference}` : "",
+  ]
     .filter((v) => v.length > 0)
     .join(" · ");
   const customerAddress =
@@ -168,6 +181,14 @@ export default async function AdminOrderDetailPage({ params, searchParams }: Pro
         }
         shippingCity={
           order.shipping_city != null ? String(order.shipping_city) : null
+        }
+        shippingNeighborhood={
+          orderShippingNeighborhood.length > 0
+            ? orderShippingNeighborhood
+            : null
+        }
+        shippingReference={
+          orderShippingReference.length > 0 ? orderShippingReference : null
         }
         shippingCents={Number(
           "shipping_cents" in order ? (order.shipping_cents ?? 0) : 0,

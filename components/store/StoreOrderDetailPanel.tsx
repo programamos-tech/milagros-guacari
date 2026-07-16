@@ -34,6 +34,8 @@ type Props = {
   shippingPhone: string | null;
   shippingAddress: string | null;
   shippingCity: string | null;
+  shippingNeighborhood?: string | null;
+  shippingReference?: string | null;
   shippingPostalCode: string | null;
   shippingCents?: number;
   orderLines: TransferOrderLine[];
@@ -82,6 +84,8 @@ export function StoreOrderDetailPanel({
   shippingPhone,
   shippingAddress,
   shippingCity,
+  shippingNeighborhood,
+  shippingReference,
   shippingPostalCode,
   shippingCents = 0,
   orderLines,
@@ -228,10 +232,20 @@ export function StoreOrderDetailPanel({
                     <dt className="text-[11px] font-semibold uppercase tracking-wide text-stone-500">
                       Envío
                     </dt>
-                    <dd className="mt-0.5">
-                      {shippingAddress}
-                      {shippingCity ? `, ${shippingCity}` : ""}
-                      {shippingPostalCode ? ` · ${shippingPostalCode}` : ""}
+                    <dd className="mt-0.5 space-y-0.5">
+                      <p>
+                        {shippingAddress}
+                        {shippingNeighborhood
+                          ? `, barrio ${shippingNeighborhood}`
+                          : ""}
+                        {shippingCity ? `, ${shippingCity}` : ""}
+                        {shippingPostalCode ? ` · ${shippingPostalCode}` : ""}
+                      </p>
+                      {shippingReference?.trim() ? (
+                        <p className="text-stone-600">
+                          Ref.: {shippingReference.trim()}
+                        </p>
+                      ) : null}
                     </dd>
                   </div>
                 ) : null}

@@ -31,7 +31,7 @@ export default async function PedidoSeguimientoPage({ searchParams }: Props) {
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "id, checkout_payment_method, transfer_session_token, status, fulfillment_status, total_cents, shipping_cents, customer_name, customer_email, shipping_address, shipping_city, shipping_postal_code, shipping_phone, created_at",
+      "id, checkout_payment_method, transfer_session_token, status, fulfillment_status, total_cents, shipping_cents, customer_name, customer_email, shipping_address, shipping_city, shipping_neighborhood, shipping_reference, shipping_postal_code, shipping_phone, created_at",
     )
     .eq("id", orderId)
     .maybeSingle();
@@ -133,6 +133,14 @@ export default async function PedidoSeguimientoPage({ searchParams }: Props) {
             shippingPhone={order.shipping_phone ? String(order.shipping_phone) : null}
             shippingAddress={order.shipping_address ? String(order.shipping_address) : null}
             shippingCity={order.shipping_city ? String(order.shipping_city) : null}
+            shippingNeighborhood={
+              order.shipping_neighborhood
+                ? String(order.shipping_neighborhood)
+                : null
+            }
+            shippingReference={
+              order.shipping_reference ? String(order.shipping_reference) : null
+            }
             shippingPostalCode={
               order.shipping_postal_code ? String(order.shipping_postal_code) : null
             }

@@ -20,6 +20,8 @@ export type CheckoutShippingInitial = {
   /** Dirección principal a prellenar (perfil o último pedido). */
   profileAddressLine: string;
   city: string;
+  neighborhood: string;
+  reference: string;
   mobile: string;
   /** Id de municipio tarifado del último pedido, si existe. */
   municipalityId?: string;
@@ -83,6 +85,8 @@ export function CheckoutShippingFields({
   const [address, setAddress] = useState(
     () => profileLine || savedAddresses[0]?.address_line.trim() || "",
   );
+  const [neighborhood, setNeighborhood] = useState(initial.neighborhood);
+  const [reference, setReference] = useState(initial.reference);
   const [mobile, setMobile] = useState(initial.mobile);
   const [email, setEmail] = useState(accountEmail ?? "");
   const [hydrated, setHydrated] = useState(false);
@@ -93,6 +97,8 @@ export function CheckoutShippingFields({
       if (draft.firstName) setFirstName(draft.firstName);
       if (draft.lastName) setLastName(draft.lastName);
       if (draft.address) setAddress(draft.address);
+      if (draft.neighborhood) setNeighborhood(draft.neighborhood);
+      if (draft.reference) setReference(draft.reference);
       if (draft.mobile) setMobile(draft.mobile);
       if (!accountEmail && draft.email) setEmail(draft.email);
       if (draft.addressSelection) setSelection(draft.addressSelection);
@@ -106,6 +112,8 @@ export function CheckoutShippingFields({
       firstName,
       lastName,
       address,
+      neighborhood,
+      reference,
       mobile,
       email: accountEmail ?? email,
       addressSelection: selection,
@@ -115,6 +123,8 @@ export function CheckoutShippingFields({
     firstName,
     lastName,
     address,
+    neighborhood,
+    reference,
     mobile,
     email,
     selection,
@@ -125,6 +135,8 @@ export function CheckoutShippingFields({
     setSelection(next);
     if (next === "profile") {
       setAddress(profileLine);
+      setNeighborhood(initial.neighborhood);
+      setReference(initial.reference);
       setMobile(initial.mobile);
       setFirstName(initial.firstName);
       setLastName(initial.lastName);
@@ -138,7 +150,9 @@ export function CheckoutShippingFields({
       const row = savedAddresses.find((a) => a.id === id);
       if (row) {
         setAddress(row.address_line.trim());
+        setReference(row.reference?.trim() || initial.reference);
       }
+      setNeighborhood(initial.neighborhood);
       setMobile(initial.mobile);
       setFirstName(initial.firstName);
       setLastName(initial.lastName);
@@ -209,6 +223,29 @@ export function CheckoutShippingFields({
             className={inputClass}
             value={address}
             onChange={(e) => setAddress(e.target.value)}
+          />
+        </label>
+        <label className="block sm:col-span-1">
+          <span className={labelClass}>Barrio</span>
+          <input
+            name="neighborhood"
+            required
+            autoComplete="address-level3"
+            placeholder="Ej. Centro, La Castellana…"
+            className={inputClass}
+            value={neighborhood}
+            onChange={(e) => setNeighborhood(e.target.value)}
+          />
+        </label>
+        <label className="block sm:col-span-1">
+          <span className={labelClass}>Punto de referencia</span>
+          <input
+            name="reference"
+            autoComplete="off"
+            placeholder="Ej. frente al parque, casa blanca…"
+            className={inputClass}
+            value={reference}
+            onChange={(e) => setReference(e.target.value)}
           />
         </label>
         <div className="sm:col-span-2">

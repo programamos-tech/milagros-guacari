@@ -5,6 +5,8 @@ export type CheckoutFormDraft = {
   firstName: string;
   lastName: string;
   address: string;
+  neighborhood: string;
+  reference: string;
   mobile: string;
   email: string;
   municipalityId: string;
@@ -16,6 +18,8 @@ const EMPTY: CheckoutFormDraft = {
   firstName: "",
   lastName: "",
   address: "",
+  neighborhood: "",
+  reference: "",
   mobile: "",
   email: "",
   municipalityId: "",
@@ -34,6 +38,8 @@ export function readCheckoutFormDraft(): CheckoutFormDraft | null {
       firstName: String(parsed.firstName ?? ""),
       lastName: String(parsed.lastName ?? ""),
       address: String(parsed.address ?? ""),
+      neighborhood: String(parsed.neighborhood ?? ""),
+      reference: String(parsed.reference ?? ""),
       mobile: String(parsed.mobile ?? ""),
       email: String(parsed.email ?? ""),
       municipalityId: String(parsed.municipalityId ?? ""),

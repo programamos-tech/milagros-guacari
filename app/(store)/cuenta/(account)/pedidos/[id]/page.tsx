@@ -23,7 +23,7 @@ export default async function CuentaPedidoDetallePage({
   const { data: order, error: oErr } = await supabase
     .from("orders")
     .select(
-      "id, status, fulfillment_status, checkout_payment_method, total_cents, currency, created_at, customer_name, customer_email, shipping_address, shipping_city, shipping_postal_code, shipping_phone",
+      "id, status, fulfillment_status, checkout_payment_method, total_cents, currency, created_at, customer_name, customer_email, shipping_address, shipping_city, shipping_neighborhood, shipping_reference, shipping_postal_code, shipping_phone",
     )
     .eq("id", id)
     .maybeSingle();
@@ -112,14 +112,22 @@ export default async function CuentaPedidoDetallePage({
           {order.shipping_address ? (
             <div>
               <dt className="text-stone-500">Dirección</dt>
-              <dd>
-                {order.shipping_address}
-                {order.shipping_city
-                  ? `, ${order.shipping_city}`
-                  : ""}
-                {order.shipping_postal_code
-                  ? ` · ${order.shipping_postal_code}`
-                  : ""}
+              <dd className="space-y-0.5">
+                <p>
+                  {order.shipping_address}
+                  {order.shipping_neighborhood
+                    ? `, barrio ${order.shipping_neighborhood}`
+                    : ""}
+                  {order.shipping_city ? `, ${order.shipping_city}` : ""}
+                  {order.shipping_postal_code
+                    ? ` · ${order.shipping_postal_code}`
+                    : ""}
+                </p>
+                {order.shipping_reference ? (
+                  <p className="text-stone-600">
+                    Ref.: {order.shipping_reference}
+                  </p>
+                ) : null}
               </dd>
             </div>
           ) : null}
