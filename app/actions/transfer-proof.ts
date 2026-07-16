@@ -5,7 +5,6 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 const BUCKET = "order-payment-proofs";
-const WINDOW_MS = 2 * 60 * 1000;
 const MAX_BYTES = 5 * 1024 * 1024;
 
 const ALLOWED_TYPES = new Set([
@@ -15,11 +14,9 @@ const ALLOWED_TYPES = new Set([
   "application/pdf",
 ]);
 
-function transferProofUploadAllowed(status: string, fulfillmentStatus: string | null): boolean {
-  if (status === "cancelled" || status === "failed") return false;
-  if (status === "pending") return true;
-  if (status === "paid" && fulfillmentStatus === "preparing") return true;
-  return false;
+/** Mientras el pedido no esté cancelado/fallido, se puede subir comprobante. */
+function transferProofUploadAllowed(status: string): boolean {
+  return status !== "cancelled" && status !== "failed";
 }
 
 function inferMime(file: File): string {
@@ -42,9 +39,10 @@ function extFromMime(mime: string): string | null {
 }
 
 export type TransferProofActionResult =
-  | { ok: true; deadlineIso: string }
+  | { ok: true; deadlineIso: string | null }
   | { ok: false; error: string };
 
+/** Abre el flujo de subida (sin ventana de tiempo). */
 export async function openTransferProofUploadWindow(
   orderId: string,
   token: string,
@@ -57,7 +55,7 @@ export async function openTransferProofUploadWindow(
   const supabase = createSupabaseServiceClient();
   const { data: row, error } = await supabase
     .from("orders")
-    .select("id, checkout_payment_method, transfer_session_token, status, fulfillment_status")
+    .select("id, checkout_payment_method, transfer_session_token, status")
     .eq("id", orderId)
     .maybeSingle();
 
@@ -70,24 +68,11 @@ export async function openTransferProofUploadWindow(
   if (String(row.transfer_session_token) !== tid) {
     return { ok: false, error: "Enlace inválido o vencido." };
   }
-  const fulfillment =
-    row.fulfillment_status != null ? String(row.fulfillment_status) : null;
-  if (!transferProofUploadAllowed(String(row.status), fulfillment)) {
-    return { ok: false, error: "Este pedido ya no admite comprobante por transferencia." };
+  if (!transferProofUploadAllowed(String(row.status))) {
+    return { ok: false, error: "Este pedido está cancelado y no admite comprobante." };
   }
 
-  const deadline = new Date(Date.now() + WINDOW_MS).toISOString();
-  const { error: uErr } = await supabase
-    .from("orders")
-    .update({ transfer_upload_deadline_at: deadline })
-    .eq("id", orderId)
-    .eq("transfer_session_token", tid);
-
-  if (uErr) {
-    return { ok: false, error: "No se pudo abrir la ventana de subida." };
-  }
-
-  return { ok: true, deadlineIso: deadline };
+  return { ok: true, deadlineIso: null };
 }
 
 export type UploadTransferProofResult =
@@ -104,9 +89,7 @@ export async function getTransferProofDeadline(
   const supabase = createSupabaseServiceClient();
   const { data: row, error } = await supabase
     .from("orders")
-    .select(
-      "transfer_session_token, transfer_upload_deadline_at, checkout_payment_method, status, fulfillment_status",
-    )
+    .select("transfer_session_token, checkout_payment_method, status")
     .eq("id", orderId)
     .maybeSingle();
 
@@ -115,16 +98,12 @@ export async function getTransferProofDeadline(
   if (String(row.checkout_payment_method) !== "transfer") {
     return { error: "Pedido no válido." };
   }
-  const fulfillment =
-    row.fulfillment_status != null ? String(row.fulfillment_status) : null;
-  if (!transferProofUploadAllowed(String(row.status), fulfillment)) {
+  if (!transferProofUploadAllowed(String(row.status))) {
     return { deadlineIso: null };
   }
 
-  const d = row.transfer_upload_deadline_at as string | null;
-  if (!d) return { deadlineIso: null };
-  if (new Date(d).getTime() <= Date.now()) return { deadlineIso: null };
-  return { deadlineIso: d };
+  // Ya no usamos deadline; el cliente solo verifica acceso.
+  return { deadlineIso: null };
 }
 
 export async function uploadTransferProof(
@@ -158,7 +137,7 @@ export async function uploadTransferProof(
   const { data: row, error } = await supabase
     .from("orders")
     .select(
-      "id, checkout_payment_method, transfer_session_token, status, fulfillment_status, transfer_upload_deadline_at",
+      "id, checkout_payment_method, transfer_session_token, status, fulfillment_status",
     )
     .eq("id", orderId)
     .maybeSingle();
@@ -172,22 +151,8 @@ export async function uploadTransferProof(
   if (String(row.transfer_session_token) !== tid) {
     return { ok: false, error: "Enlace inválido." };
   }
-  const fulfillment =
-    row.fulfillment_status != null ? String(row.fulfillment_status) : null;
-  if (!transferProofUploadAllowed(String(row.status), fulfillment)) {
-    return { ok: false, error: "Este pedido ya no admite comprobante por transferencia." };
-  }
-
-  const deadlineRaw = row.transfer_upload_deadline_at as string | null;
-  if (!deadlineRaw) {
-    return { ok: false, error: "Primero abre la ventana de subida (2 minutos)." };
-  }
-  const deadlineMs = new Date(deadlineRaw).getTime();
-  if (!Number.isFinite(deadlineMs) || Date.now() > deadlineMs) {
-    return {
-      ok: false,
-      error: "Se acabó el tiempo. Habilita de nuevo la subida e intenta otra vez.",
-    };
+  if (!transferProofUploadAllowed(String(row.status))) {
+    return { ok: false, error: "Este pedido está cancelado y no admite comprobante." };
   }
 
   const buf = Buffer.from(await file.arrayBuffer());
@@ -218,13 +183,24 @@ export async function uploadTransferProof(
     return { ok: false, error: "No se pudo registrar el comprobante." };
   }
 
+  const status = String(row.status);
+  const fulfillment =
+    row.fulfillment_status != null ? String(row.fulfillment_status) : null;
+
+  // Primera confirmación: marcar pagado. Si ya estaba pagado, no tocar el fulfillment avanzado.
+  const patch: Record<string, unknown> = {
+    transfer_upload_deadline_at: null,
+  };
+  if (status === "pending") {
+    patch.status = "paid";
+    if (!fulfillment || fulfillment === "awaiting_payment") {
+      patch.fulfillment_status = "preparing";
+    }
+  }
+
   await supabase
     .from("orders")
-    .update({
-      transfer_upload_deadline_at: null,
-      status: "paid",
-      fulfillment_status: "preparing",
-    })
+    .update(patch)
     .eq("id", orderId)
     .eq("transfer_session_token", tid);
 

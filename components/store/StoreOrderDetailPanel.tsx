@@ -357,7 +357,7 @@ export function StoreOrderDetailPanel({
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-stone-600">
               {proofCount > 0
                 ? "Puedes subir otro comprobante si lo necesitas. Guarda el enlace de seguimiento para ver el progreso."
-                : "Para confirmar tu pedido es obligatorio transferir el valor exacto y subir el comprobante. Tienes ventanas de 2 minutos para cada intento de subida."}
+                : "Para confirmar tu pedido es obligatorio transferir el valor exacto y subir el comprobante. Podés hacerlo cuando quieras desde este mismo enlace."}
             </p>
             <div className="mt-6">
               <TransferenciaCheckoutPanel

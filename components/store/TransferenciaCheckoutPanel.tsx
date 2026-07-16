@@ -3,7 +3,6 @@
 import { useActionState, useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  getTransferProofDeadline,
   openTransferProofUploadWindow,
   uploadTransferProof,
   type UploadTransferProofResult,
@@ -33,18 +32,6 @@ type Props = {
   initialProofCount?: number;
   onProofUploaded?: (proofCount: number) => void;
 };
-
-function secondsRemaining(deadlineIso: string | null): number {
-  if (!deadlineIso) return 0;
-  const ms = new Date(deadlineIso).getTime() - Date.now();
-  return Math.max(0, Math.ceil(ms / 1000));
-}
-
-function formatMmSs(totalSec: number): string {
-  const m = Math.floor(totalSec / 60);
-  const s = totalSec % 60;
-  return `${m}:${s.toString().padStart(2, "0")}`;
-}
 
 function TransferOrderSummary({
   lines,
@@ -109,9 +96,7 @@ export function TransferenciaCheckoutPanel({
 }: Props) {
   const router = useRouter();
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const [deadlineIso, setDeadlineIso] = useState<string | null>(null);
   const [proofCount, setProofCount] = useState(initialProofCount);
-  const [tick, setTick] = useState(0);
   const [pending, startTransition] = useTransition();
   const [uploadState, uploadAction, uploadPending] = useActionState(
     uploadTransferProof,
@@ -127,27 +112,6 @@ export function TransferenciaCheckoutPanel({
     dialogRef.current?.showModal();
   }, []);
 
-  const refreshDeadline = useCallback(() => {
-    startTransition(async () => {
-      const res = await getTransferProofDeadline(orderId, token);
-      if ("error" in res) {
-        setDeadlineIso(null);
-        return;
-      }
-      setDeadlineIso(res.deadlineIso);
-    });
-  }, [orderId, token]);
-
-  useEffect(() => {
-    void refreshDeadline();
-  }, [refreshDeadline]);
-
-  useEffect(() => {
-    if (!deadlineIso) return;
-    const id = window.setInterval(() => setTick((t) => t + 1), 1000);
-    return () => window.clearInterval(id);
-  }, [deadlineIso]);
-
   useEffect(() => {
     setProofCount(initialProofCount);
   }, [initialProofCount]);
@@ -156,7 +120,6 @@ export function TransferenciaCheckoutPanel({
     if (uploadState?.ok) {
       const input = document.getElementById("transfer-proof-file") as HTMLInputElement | null;
       if (input) input.value = "";
-      setDeadlineIso(null);
       const nextCount = uploadState.proofCount;
       setProofCount(nextCount);
       onProofUploaded?.(nextCount);
@@ -167,10 +130,7 @@ export function TransferenciaCheckoutPanel({
     }
   }, [uploadState, embedded, closeModal, router, onProofUploaded]);
 
-  const remain = secondsRemaining(deadlineIso);
-  void tick;
-
-  const startWindow = () => {
+  const openUploadForm = () => {
     setWindowError(null);
     startTransition(async () => {
       const res = await openTransferProofUploadWindow(orderId, token);
@@ -178,13 +138,10 @@ export function TransferenciaCheckoutPanel({
         setWindowError(res.error);
         return;
       }
-      setDeadlineIso(res.deadlineIso);
       openModal();
     });
   };
 
-  const activeWindow = deadlineIso !== null && remain > 0;
-  const expiredWindow = deadlineIso !== null && remain <= 0;
   const hasProof = proofCount > 0;
 
   const copyValue = async (value: string) => {
@@ -211,9 +168,8 @@ export function TransferenciaCheckoutPanel({
             <div className="rounded-xl border border-emerald-100 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-950">
               <p className="font-semibold">Pedido registrado</p>
               <p className="mt-1 leading-relaxed">
-                Transfiere el valor exacto y sube el comprobante. Tienes{" "}
-                <strong>2 minutos</strong> por ventana; si vence, pulsa{" "}
-                <strong>Habilitar de nuevo</strong>.
+                Transfiere el valor exacto y sube el comprobante cuando quieras. Podés
+                enviar más de un archivo si lo necesitás.
               </p>
             </div>
 
@@ -301,47 +257,26 @@ export function TransferenciaCheckoutPanel({
                   pedido en este mismo enlace.
                 </p>
                 <p className="text-xs leading-relaxed text-stone-500">
-                  Si necesitás enviar otro archivo, podés subir uno adicional.
+                  Si necesitás enviar otro archivo, podés subir uno adicional cuando quieras.
                 </p>
                 <button
                   type="button"
                   disabled={pending}
-                  onClick={startWindow}
+                  onClick={openUploadForm}
                   className="inline-flex w-full items-center justify-center border border-stone-300 bg-white px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-700 transition hover:bg-stone-50 disabled:opacity-60 sm:w-auto"
                 >
                   Subir otro comprobante
                 </button>
               </div>
             ) : (
-              <div className="flex flex-wrap items-center gap-3">
-                {!activeWindow ? (
-                  <button
-                    type="button"
-                    disabled={pending}
-                    onClick={startWindow}
-                    className="inline-flex flex-1 items-center justify-center bg-[var(--store-accent)] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-[var(--store-accent-hover)] disabled:opacity-60 sm:min-w-[220px]"
-                  >
-                    {expiredWindow ? "Habilitar de nuevo (2 min)" : "Subir comprobante"}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={pending}
-                    onClick={openModal}
-                    className="inline-flex flex-1 items-center justify-center border border-[var(--store-accent)] bg-white px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--store-accent)] transition hover:bg-[#fff8fb] disabled:opacity-60 sm:min-w-[220px]"
-                  >
-                    Abrir formulario de subida
-                  </button>
-                )}
-                {activeWindow ? (
-                  <p className="text-xs text-stone-600" role="status">
-                    Ventana activa:{" "}
-                    <strong className="tabular-nums text-[var(--store-brand)]">
-                      {formatMmSs(remain)}
-                    </strong>
-                  </p>
-                ) : null}
-              </div>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={openUploadForm}
+                className="inline-flex w-full items-center justify-center bg-[var(--store-accent)] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-[var(--store-accent-hover)] disabled:opacity-60 sm:min-w-[220px] sm:w-auto"
+              >
+                Subir comprobante
+              </button>
             )}
             {windowError ? (
               <p className="mt-3 text-sm text-red-700" role="alert">
@@ -365,91 +300,49 @@ export function TransferenciaCheckoutPanel({
           JPG, PNG, WebP o PDF. Máximo 5 MB.
         </p>
 
-        {!activeWindow && !pending && !uploadPending ? (
-          <div className="mt-5 space-y-4">
-            <p className="text-sm text-amber-800">
-              {expiredWindow
-                ? "El tiempo de esta ventana terminó. Cierra este cuadro y pulsa «Habilitar de nuevo» en la página."
-                : "Primero abre una ventana de 2 minutos desde la página principal."}
-            </p>
-            <button
-              type="button"
-              className="w-full rounded-lg border border-stone-300 py-2.5 text-sm font-medium text-stone-800 hover:bg-stone-50"
-              onClick={closeModal}
-            >
-              Cerrar
-            </button>
+        <div className="mt-5 grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:items-start">
+          <TransferOrderSummary
+            lines={orderLines}
+            totalCents={totalCents}
+            compact
+          />
+          <div>
+            <form className="space-y-4" action={uploadAction}>
+              <input type="hidden" name="orderId" value={orderId} />
+              <input type="hidden" name="token" value={token} />
+              <label className="block text-sm text-stone-700">
+                <span className="mb-1 block font-medium">Archivo</span>
+                <input
+                  id="transfer-proof-file"
+                  name="file"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,application/pdf,.jpg,.jpeg,.png,.webp,.pdf"
+                  required
+                  className="block w-full text-sm text-stone-600 file:mr-3 file:border-0 file:bg-stone-100 file:px-3 file:py-2 file:text-[11px] file:font-semibold file:uppercase file:tracking-wide file:text-stone-800"
+                />
+              </label>
+              {uploadState && !uploadState.ok ? (
+                <p className="text-sm text-red-700" role="alert">
+                  {uploadState.error}
+                </p>
+              ) : null}
+              <button
+                type="submit"
+                disabled={uploadPending}
+                className="w-full bg-[var(--store-accent)] py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-[var(--store-accent-hover)] disabled:opacity-60"
+              >
+                {uploadPending ? "Enviando…" : "Enviar comprobante"}
+              </button>
+              <button
+                type="button"
+                className="w-full rounded-lg border border-stone-300 py-2.5 text-sm font-medium text-stone-800 hover:bg-stone-50"
+                onClick={closeModal}
+              >
+                Cerrar
+              </button>
+            </form>
           </div>
-        ) : (
-          <div className="mt-5 grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:items-start">
-            <TransferOrderSummary
-              lines={orderLines}
-              totalCents={totalCents}
-              compact
-            />
-            <div>
-              <p className="text-sm font-semibold tabular-nums text-[var(--store-brand)]">
-                Tiempo restante: {formatMmSs(remain)}
-              </p>
-              <form className="mt-4 space-y-4" action={uploadAction}>
-                <input type="hidden" name="orderId" value={orderId} />
-                <input type="hidden" name="token" value={token} />
-                <label className="block text-sm text-stone-700">
-                  <span className="mb-1 block font-medium">Archivo</span>
-                  <input
-                    id="transfer-proof-file"
-                    name="file"
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,application/pdf"
-                    required
-                    disabled={!activeWindow || pending || uploadPending}
-                    className="block w-full text-sm text-stone-800 file:mr-3 file:rounded-md file:border-0 file:bg-stone-100 file:px-3 file:py-2 file:text-xs file:font-semibold file:uppercase file:tracking-wide"
-                  />
-                </label>
-                {uploadState ? (
-                  <p
-                    className={
-                      uploadState.ok
-                        ? "text-sm font-medium text-emerald-800"
-                        : "text-sm text-red-700"
-                    }
-                    role="status"
-                  >
-                    {uploadState.ok
-                      ? "Comprobante recibido. Ya podés cerrar este cuadro."
-                      : uploadState.error}
-                  </p>
-                ) : null}
-                <div className="flex flex-wrap gap-2">
-                  {uploadState?.ok ? (
-                    <button
-                      type="button"
-                      className="flex-1 rounded-lg bg-[var(--store-accent)] py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--store-accent-hover)]"
-                      onClick={closeModal}
-                    >
-                      Listo
-                    </button>
-                  ) : (
-                    <button
-                      type="submit"
-                      disabled={!activeWindow || pending || uploadPending}
-                      className="flex-1 rounded-lg bg-[var(--store-accent)] py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--store-accent-hover)] disabled:opacity-50"
-                    >
-                      {uploadPending ? "Enviando…" : "Enviar comprobante"}
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    className="rounded-lg border border-stone-300 px-4 py-2.5 text-sm font-medium text-stone-800 hover:bg-stone-50"
-                    onClick={closeModal}
-                  >
-                    Cerrar
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
+        </div>
       </dialog>
     </>
   );
